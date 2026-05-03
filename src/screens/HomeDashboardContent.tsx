@@ -210,85 +210,87 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
             </div>
           </div>
 
-          {/* PROGRESS CARDS — hours only, matching NJ GDL requirements */}
-          {/* [FIX-1][FIX-6] Miles card is purely informational: no progress bar,
-              no compliance framing. Total Hours and Night Hours are the only
-              NJ GDL requirements tracked with progress indicators. */}
-          <div className="mt-5 grid grid-cols-3 auto-rows-fr gap-2 sm:gap-3">
+          {/* PROGRESS CARDS — Plan B layout: 2 panels on top, 1 full-width panel below */}
+<div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
 
-            {/* Total Hours — NJ GDL requirement */}
-            <div className="grid h-full min-h-[190px] grid-rows-[auto_auto_auto_auto_auto] justify-items-center rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-3 text-center shadow-sm sm:min-h-[220px] sm:p-4">
-              <div className="flex h-[34px] min-h-[34px] flex-col items-center justify-center sm:h-[40px] sm:min-h-[40px]">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/55 sm:text-[11px] sm:tracking-[0.18em]">Total</p>
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/55 sm:text-[11px] sm:tracking-[0.18em]">Hours</p>
-              </div>
-              <p className="flex min-h-[36px] items-end text-2xl font-extrabold leading-none tracking-tight text-[#0A1E5E] sm:min-h-[42px] sm:text-3xl">
-                {totalHours.toFixed(1)}
-                <span className="text-sm font-semibold text-[#0A1E5E]/65 sm:text-lg"> / {totalRequired}</span>
-              </p>
-              <p className="flex min-h-[28px] items-center text-xs leading-snug text-[#0A1E5E]/68 sm:min-h-[32px] sm:text-sm">
-                {totalRemaining.toFixed(1)} hours remaining
-              </p>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#0A1E5E]/10">
-                <div
-                  className="h-full rounded-full bg-[#f9c80e] transition-all duration-300 ease-out"
-                  style={{ width: `${totalPercent}%` }}
-                />
-              </div>
-              <div className="inline-flex h-[24px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70 sm:h-[26px] sm:min-w-[80px] sm:text-[11px]">
-                LOGGED
-              </div>
-            </div>
 
-            {/* Night Hours — NJ GDL requirement */}
-            <div className="grid h-full min-h-[190px] grid-rows-[auto_auto_auto_auto_auto] justify-items-center rounded-2xl border border-[#0A1E5E]/10 bg-[#EEF2F8] p-3 text-center shadow-sm sm:min-h-[220px] sm:p-4">
-              <div className="flex h-[34px] min-h-[34px] flex-col items-center justify-center sm:h-[40px] sm:min-h-[40px]">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/55 sm:text-[11px] sm:tracking-[0.18em]">Night</p>
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/55 sm:text-[11px] sm:tracking-[0.18em]">Hours</p>
-              </div>
-              <p className="flex min-h-[36px] items-end text-2xl font-extrabold leading-none tracking-tight text-[#0A1E5E] sm:min-h-[42px] sm:text-3xl">
-                {nightHours.toFixed(1)}
-                <span className="text-sm font-semibold text-[#0A1E5E]/65 sm:text-lg"> / {nightRequired}</span>
-              </p>
-              <p className="flex min-h-[28px] items-center text-xs leading-snug text-[#0A1E5E]/68 sm:min-h-[32px] sm:text-sm">
-                {nightRemaining.toFixed(1)} hours remaining
-              </p>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#0A1E5E]/10">
-                <div
-                  className="h-full rounded-full bg-[#f9c80e] transition-all duration-300 ease-out"
-                  style={{ width: `${nightPercent}%` }}
-                />
-              </div>
-              <div className="inline-flex h-[24px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70 sm:h-[26px] sm:min-w-[80px] sm:text-[11px]">
-                NIGHT
-              </div>
-            </div>
+  {/* Total Hours — top left */}
+  <div className="grid h-full min-h-[210px] grid-rows-[auto_auto_auto_auto_auto] justify-items-center rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-center shadow-sm sm:min-h-[240px]">
+    <div className="flex h-[40px] min-h-[40px] flex-col items-center justify-center">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Total</p>
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Hours</p>
+    </div>
 
-            {/* Total Miles — informational only, no compliance bar */}
-            {/* [FIX-1][FIX-6] NJ GDL has no mileage requirement. This card is
-                purely informational. No progress bar, no percent fill.
-                Sub-label explicitly states "Info only" to prevent
-                parents from treating mileage as a compliance gate. */}
-            <div className="grid h-full min-h-[190px] grid-rows-[auto_auto_auto_1fr_auto] justify-items-center rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-3 text-center shadow-sm sm:min-h-[220px] sm:p-4">
-              <div className="flex h-[34px] min-h-[34px] flex-col items-center justify-center sm:h-[40px] sm:min-h-[40px]">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/55 sm:text-[11px] sm:tracking-[0.18em]">Total</p>
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/55 sm:text-[11px] sm:tracking-[0.18em]">Miles</p>
-              </div>
-              <p className="flex min-h-[36px] items-end text-2xl font-extrabold leading-none tracking-tight text-[#0A1E5E] sm:min-h-[42px] sm:text-3xl">
-                {totalMiles.toFixed(1)}
-                <span className="text-sm font-semibold text-[#0A1E5E]/65 sm:text-lg"> mi</span>
-              </p>
-              <p className="flex min-h-[28px] items-center text-xs leading-snug text-[#0A1E5E]/68 sm:min-h-[32px] sm:text-sm">
-                Across all drives
-              </p>
-              {/* No progress bar — mileage is not a NJ GDL compliance requirement */}
-              <div className="h-2.5 w-full" />
-              <div className="inline-flex h-[24px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70 sm:h-[26px] sm:min-w-[80px] sm:text-[11px]">
-                INFO
-              </div>
-            </div>
+    <p className="flex min-h-[42px] items-end text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
+      {totalHours.toFixed(1)}
+      <span className="text-lg font-semibold text-[#0A1E5E]/65"> / {totalRequired}</span>
+    </p>
 
-          </div>
+    <p className="flex min-h-[32px] items-center text-sm leading-snug text-[#0A1E5E]/68">
+      {totalRemaining.toFixed(1)} Hours Remaining
+    </p>
+
+    <div className="h-3 w-full overflow-hidden rounded-full bg-[#0A1E5E]/10">
+      <div
+        className="h-full rounded-full bg-[#f9c80e] transition-all duration-300 ease-out"
+        style={{ width: `${totalPercent}%` }}
+      />
+    </div>
+
+    <div className="inline-flex h-[24px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70">
+      LOGGED
+    </div>
+  </div>
+
+  {/* Night Hours — top right */}
+  <div className="grid h-full min-h-[210px] grid-rows-[auto_auto_auto_auto_auto] justify-items-center rounded-2xl border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4 text-center shadow-sm sm:min-h-[240px]">
+    <div className="flex h-[40px] min-h-[40px] flex-col items-center justify-center">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Night</p>
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Hours</p>
+    </div>
+
+    <p className="flex min-h-[42px] items-end text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
+      {nightHours.toFixed(1)}
+      <span className="text-lg font-semibold text-[#0A1E5E]/65"> / {nightRequired}</span>
+    </p>
+
+    <p className="flex min-h-[32px] items-center text-sm leading-snug text-[#0A1E5E]/68">
+      {nightRemaining.toFixed(1)} Hours Remaining
+    </p>
+
+    <div className="h-3 w-full overflow-hidden rounded-full bg-[#0A1E5E]/10">
+      <div
+        className="h-full rounded-full bg-[#f9c80e] transition-all duration-300 ease-out"
+        style={{ width: `${nightPercent}%` }}
+      />
+    </div>
+
+    <div className="inline-flex h-[24px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70">
+      NIGHT
+    </div>
+  </div>
+
+  {/* Total Miles — short wide horizontal panel */}
+<div className="col-span-2 flex items-center justify-between rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] px-4 py-2 shadow-sm">
+
+  {/* Left side: label */}
+  <div className="flex flex-col leading-tight">
+    <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Total Miles</p>
+    <p className="text-xs text-[#0A1E5E]/60">Across all drives</p>
+  </div>
+
+  {/* Middle: big number */}
+  <p className="flex items-end text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
+    {totalMiles.toFixed(1)}
+    <span className="ml-1 text-lg font-semibold text-[#0A1E5E]/65">mi</span>
+  </p>
+
+  {/* Right side: pill */}
+  <div className="inline-flex h-[26px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70">
+    INFO
+  </div>
+</div>
+</div>
 
           {/* LAST DRIVE CARD */}
           <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 shadow-sm sm:p-5">

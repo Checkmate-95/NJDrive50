@@ -176,7 +176,7 @@ export default function App() {
         return <ShareLogView />
 
       case "todaysDrive":
-        return <TodaysDrive setScreen={setScreenCompat} drive={currentDrive} />
+        return <TodaysDrive drive={currentDrive} />
 
       case "helpFaq":
         return <HelpFaq />

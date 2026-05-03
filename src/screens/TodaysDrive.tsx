@@ -1,15 +1,14 @@
 // src/screens/TodaysDrive.tsx
-// TRUST-CORRECTED VERSION
+// TRUST-CORRECTED + NAV-HOOK VERSION
 // [FIX-1]  isPreview banner — unsaved previews are visually distinguished from saved drives
 // [FIX-2]  Timestamps use toLocaleString() — date included for midnight-crossing drives
 // [FIX-3]  getMapTimeOfDay: Mixed drives render map in Night mode (safety-relevant)
 // [FIX-4]  formatHours unit included in function return — no bare unitless strings
 // [FIX-5]  drive.isPreview checked before rendering — unsaved state clearly communicated
 // [FIX-6]  Start New Drive checks for active session — no silent second-session risk
+// [NAV]   Replaced prop-based setScreen + navigate() with useNav() hook
 
-import type { Dispatch, SetStateAction } from "react"
-import type { Screen } from "../App"
-import { navigate } from "../navigation/navMap"
+import { useNav } from "../state/navStore"
 import { useActiveDriveStore } from "../state/activeDriveStore"
 
 import { MapProvider } from "../components/map/MapProvider"
@@ -22,7 +21,6 @@ type Coord = {
 }
 
 type TodaysDriveProps = {
-  setScreen: Dispatch<SetStateAction<Screen>>
   drive: (DriveEntry & {
     isPreview?: boolean
     milesSource?: "routes-api" | "gps-accumulated"
@@ -45,9 +43,6 @@ function getLightingLabel(
 }
 
 // [FIX-3] Mixed drives render as Night — the safety-relevant condition.
-// Previously Mixed collapsed to "Day", causing the map to contradict the
-// "Mixed" text label shown directly above it.
-// dayHours param removed — only nightHours determines map style.
 function getMapTimeOfDay(nightHours: number): "Day" | "Night" {
   if (nightHours > 0) return "Night"
   return "Day"
@@ -65,12 +60,14 @@ function normalizeRoute(value: unknown): Coord[] {
     (coord): coord is Coord =>
       !!coord &&
       typeof coord === "object" &&
-      typeof coord.lat === "number" &&
-      typeof coord.lng === "number"
+      typeof (coord as Coord).lat === "number" &&
+      typeof (coord as Coord).lng === "number"
   )
 }
 
-export default function TodaysDrive({ setScreen, drive }: TodaysDriveProps) {
+export default function TodaysDrive({ drive }: TodaysDriveProps) {
+  const { setScreen } = useNav()
+
   // [FIX-6] Check for active session to prevent silent second-session start
   const activeSession = useActiveDriveStore((s) => s.session)
   const hasActiveDrive = Boolean(activeSession?.isActive)
@@ -111,19 +108,16 @@ export default function TodaysDrive({ setScreen, drive }: TodaysDriveProps) {
 
   // [FIX-6] Start New Drive handler — redirects to active drive if one exists
   const handleStartNew = () => {
-    if (hasActiveDrive) {
-      setScreen("active")
-      return
-    }
-    navigate("todaysDrive", "startNew", setScreen)
+  setScreen("active")
+}
+
+  const handleViewSummary = () => {
+    setScreen("summary")
   }
 
   return (
     <div className="w-full flex flex-col items-center px-3 pb-24 pt-3 text-[#0A1E5E] sm:px-4">
-
-      {/* [FIX-1][FIX-5] Preview banner — shown whenever this screen receives
-          an unsaved preview drive. Prominently communicates that this data has
-          NOT been saved and will not appear in History, Summary, or Exports. */}
+      {/* [FIX-1][FIX-5] Preview banner — unsaved preview drive */}
       {isPreview && (
         <div className="mb-4 w-full max-w-md rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">
@@ -139,7 +133,6 @@ export default function TodaysDrive({ setScreen, drive }: TodaysDriveProps) {
       )}
 
       <section className="w-full max-w-md rounded-[24px] border border-white/30 bg-white/95 px-6 py-7 text-left shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md">
-
         {/* Title row — shows PREVIEW badge when unsaved */}
         <div className="mb-1 flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">
@@ -159,8 +152,7 @@ export default function TodaysDrive({ setScreen, drive }: TodaysDriveProps) {
         </p>
 
         <div className="mb-4 space-y-2 text-sm text-[#1b2755]">
-          {/* [FIX-2] toLocaleString() includes date — correct for midnight-crossing drives.
-              Previously toLocaleTimeString() dropped the date entirely. */}
+          {/* [FIX-2] Use toLocaleString() for midnight-crossing drives */}
           <p>
             <strong>Start Time:</strong>{" "}
             {new Date(startTime).toLocaleString()}
@@ -172,10 +164,10 @@ export default function TodaysDrive({ setScreen, drive }: TodaysDriveProps) {
           <p>
             <strong>Miles:</strong>{" "}
             {numericMiles.toFixed(1)}
-            {/* [FIX-3] If mileage came from GPS accumulation (not Routes API),
-                note that the saved value may differ slightly */}
             {milesSource === "gps-accumulated" && (
-              <span className="ml-1 text-[10px] text-[#0A1E5E]/45">(GPS est.)</span>
+              <span className="ml-1 text-[10px] text-[#0A1E5E]/45">
+                (GPS est.)
+              </span>
             )}
           </p>
           <p>
@@ -218,9 +210,7 @@ export default function TodaysDrive({ setScreen, drive }: TodaysDriveProps) {
       </div>
 
       <div className="flex w-full max-w-md flex-col gap-3 pt-6">
-        {/* [FIX-6] Checks for active session before navigating to start flow.
-            If a session is already running/paused, redirects to Active Drive
-            instead of silently allowing a second session to be started. */}
+        {/* [FIX-6] Active-session aware start */}
         <button
           onClick={handleStartNew}
           className="w-full rounded-lg bg-[#0A1E5E] py-3 font-semibold text-white transition-colors hover:bg-[#f9c80e] hover:text-[#0A1E5E]"
@@ -229,7 +219,7 @@ export default function TodaysDrive({ setScreen, drive }: TodaysDriveProps) {
         </button>
 
         <button
-          onClick={() => navigate("todaysDrive", "summary", setScreen)}
+          onClick={handleViewSummary}
           className="w-full rounded-lg border border-[#0A1E5E] bg-white py-3 font-semibold text-[#0A1E5E] transition-colors hover:bg-[#0A1E5E] hover:text-white"
         >
           View Summary

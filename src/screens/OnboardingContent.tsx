@@ -14,7 +14,7 @@ import {
   saveOnboardingData,
   type OnboardingData,
 } from "../../core/ReminderEngine"
-import { navigate } from "../navigation/navMap"
+
 
 import {
   useTeenPhoto,
@@ -358,7 +358,8 @@ export default function OnboardingContent({
   const handleContinue = () => {
     if (!canContinue) return
     persistOnboarding()
-    navigate("onboarding", "continue", setScreen)
+   setScreen("onboarding")
+
   }
 
   const handleTeenPanelSave = () => {

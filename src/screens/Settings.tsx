@@ -1,6 +1,7 @@
 // src/screens/Settings.tsx
 import { useNav } from "../state/navStore"
 import { useSettingsStore } from "../state/settingsStore"
+import { devResetAll } from "../utils/devReset"
 
 export default function Settings() {
   const { setScreen, goBack } = useNav()
@@ -11,6 +12,11 @@ export default function Settings() {
     setNotifications,
     setAutoExport,
   } = useSettingsStore()
+
+  const handleDevReset = async () => {
+    await devResetAll()
+    setScreen("intro")
+  }
 
   return (
     <main className="min-h-screen bg-[#F7F9FC] text-[#08194A] flex flex-col items-center p-6 relative">
@@ -96,6 +102,14 @@ export default function Settings() {
             className="w-full bg-red-50 text-red-700 py-3 rounded-xl font-semibold border border-red-300 mt-3 hover:bg-red-100 transition"
           >
             Reset Onboarding
+          </button>
+
+          {/* Developer Reset */}
+          <button
+            onClick={handleDevReset}
+            className="w-full bg-[#08194A] text-white py-3 rounded-xl font-semibold mt-4 hover:bg-[#0A1E5E] transition shadow-lg"
+          >
+            Developer Reset (Wipe All Data)
           </button>
         </section>
 

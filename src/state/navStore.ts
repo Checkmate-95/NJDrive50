@@ -4,6 +4,13 @@ import { persist, createJSONStorage } from "zustand/middleware"
 import type { Screen } from "../App"
 
 const MAX_STACK_SIZE = 20
+const NAV_STORAGE_KEY = "njdrive50_nav"
+
+type PersistedNavState = {
+  screen?: unknown
+  stack?: unknown
+  previousScreen?: unknown
+}
 
 type NavState = {
   screen: Screen
@@ -15,6 +22,58 @@ type NavState = {
   resetTo: (s: Screen) => void
 }
 
+function isScreen(value: unknown): value is Screen {
+  return (
+    value === "intro" ||
+    value === "onboarding" ||
+    value === "home" ||
+    value === "active" ||
+    value === "todaysDrive" ||
+    value === "summary" ||
+    value === "milestones" ||
+    value === "driveHistory" ||
+    value === "export" ||
+    value === "settings" ||
+    value === "reminderSettings" ||
+    value === "reminderLog" ||
+    value === "dmv" ||
+    value === "dmvPrep" ||
+    value === "share" ||
+    value === "helpFaq" ||
+    value === "aiHelper" ||
+    value === "teenDriverRules" ||
+    value === "manageProfile" ||
+    value === "restartOnboarding" ||
+    value === "dataCleared" ||
+    value === "practiceTest"
+  )
+}
+
+function normalizeScreen(value: unknown, fallback: Screen = "home"): Screen {
+  return isScreen(value) ? value : fallback
+}
+
+function normalizeStack(value: unknown): Screen[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(isScreen).slice(-MAX_STACK_SIZE)
+}
+
+function normalizePreviousScreen(value: unknown): Screen | null {
+  return isScreen(value) ? value : null
+}
+
+function normalizePersistedNavState(
+  value: unknown
+): Pick<NavState, "screen" | "stack" | "previousScreen"> {
+  const raw = (value ?? null) as PersistedNavState | null
+
+  return {
+    screen: normalizeScreen(raw?.screen, "home"),
+    stack: normalizeStack(raw?.stack),
+    previousScreen: normalizePreviousScreen(raw?.previousScreen),
+  }
+}
+
 export const useNav = create<NavState>()(
   persist(
     (set, get) => ({
@@ -22,15 +81,15 @@ export const useNav = create<NavState>()(
       stack: [],
       previousScreen: null,
 
-      setScreen: (s: Screen) => {
+      setScreen: (nextScreen: Screen) => {
         const { screen, stack } = get()
 
-        if (s === screen) return
+        if (nextScreen === screen) return
 
         const nextStack = [...stack, screen].slice(-MAX_STACK_SIZE)
 
         set({
-          screen: s,
+          screen: nextScreen,
           stack: nextStack,
           previousScreen: screen,
         })
@@ -48,28 +107,33 @@ export const useNav = create<NavState>()(
           return
         }
 
-        const next = [...stack]
-        const destination = next.pop() as Screen
-        const previous = next.length > 0 ? next[next.length - 1] : null
+        const nextStack = [...stack]
+        const destination = nextStack.pop() ?? fallback
+        const previousScreen =
+          nextStack.length > 0 ? nextStack[nextStack.length - 1] : null
 
         set({
           screen: destination,
-          stack: next,
-          previousScreen: previous,
+          stack: nextStack,
+          previousScreen,
         })
       },
 
-      resetTo: (s: Screen) => {
+      resetTo: (screen: Screen) => {
         set({
-          screen: s,
+          screen,
           stack: [],
           previousScreen: null,
         })
       },
     }),
     {
-      name: "njdrive50_nav",
+      name: NAV_STORAGE_KEY,
       storage: createJSONStorage(() => sessionStorage),
+      version: 1,
+      migrate: (persistedState: unknown) => {
+        return normalizePersistedNavState(persistedState)
+      },
       partialize: (state) => ({
         screen: state.screen,
         stack: state.stack,

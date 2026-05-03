@@ -9,29 +9,20 @@ export type DriveScoreInput = {
 
 export function computeDriveScoreV2(d: DriveScoreInput): number {
   const minutes = Math.max(0, d.minutes)
+  const weather = d.weather?.trim().toLowerCase()
 
-  let score = 0
+  const durationScore = Math.min(minutes / 10, 10)
+  const nightBonus = d.isNight ? 5 : 0
 
-  // Duration weight (max 10 points)
-  score += Math.min(minutes / 10, 10)
+  const weatherBonus =
+    weather === "rain"
+      ? 4
+      : weather === "snow"
+        ? 6
+        : 0
 
-  // Night bonus
-  if (d.isNight) score += 5
+  const baseScore = durationScore + nightBonus + weatherBonus
+  const confirmationBonus = d.confirmed ? 2 : 0
 
-  // Weather difficulty
-  switch (d.weather?.trim().toLowerCase()) {
-    case "rain":
-      score += 4
-      break
-    case "snow":
-      score += 6
-      break
-    default:
-      break
-  }
-
-  // Confirmation multiplier
-  if (d.confirmed) score *= 1.2
-
-  return Math.round(score)
+  return Math.round(baseScore + confirmationBonus)
 }

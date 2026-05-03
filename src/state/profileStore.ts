@@ -25,9 +25,71 @@ const defaultProfile: Profile = {
   carYear: null,
 }
 
+let cachedTeenPhoto: string | null = null
+let cachedProfileSnapshot: Profile = { ...defaultProfile }
+
+function normalizeTeenAge(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null
+  const n = Number(value)
+  return Number.isFinite(n) && n >= 14 && n <= 21 ? n : null
+}
+
+function normalizeCarYear(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null
+  const n = Number(value)
+  const maxYear = new Date().getFullYear() + 1
+  return Number.isFinite(n) && n >= 1900 && n <= maxYear ? n : null
+}
+
+function normalizeProfile(value: unknown): Profile {
+  if (!value || typeof value !== "object") return { ...defaultProfile }
+
+  const raw = value as Record<string, unknown>
+
+  return {
+    teenName: typeof raw.teenName === "string" ? raw.teenName : "",
+    parentName: typeof raw.parentName === "string" ? raw.parentName : "",
+    teenAge: normalizeTeenAge(raw.teenAge),
+    carMake: typeof raw.carMake === "string" ? raw.carMake : "",
+    carModel: typeof raw.carModel === "string" ? raw.carModel : "",
+    carYear: normalizeCarYear(raw.carYear),
+  }
+}
+
+function loadTeenPhotoFromStorage(): string | null {
+  try {
+    cachedTeenPhoto = localStorage.getItem(PHOTO_KEY)
+    return cachedTeenPhoto
+  } catch {
+    cachedTeenPhoto = null
+    return cachedTeenPhoto
+  }
+}
+
+function loadProfileFromStorage(): Profile {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY)
+    if (!raw) {
+      cachedProfileSnapshot = { ...defaultProfile }
+      return cachedProfileSnapshot
+    }
+
+    const parsed: unknown = JSON.parse(raw)
+    cachedProfileSnapshot = normalizeProfile(parsed)
+    return cachedProfileSnapshot
+  } catch {
+    cachedProfileSnapshot = { ...defaultProfile }
+    return cachedProfileSnapshot
+  }
+}
+
+loadTeenPhotoFromStorage()
+loadProfileFromStorage()
+
 export function setTeenPhoto(url: string): boolean {
   try {
     localStorage.setItem(PHOTO_KEY, url)
+    cachedTeenPhoto = url
     window.dispatchEvent(new Event(PHOTO_EVENT))
     return true
   } catch {
@@ -36,11 +98,7 @@ export function setTeenPhoto(url: string): boolean {
 }
 
 export function getTeenPhoto(): string | null {
-  try {
-    return localStorage.getItem(PHOTO_KEY)
-  } catch {
-    return null
-  }
+  return cachedTeenPhoto
 }
 
 const defaultPhoto = (): string | null => null
@@ -50,7 +108,10 @@ function subscribePhoto(listener: () => void) {
 
   const onCustom = () => listener()
   const onStorage = (e: StorageEvent) => {
-    if (e.key === PHOTO_KEY) listener()
+    if (e.key === PHOTO_KEY) {
+      loadTeenPhotoFromStorage()
+      listener()
+    }
   }
 
   window.addEventListener(PHOTO_EVENT, onCustom)
@@ -67,46 +128,14 @@ export function useTeenPhoto() {
 }
 
 export function getProfile(): Profile {
-  try {
-    const raw = localStorage.getItem(PROFILE_KEY)
-    if (!raw) return { ...defaultProfile }
-
-    const parsed = JSON.parse(raw)
-    if (!parsed || typeof parsed !== "object") return { ...defaultProfile }
-
-    const teenAge: number | null = (() => {
-      const v = (parsed as Record<string, unknown>).teenAge
-      if (v === null || v === undefined || v === "") return null
-      const n = Number(v)
-      return Number.isFinite(n) && n >= 14 && n <= 21 ? n : null
-    })()
-
-    const carYear: number | null = (() => {
-      const v = (parsed as Record<string, unknown>).carYear
-      if (v === null || v === undefined || v === "") return null
-      const n = Number(v)
-      const maxYear = new Date().getFullYear() + 1
-      return Number.isFinite(n) && n >= 1900 && n <= maxYear ? n : null
-    })()
-
-    const p = parsed as Partial<Profile>
-
-    return {
-      teenName: typeof p.teenName === "string" ? p.teenName : "",
-      parentName: typeof p.parentName === "string" ? p.parentName : "",
-      teenAge,
-      carMake: typeof p.carMake === "string" ? p.carMake : "",
-      carModel: typeof p.carModel === "string" ? p.carModel : "",
-      carYear,
-    }
-  } catch {
-    return { ...defaultProfile }
-  }
+  return cachedProfileSnapshot
 }
 
 export function setProfile(profile: Profile): boolean {
   try {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile))
+    const normalized = normalizeProfile(profile)
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(normalized))
+    cachedProfileSnapshot = normalized
     window.dispatchEvent(new Event(PROFILE_EVENT))
     return true
   } catch {
@@ -125,7 +154,10 @@ function subscribeProfile(listener: () => void) {
 
   const onCustom = () => listener()
   const onStorage = (e: StorageEvent) => {
-    if (e.key === PROFILE_KEY) listener()
+    if (e.key === PROFILE_KEY) {
+      loadProfileFromStorage()
+      listener()
+    }
   }
 
   window.addEventListener(PROFILE_EVENT, onCustom)

@@ -3,7 +3,7 @@ import type { PracticeQuestion } from "../data/practiceQuestions"
 
 export type Question = PracticeQuestion
 
-export const shuffleArray = <T,>(items: T[]): T[] => {
+export const shuffleArray = <T,>(items: readonly T[]): T[] => {
   const copy = [...items]
 
   for (let i = copy.length - 1; i > 0; i--) {
@@ -26,7 +26,7 @@ export const shuffleAnswersForQuestion = (question: Question): Question => {
     (item) => item.originalIndex === question.correctIndex
   )
 
-  if (newCorrectIndex === -1) {
+  if (newCorrectIndex < 0 || newCorrectIndex > 3) {
     throw new Error("Failed to locate correct answer after shuffling.")
   }
 
@@ -43,8 +43,8 @@ export const shuffleAnswersForQuestion = (question: Question): Question => {
 }
 
 export const buildTestQuestions = (
-  questions: Question[],
-  count: number,
+  questions: readonly Question[],
+  count: number
 ): Question[] => {
   const safeCount = Math.max(0, Math.min(count, questions.length))
 

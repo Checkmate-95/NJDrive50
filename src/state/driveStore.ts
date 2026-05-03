@@ -316,8 +316,11 @@ function subscribeHistory(listener: () => void) {
   const onCustomEvent = () => listener()
 
   const onStorageEvent = (e: StorageEvent) => {
-    if (e.key === DRIVE_HISTORY_STORAGE_KEY) listener()
+  if (e.key === DRIVE_HISTORY_STORAGE_KEY) {
+    loadHistoryFromStorage()
+    listener()
   }
+}
 
   window.addEventListener(DRIVE_HISTORY_EVENT, onCustomEvent)
   window.addEventListener("storage", onStorageEvent)

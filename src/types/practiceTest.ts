@@ -1,8 +1,11 @@
+export type AnswerSet = [string, string, string, string]
+export type AnswerIndex = 0 | 1 | 2 | 3
+
 export type Question = {
   id: string
   question: string
-  answers: [string, string, string, string]
-  correctIndex: 0 | 1 | 2 | 3
+  answers: AnswerSet
+  correctIndex: AnswerIndex
   explanation: string
 }
 

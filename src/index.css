@@ -1,26 +1,41 @@
 @import "tailwindcss";
 
-/* ─── Custom Animations ─────────────────────────────────────── */
+/* ─── Custom Animations (Tailwind v4) ───────────────────────── */
 
-@keyframes pulseGreen {
-  0%   { box-shadow: 0 0 0 0    rgba(0, 200, 81, 0.5); }
-  70%  { box-shadow: 0 0 0 10px rgba(0, 200, 81, 0);   }
-  100% { box-shadow: 0 0 0 0    rgba(0, 200, 81, 0);   }
-}
-
-@keyframes pulseRed {
-  0%   { box-shadow: 0 0 0 0    rgba(217, 48, 37, 0.5); }
-  70%  { box-shadow: 0 0 0 10px rgba(217, 48, 37, 0);   }
-  100% { box-shadow: 0 0 0 0    rgba(217, 48, 37, 0);   }
-}
-
-/* Register as Tailwind utility classes (v4 syntax) */
 @theme {
-  --animate-pulse-green: pulseGreen 1.5s ease-out infinite;
-  --animate-pulse-red:   pulseRed   1.5s ease-out infinite;
+  /* Animation tokens */
+  --animate-pulse-green:  pulseGreen 1.5s ease-out infinite;
+  --animate-pulse-red:    pulseRed   1.5s ease-out infinite;
+  --animate-pulse-yellow: pulseYellow 1.5s ease-out infinite;
+  --animate-pulse-blue:   pulseBlue   1.5s ease-out infinite;
+
+  @keyframes pulseGreen {
+    0%   { box-shadow: 0 0 0 0    rgba(0, 200, 81, 0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(0, 200, 81, 0);   }
+    100% { box-shadow: 0 0 0 0    rgba(0, 200, 81, 0);   }
+  }
+
+  @keyframes pulseRed {
+    0%   { box-shadow: 0 0 0 0    rgba(217, 48, 37, 0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(217, 48, 37, 0);   }
+    100% { box-shadow: 0 0 0 0    rgba(217, 48, 37, 0);   }
+  }
+
+  @keyframes pulseYellow {
+    0%   { box-shadow: 0 0 0 0    rgba(255, 193, 7, 0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);   }
+    100% { box-shadow: 0 0 0 0    rgba(255, 193, 7, 0);   }
+  }
+
+  @keyframes pulseBlue {
+    0%   { box-shadow: 0 0 0 0    rgba(25, 118, 210, 0.5); }
+    70%  { box-shadow: 0 0 0 10px rgba(25, 118, 210, 0);   }
+    100% { box-shadow: 0 0 0 0    rgba(25, 118, 210, 0);   }
+  }
 }
 
 /* ─── Utility classes for direct use ────────────────────────── */
+
 .animate-pulse-green {
   animation: var(--animate-pulse-green);
 }
@@ -29,11 +44,23 @@
   animation: var(--animate-pulse-red);
 }
 
-/* ─── Accessibility ──────────────────────────────────────────── */
+.animate-pulse-yellow {
+  animation: var(--animate-pulse-yellow);
+}
+
+.animate-pulse-blue {
+  animation: var(--animate-pulse-blue);
+}
+
+/* ─── Accessibility: reduce motion ──────────────────────────── */
+
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse-green,
-  .animate-pulse-red {
+  .animate-pulse-red,
+  .animate-pulse-yellow,
+  .animate-pulse-blue {
     animation: none;
+    /* Keep a static ring so feedback is still visible */
     box-shadow: 0 0 0 2px rgba(0, 200, 81, 0.5);
   }
 }

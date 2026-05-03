@@ -80,6 +80,7 @@ export default function App() {
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const prevStackLengthRef = useRef(stack.length)
 
+  // Initialize reminders only if onboarding exists
   useEffect(() => {
     const data = loadOnboardingData()
     if (!data?.teenName) return
@@ -88,6 +89,7 @@ export default function App() {
     initializeReminders(prefs)
   }, [])
 
+  // ⭐ FIXED STARTUP LOGIC ⭐
   useEffect(() => {
     const checkShareUrl = () => {
       const path = window.location.pathname
@@ -104,13 +106,19 @@ export default function App() {
     if (checkShareUrl()) return
 
     const data = loadOnboardingData()
-    if (screen === "intro") {
-      setScreen(data?.teenName ? "home" : "intro")
+
+    // CASE 1: No onboarding data → show Intro
+    if (!data?.teenName) {
+      if (screen !== "intro") setScreen("intro")
+      return
     }
 
-    window.addEventListener("popstate", checkShareUrl)
-    return () => window.removeEventListener("popstate", checkShareUrl)
-  }, [setScreen, screen])
+    // CASE 2: Onboarding complete → go Home
+    if (screen === "intro" || screen === "onboarding") {
+      setScreen("home")
+    }
+
+  }, [screen, setScreen])
 
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current
@@ -152,7 +160,7 @@ export default function App() {
         return <ExportLog setScreen={setScreenCompat} />
 
       case "settings":
-  return <Settings />
+        return <Settings />
 
       case "teenDriverRules":
         return <TeenDriverRules />

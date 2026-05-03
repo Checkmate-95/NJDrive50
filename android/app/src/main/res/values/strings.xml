@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NJDRIVE50</string>
+    <string name="title_activity_main">NJDRIVE50</string>
+    <string name="package_name">com.njdrive50.app</string>
+    <string name="custom_url_scheme">com.njdrive50.app</string>
+</resources>

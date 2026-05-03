@@ -1,0 +1,121 @@
+/* src/layout/AppLayout.css */
+
+/* -------------------------------------------------------
+   APP SHELL — full-height flex column layout
+   .app-layout
+     ├── .header        (fixed top bar)
+     ├── .content       (scrollable main area, fills remaining height)
+     └── .footer-nav    (fixed bottom nav bar)
+------------------------------------------------------- */
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background-color: var(--color-bg, #f7f6f2);
+  color: var(--color-text, #28251d);
+}
+
+/* -------------------------------------------------------
+   HEADER
+------------------------------------------------------- */
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding-inline: 1rem;
+
+  background-color: var(--color-surface, #f9f8f5);
+  border-bottom: 1px solid var(--color-border, #d4d1ca);
+  box-shadow: 0 1px 4px oklch(0.2 0.01 80 / 0.06);
+
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text, #28251d);
+
+  /* Prevent content from showing through on scroll */
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* -------------------------------------------------------
+   MAIN CONTENT AREA
+   Offset by header height (top) and footer height (bottom)
+   so fixed bars never overlap scrollable content.
+------------------------------------------------------- */
+
+.content {
+  flex: 1;
+  margin-top: 56px;    /* matches .header height */
+  margin-bottom: 64px; /* matches .footer-nav height */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 1rem;
+}
+
+/* -------------------------------------------------------
+   FOOTER NAV
+------------------------------------------------------- */
+
+.footer-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding-inline: 0.5rem;
+
+  /* Safe area inset for iPhone home indicator */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+
+  background-color: var(--color-surface, #f9f8f5);
+  border-top: 1px solid var(--color-border, #d4d1ca);
+  box-shadow: 0 -1px 4px oklch(0.2 0.01 80 / 0.06);
+
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* -------------------------------------------------------
+   RESPONSIVE — tablet and up
+   Content max-width handled by Tailwind wrapper in AppLayout.tsx.
+   These rules tune shell spacing for larger screens.
+------------------------------------------------------- */
+
+@media (min-width: 768px) {
+  .header {
+    height: 60px;
+    padding-inline: 1.5rem;
+    font-size: 1.25rem;
+  }
+
+  .content {
+    margin-top: 60px;
+    margin-bottom: 0;   /* footer-nav hidden on desktop — see below */
+    padding: 1.5rem;
+  }
+
+  /* Footer nav collapses on desktop (side nav or top nav takes over) */
+  .footer-nav {
+    display: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  .content {
+    padding: 2rem;
+  }
+}

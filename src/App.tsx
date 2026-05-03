@@ -107,11 +107,14 @@ export default function App() {
 
     const data = loadOnboardingData()
 
-    // CASE 1: No onboarding data → show Intro
-    if (!data?.teenName) {
-      if (screen !== "intro") setScreen("intro")
-      return
-    }
+    // CASE 1: No onboarding data → allow Intro and Onboarding
+if (!data?.teenName) {
+  if (screen !== "intro" && screen !== "onboarding") {
+    setScreen("intro")
+  }
+  return
+}
+
 
     // CASE 2: Onboarding complete → go Home
     if (screen === "intro" || screen === "onboarding") {

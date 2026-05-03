@@ -105,12 +105,13 @@ export default function DriveSummaryContent({
       window.clearInterval(intervalId)
     }
   }, [
-    activeSession?.isActive,
-    activeSession?.isRunning,
-    activeSession?.startTime,
-    activeSession?.elapsedBeforeStart,
-    getElapsedSeconds,
-  ])
+  activeSession?.isActive,
+  activeSession?.isRunning,
+  activeSession?.startTime,
+  activeSession?.dayMs,
+  activeSession?.nightMs,
+  getElapsedSeconds,
+])
 
   const {
     totalHours,

@@ -123,20 +123,17 @@ async function buildDriveSnapshot(opts?: { isPreview?: boolean }): Promise<Previ
 
   const snapshotTime = Date.now()
 
-  storeSnapshot.tick(undefined, snapshotTime)
+storeSnapshot.tick(undefined, snapshotTime)
 
-  const fresh = useActiveDriveStore.getState().session
-  const liveMode =
-    useActiveDriveStore.getState().getCurrentMode() ?? fresh.currentMode ?? "day"
+const fresh = useActiveDriveStore.getState().session
+const liveMode =
+  useActiveDriveStore.getState().getCurrentMode() ?? fresh.currentMode ?? "day"
 
-  const currentEndCoord = await getCurrentPosition()
+const currentEndCoord = await getCurrentPosition()
 
-  const finalElapsedMs =
-    fresh.isRunning && fresh.startTime
-      ? fresh.elapsedBeforeStart + (snapshotTime - fresh.startTime)
-      : fresh.elapsedBeforeStart
+const finalElapsedMs = fresh.dayMs + fresh.nightMs
 
-  if (finalElapsedMs <= 0) return null
+if (finalElapsedMs <= 0) return null
 
   // [FIX-2] Bucket reconciliation — runs once against locked snapshotTime
   let finalDayMs = Math.max(0, fresh.dayMs)

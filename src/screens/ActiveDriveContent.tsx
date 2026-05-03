@@ -11,6 +11,7 @@
 // [FIX-10] primeSessionCoord uses appendRoutePoint store action
 // [FIX-11] setCurrentDrive typed as DriveEntry | null — any removed
 // [FIX-12] Tooltip parent div has group class so hover works correctly
+// [FIX-13] Timer display freezes at last running value when paused (no 00:00 flicker)
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import type { Dispatch, SetStateAction } from "react"
@@ -43,7 +44,7 @@ const formatTime = (ms: number) => {
   const minutes = Math.floor((totalSec % 3600) / 60)
   const seconds = totalSec % 60
   return [hours, minutes, seconds]
-    .map((part) => String(part).padStart(2, "0"))
+    .map(part => String(part).padStart(2, "0"))
     .join(":")
 }
 
@@ -96,9 +97,9 @@ async function getAccurateMileage(start: RouteCoord, end: RouteCoord) {
 }
 
 function getCurrentPosition(): Promise<RouteCoord | null> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     navigator.geolocation.getCurrentPosition(
-      (pos) =>
+      pos =>
         resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => resolve(null),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
@@ -114,7 +115,9 @@ type PreviewDriveEntry = DriveEntry & {
 }
 
 // [FIX-8] Defined outside component — reads store via getState() at call time
-async function buildDriveSnapshot(opts?: { isPreview?: boolean }): Promise<PreviewDriveEntry | null> {
+async function buildDriveSnapshot(
+  opts?: { isPreview?: boolean }
+): Promise<PreviewDriveEntry | null> {
   const storeSnapshot = useActiveDriveStore.getState()
   const session = storeSnapshot.session
 
@@ -123,17 +126,17 @@ async function buildDriveSnapshot(opts?: { isPreview?: boolean }): Promise<Previ
 
   const snapshotTime = Date.now()
 
-storeSnapshot.tick(undefined, snapshotTime)
+  storeSnapshot.tick(undefined, snapshotTime)
 
-const fresh = useActiveDriveStore.getState().session
-const liveMode =
-  useActiveDriveStore.getState().getCurrentMode() ?? fresh.currentMode ?? "day"
+  const fresh = useActiveDriveStore.getState().session
+  const liveMode =
+    useActiveDriveStore.getState().getCurrentMode() ?? fresh.currentMode ?? "day"
 
-const currentEndCoord = await getCurrentPosition()
+  const currentEndCoord = await getCurrentPosition()
 
-const finalElapsedMs = fresh.dayMs + fresh.nightMs
+  const finalElapsedMs = fresh.dayMs + fresh.nightMs
 
-if (finalElapsedMs <= 0) return null
+  if (finalElapsedMs <= 0) return null
 
   // [FIX-2] Bucket reconciliation — runs once against locked snapshotTime
   let finalDayMs = Math.max(0, fresh.dayMs)
@@ -165,7 +168,10 @@ if (finalElapsedMs <= 0) return null
   let milesSource: MilesSource = "gps-accumulated"
 
   if (fresh.startCoord && currentEndCoord) {
-    const routeMiles = await getAccurateMileage(fresh.startCoord, currentEndCoord)
+    const routeMiles = await getAccurateMileage(
+      fresh.startCoord,
+      currentEndCoord
+    )
     if (routeMiles !== null) {
       accurateMiles = routeMiles
       milesSource = "routes-api"
@@ -219,7 +225,8 @@ export default function ActiveDriveContent({
   const gpsRef = useRef<number | null>(null)
 
   // [FIX-1] Single frozen snapshot shared between Preview and Save
-  const frozenSnapshotRef = useRef<Promise<PreviewDriveEntry | null> | null>(null)
+  const frozenSnapshotRef =
+    useRef<Promise<PreviewDriveEntry | null> | null>(null)
 
   // [FIX-4] Atomic save guard — synchronous flip prevents double-save
   const isSavingRef = useRef(false)
@@ -260,7 +267,7 @@ export default function ActiveDriveContent({
   // [FIX-10] Uses store's appendRoutePoint action
   const primeSessionCoord = useCallback(
     (coord: RouteCoord) => {
-      useActiveDriveStore.setState((state) => {
+      useActiveDriveStore.setState(state => {
         const s = state.session
         return {
           session: {
@@ -276,15 +283,26 @@ export default function ActiveDriveContent({
     [appendRoutePoint]
   )
 
+  // [FIX-13] Freeze displayed timer while paused to avoid 00:00 flicker
+  const [frozenElapsedMs, setFrozenElapsedMs] = useState(0)
+
   const elapsedSeconds = getElapsedSeconds()
-  const elapsedMs = elapsedSeconds * 1000
-  const formattedElapsed = formatTime(elapsedMs)
+  const rawElapsedMs = elapsedSeconds * 1000
+
+  useEffect(() => {
+    if (session.isRunning) {
+      setFrozenElapsedMs(rawElapsedMs)
+    }
+  }, [rawElapsedMs, session.isRunning])
+
+  const displayedMs = session.isRunning ? rawElapsedMs : frozenElapsedMs
+  const formattedElapsed = formatTime(displayedMs)
 
   const isRunning = session.isRunning
   const hasActiveDrive = session.isActive
-  const saveDisabled = !hasActiveDrive || elapsedMs < 10000 || isStopping
+  const saveDisabled = !hasActiveDrive || displayedMs < 10000 || isStopping
   const previewDisabled =
-    !hasActiveDrive || elapsedMs <= 0 || isStopping || isPreviewing
+    !hasActiveDrive || displayedMs <= 0 || isStopping || isPreviewing
 
   const effectiveMode: DriveMode | null = hasActiveDrive
     ? getCurrentMode()
@@ -345,13 +363,17 @@ export default function ActiveDriveContent({
 
     gpsRef.current = window.setInterval(() => {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        pos => {
           const newCoord: RouteCoord = {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
           }
 
-          if (!Number.isFinite(newCoord.lat) || !Number.isFinite(newCoord.lng)) return
+          if (
+            !Number.isFinite(newCoord.lat) ||
+            !Number.isFinite(newCoord.lng)
+          )
+            return
           if (newCoord.lat === 0 && newCoord.lng === 0) return
           if (pos.coords.accuracy && pos.coords.accuracy > 100) return
 
@@ -359,7 +381,9 @@ export default function ActiveDriveContent({
           tick(newCoord, Date.now())
         },
         () => {
-          setLocationError("Location access is required for accurate mileage.")
+          setLocationError(
+            "Location access is required for accurate mileage."
+          )
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
       )
@@ -384,7 +408,7 @@ export default function ActiveDriveContent({
     }
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      pos => {
         const coord: RouteCoord = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
@@ -448,7 +472,11 @@ export default function ActiveDriveContent({
       if (!finalizedDrive) return
 
       // Strip preview flag and milesSource before persisting
-      const { isPreview: _stripped, milesSource: _src, ...driveToSave } = finalizedDrive
+      const {
+        isPreview: _stripped,
+        milesSource: _src,
+        ...driveToSave
+      } = finalizedDrive
 
       saveDrive(driveToSave)
       setCurrentDrive(driveToSave as DriveEntry)
@@ -459,7 +487,9 @@ export default function ActiveDriveContent({
       hardReset()
     } catch (err) {
       console.error("[ActiveDrive] Save failed:", err)
-      setLocationError("Drive save failed. Please try again before closing the app.")
+      setLocationError(
+        "Drive save failed. Please try again before closing the app."
+      )
     } finally {
       isSavingRef.current = false
       setIsStopping(false)
@@ -563,7 +593,7 @@ export default function ActiveDriveContent({
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-1.5">
                 <div className="grid grid-cols-3 gap-2">
-                  {(["auto", "day", "night"] as NightOverride[]).map((mode) => (
+                  {(["auto", "day", "night"] as NightOverride[]).map(mode => (
                     <button
                       key={mode}
                       type="button"
@@ -724,7 +754,7 @@ export default function ActiveDriveContent({
                   </div>
 
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {["Clear", "Rain", "Snow", "Fog"].map((w) => {
+                    {["Clear", "Rain", "Snow", "Fog"].map(w => {
                       const isSelected = session.weather === w
                       return (
                         <button

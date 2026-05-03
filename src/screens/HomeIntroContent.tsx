@@ -1,11 +1,12 @@
 // src/screens/HomeIntroContent.tsx
+// src/screens/HomeIntroContent.tsx
 import type { Dispatch, SetStateAction } from "react"
 import type { Screen } from "../App"
-import { navigate } from "../navigation/navMap"
 
 type HomeIntroContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
 }
+
 
 export default function HomeIntroContent({ setScreen }: HomeIntroContentProps) {
   return (
@@ -38,7 +39,8 @@ export default function HomeIntroContent({ setScreen }: HomeIntroContentProps) {
 
         <button
           type="button"
-          onClick={() => navigate("intro", "continue", setScreen)}
+         onClick={() => setScreen("onboarding")}
+
           className="w-full rounded-lg bg-[#0A1E5E] text-white py-3 text-base font-semibold hover:bg-[#f9c80e] hover:text-[#0A1E5E] transition-colors shadow-md"
         >
           Get Started

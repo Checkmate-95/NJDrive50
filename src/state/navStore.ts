@@ -42,7 +42,6 @@ function isScreen(value: unknown): value is Screen {
     value === "helpFaq" ||
     value === "aiHelper" ||
     value === "teenDriverRules" ||
-    value === "manageProfile" ||
     value === "restartOnboarding" ||
     value === "dataCleared" ||
     value === "practiceTest"

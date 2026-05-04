@@ -73,7 +73,7 @@ export default function Settings() {
           <h2 className="text-lg font-bold mb-4">Account</h2>
 
           <button
-            onClick={() => setScreen("manageProfile")}
+            onClick={() => setScreen("onboarding")}
             className="w-full bg-[#F7F9FC] text-[#08194A] py-3 rounded-xl font-semibold border border-[#08194A]/15 hover:bg-[#f9c80e]/10 transition"
           >
             Manage Profile

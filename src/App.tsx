@@ -22,7 +22,6 @@ const TodaysDrive = lazy(() => import("./screens/TodaysDrive"))
 const HelpFaq = lazy(() => import("./screens/HelpFAQ"))
 const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
 const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPage"))
-const ManageProfile = lazy(() => import("./screens/ManageProfile"))
 const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
 
@@ -198,8 +197,6 @@ if (!data?.teenName) {
       case "practiceTest":
         return <PublicPracticeTestPage />
 
-      case "manageProfile":
-        return <ManageProfile />
 
       case "restartOnboarding":
         return <RestartOnboarding />

@@ -12,6 +12,7 @@
 // [FIX-11] setCurrentDrive typed as DriveEntry | null — any removed
 // [FIX-12] Tooltip parent div has group class so hover works correctly
 // [FIX-13] Timer display freezes at last running value when paused (no 00:00 flicker)
+// [FIX-14] ensureLocationPermission() gates all geolocation calls — Android-safe
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import type { Dispatch, SetStateAction } from "react"
@@ -99,12 +100,32 @@ async function getAccurateMileage(start: RouteCoord, end: RouteCoord) {
 function getCurrentPosition(): Promise<RouteCoord | null> {
   return new Promise(resolve => {
     navigator.geolocation.getCurrentPosition(
-      pos =>
-        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => resolve(null),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
     )
   })
+}
+
+// [FIX-14] Permission guard — checks browser API first, then triggers native popup
+async function ensureLocationPermission(): Promise<boolean> {
+  try {
+    if (navigator.permissions) {
+      const status = await navigator.permissions.query({
+        name: "geolocation" as PermissionName,
+      })
+      if (status.state === "granted") return true
+    }
+
+    return new Promise(resolve => {
+      navigator.geolocation.getCurrentPosition(
+        () => resolve(true),
+        () => resolve(false)
+      )
+    })
+  } catch {
+    return false
+  }
 }
 
 type MilesSource = "routes-api" | "gps-accumulated"
@@ -356,37 +377,45 @@ export default function ActiveDriveContent({
     return clearTimerLoop
   }, [session.isActive, session.isRunning, tick, clearTimerLoop])
 
+  // [FIX-14] GPS polling loop gated by ensureLocationPermission
   useEffect(() => {
     clearGpsLoop()
 
     if (!session.isRunning) return
 
     gpsRef.current = window.setInterval(() => {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const newCoord: RouteCoord = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          }
+      ensureLocationPermission().then(ok => {
+        if (!ok) {
+          setLocationError("Location access is required for accurate mileage.")
+          return
+        }
 
-          if (
-            !Number.isFinite(newCoord.lat) ||
-            !Number.isFinite(newCoord.lng)
-          )
-            return
-          if (newCoord.lat === 0 && newCoord.lng === 0) return
-          if (pos.coords.accuracy && pos.coords.accuracy > 100) return
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const newCoord: RouteCoord = {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+            }
 
-          setLocationError(null)
-          tick(newCoord, Date.now())
-        },
-        () => {
-          setLocationError(
-            "Location access is required for accurate mileage."
-          )
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-      )
+            if (
+              !Number.isFinite(newCoord.lat) ||
+              !Number.isFinite(newCoord.lng)
+            )
+              return
+            if (newCoord.lat === 0 && newCoord.lng === 0) return
+            if (pos.coords.accuracy && pos.coords.accuracy > 100) return
+
+            setLocationError(null)
+            tick(newCoord, Date.now())
+          },
+          () => {
+            setLocationError(
+              "Location access is required for accurate mileage."
+            )
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+        )
+      })
     }, 10000)
 
     return clearGpsLoop
@@ -398,12 +427,19 @@ export default function ActiveDriveContent({
     }
   }, [clearAllLoops])
 
-  const handlePress = () => {
+  // [FIX-14] handlePress gated by ensureLocationPermission — async
+  const handlePress = async () => {
     if (isStopping || isPreviewing) return
 
     if (session.isRunning) {
       pauseDrive()
       setShowStopConfirm(false)
+      return
+    }
+
+    const ok = await ensureLocationPermission()
+    if (!ok) {
+      setLocationError("Location access is required to start drive tracking.")
       return
     }
 
@@ -420,7 +456,6 @@ export default function ActiveDriveContent({
           const sunriseDate = getSunrise(coord.lat, coord.lng, today)
           const sunsetDate = getSunset(coord.lat, coord.lng, today)
 
-          // [FIX] new startDrive signature: (now?, coord?, options?)
           startDrive(Date.now(), coord, {
             sunrise: (sunriseDate ?? new Date(0)).getTime(),
             sunset: (sunsetDate ?? new Date(0)).getTime(),
@@ -728,7 +763,7 @@ export default function ActiveDriveContent({
                 </div>
 
                 <div className="sm:col-span-2">
-                  {/* [FIX-12] group class added so CSS group-hover tooltip works */}
+                  {/* [FIX-12] group class on parent enables CSS group-hover tooltip */}
                   <div className="group relative flex items-center gap-1">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                       Weather Conditions

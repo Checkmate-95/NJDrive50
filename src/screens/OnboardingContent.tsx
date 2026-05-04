@@ -7,7 +7,6 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react"
-import { useJsApiLoader } from "@react-google-maps/api"
 import type { Screen } from "../App"
 import BottomPanel from "../components/meters/BottomPanel"
 import {
@@ -19,8 +18,7 @@ import {
   useTeenPhoto,
   setTeenPhoto as setGlobalTeenPhoto,
 } from "../state/profileStore"
-
-const MAPS_LIBRARIES: ["places"] = ["places"]
+import { useMapContext } from "../components/map/MapContext"
 
 type OnboardingContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
@@ -132,11 +130,8 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   const initialDataRef = useRef<OnboardingData>(loadOnboardingData())
   const saved = initialDataRef.current
 
-  // ── Load Google Maps with Places library ──────────────────────────────────
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
-    libraries: MAPS_LIBRARIES,
-  })
+  // ── Shared Google Maps loader (MapProvider owns the single load) ──────────
+  const { isLoaded } = useMapContext()
 
   const photoInputRef = useRef<HTMLInputElement | null>(null)
   const addressInputRef = useRef<HTMLInputElement | null>(null)
@@ -211,7 +206,12 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   useEffect(() => {
     if (!isLoaded || !addressInputRef.current || autocompleteRef.current) return
 
-    const autocomplete = new google.maps.places.Autocomplete(addressInputRef.current, {
+    const input = addressInputRef.current
+    const googleMaps = (window as any)?.google?.maps
+
+    if (!googleMaps?.places?.Autocomplete) return
+
+    const autocomplete = new googleMaps.places.Autocomplete(input, {
       componentRestrictions: { country: "us" },
       types: ["address"],
       fields: ["address_components", "formatted_address", "geometry"],
@@ -252,13 +252,13 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
       if (autocompleteListenerRef.current?.remove) {
         autocompleteListenerRef.current.remove()
       }
-      if (google.maps.event && autocompleteRef.current) {
-        google.maps.event.clearInstanceListeners(autocompleteRef.current)
+      if (googleMaps?.event && autocompleteRef.current) {
+        googleMaps.event.clearInstanceListeners(autocompleteRef.current)
       }
       autocompleteListenerRef.current = null
       autocompleteRef.current = null
     }
-  }, [isLoaded]) // ← fires once when Maps API finishes loading
+  }, [isLoaded])
 
   const handleTeenPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -276,17 +276,33 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
 
   const teenComplete = Boolean(teenName.trim() && teenBirthday.trim())
   const parentComplete = Boolean(parentName.trim() && relationship.trim())
-  const canContinue = Boolean(teenName.trim() && permitIssueDate.trim() && stateValue.trim())
+
+  const canContinue = Boolean(
+    teenName.trim() &&
+    teenBirthday.trim() &&
+    teenPhone.trim() &&
+    parentName.trim() &&
+    parentPhone.trim() &&
+    relationship.trim() &&
+    permitIssueDate.trim() &&
+    permitNumber.trim() &&
+    address.trim() &&
+    homeTown.trim() &&
+    homeZip.trim() &&
+    homeCounty.trim() &&
+    homeLat !== null &&
+    homeLng !== null
+  )
 
   const hasAddressResolution = Boolean(
     homeTown || homeZip || homeCounty || homeLat !== null || homeLng !== null
   )
 
   const handleContinue = () => {
-  if (!canContinue) return
-  persistOnboarding()
-  setScreen("home")
-}
+    if (!canContinue) return
+    persistOnboarding()
+    setScreen("home")
+  }
 
   const handleTeenPanelSave = () => {
     persistOnboarding()
@@ -425,7 +441,6 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
 
               <div>
                 <label className={labelClass}>Home Address</label>
-                {/* autoComplete="off" prevents browser dropdown from blocking Google Places */}
                 <input
                   ref={addressInputRef}
                   type="text"

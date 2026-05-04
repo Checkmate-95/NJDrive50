@@ -11,10 +11,9 @@
 
 import { GoogleMap, Polyline, Marker } from '@react-google-maps/api'
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
-
+import { useMapContext } from "./MapContext"
 
 export type RouteCoord = { lat: number; lng: number }
-
 
 export type DriveMeta = {
   miles: number
@@ -22,13 +21,11 @@ export type DriveMeta = {
   timeOfDay: 'Day' | 'Night'
 }
 
-
 type DriveMapPanelProps = {
   route?: RouteCoord[]
   activePosition?: RouteCoord | null
   driveMeta?: DriveMeta | null
 }
-
 
 const DEMO_ROUTE: RouteCoord[] = [
   { lat: 40.0583, lng: -74.4057 },
@@ -37,12 +34,18 @@ const DEMO_ROUTE: RouteCoord[] = [
   { lat: 40.08,   lng: -74.35   },
 ]
 
-
 export const DriveMapPanel = ({
   route: externalRoute,
   activePosition = null,
   driveMeta = null,
 }: DriveMapPanelProps) => {
+
+  // NEW: use shared loader
+  const { isLoaded } = useMapContext()
+
+  // Prevent rendering until Google Maps API is ready
+  if (!isLoaded) return null
+
   const mapRef = useRef<google.maps.Map | null>(null)
 
   const [showMarkers, setShowMarkers] = useState(true)
@@ -52,9 +55,7 @@ export const DriveMapPanel = ({
   const [playback,    setPlayback]    = useState(false)
   const [playIndex,   setPlayIndex]   = useState(0)
 
-  // [FIX-1] Track when the Google Maps API is confirmed ready — icon useMemo
-  // calls below depend on this flag so google.maps.SymbolPath is never
-  // accessed before the script has finished loading.
+  // [FIX-1] Track when the Google Maps API is confirmed ready
   const [mapsLoaded, setMapsLoaded] = useState(false)
 
   const route = useMemo(
@@ -103,8 +104,7 @@ export const DriveMapPanel = ({
   const onLoad = useCallback(
     (map: google.maps.Map) => {
       mapRef.current = map
-      // [FIX-1] Mark API as ready before any google.maps.SymbolPath access
-      setMapsLoaded(true)
+      setMapsLoaded(true) // [FIX-1]
       fitBounds()
     },
     [fitBounds]
@@ -115,9 +115,6 @@ export const DriveMapPanel = ({
   // ─────────────────────────────────────────────
   useEffect(() => {
     if (!playback) return
-    // [FIX-2] Effect only stops playback at end — does not reset playIndex.
-    // playIndex reset is owned by the toggle button handler so replay always
-    // starts cleanly from index 0 without a stale-index flicker.
     if (playIndex >= route.length - 1) {
       setPlayback(false)
       return
@@ -129,9 +126,7 @@ export const DriveMapPanel = ({
   const playbackPosition = playback ? route[playIndex] : null
 
   // ─────────────────────────────────────────────
-  // MARKER ICONS
-  // [FIX-1] All three icons gated on mapsLoaded — google.maps.SymbolPath
-  // is only accessed after onLoad confirms the API is available.
+  // MARKER ICONS (gated by mapsLoaded)
   // ─────────────────────────────────────────────
   const startIcon = useMemo(() => {
     if (!mapsLoaded) return undefined
@@ -193,7 +188,6 @@ export const DriveMapPanel = ({
           }}
         />
 
-        {/* [FIX-1] mapsLoaded guard ensures icons are defined before rendering */}
         {showMarkers && mapsLoaded && (
           <>
             <Marker
@@ -212,40 +206,13 @@ export const DriveMapPanel = ({
         {showLive && activePosition && mapsLoaded && (
           <Marker position={activePosition} icon={liveIcon} />
         )}
+
         {playbackPosition && mapsLoaded && (
           <Marker position={playbackPosition} icon={liveIcon} />
         )}
       </GoogleMap>
 
-      {/* ─────────────────────────────────────────────
-          RIGHT-SIDE CONTEXT CARD
-      ───────────────────────────────────────────── */}
-      {driveMeta && (
-        <div
-          style={{
-            position:      'absolute',
-            top:           '12px',
-            right:         '12px',
-            background:    'rgba(8, 25, 74, 0.88)',
-            color:         '#ffffff',
-            padding:       '12px 16px',
-            borderRadius:  '16px',
-            fontSize:      '13px',
-            lineHeight:    '1.5',
-            boxShadow:     '0 4px 14px rgba(0,0,0,0.35)',
-            backdropFilter: 'blur(6px)',
-            minWidth:      '120px',
-          }}
-        >
-          <div style={{ fontWeight: 700 }}>{driveMeta.miles.toFixed(1)} mi</div>
-          <div style={{ opacity: 0.85 }}>{driveMeta.duration}</div>
-          <div style={{ opacity: 0.85 }}>{driveMeta.timeOfDay}</div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────
-          FLOATING RECENTER BUTTON
-      ───────────────────────────────────────────── */}
+      {/* FLOATING RECENTER BUTTON */}
       <button
         onClick={fitBounds}
         style={{
@@ -265,9 +232,7 @@ export const DriveMapPanel = ({
         Recenter
       </button>
 
-      {/* ─────────────────────────────────────────────
-          OPTIONS TOGGLE BUTTON
-      ───────────────────────────────────────────── */}
+      {/* OPTIONS TOGGLE BUTTON */}
       <button
         onClick={() => setShowOptions((v) => !v)}
         style={{
@@ -320,8 +285,6 @@ export const DriveMapPanel = ({
             {showLive ? 'Hide Live Position' : 'Show Live Position'}
           </button>
 
-          {/* [FIX-2] Reset playIndex to 0 before toggling playback on —
-              effect never sees a stale end-of-route index on replay */}
           <button
             onClick={() => {
               setPlayIndex(0)
@@ -333,10 +296,32 @@ export const DriveMapPanel = ({
           </button>
         </div>
       )}
+
+      {driveMeta && (
+        <div
+          style={{
+            position:      'absolute',
+            top:           '12px',
+            right:         '12px',
+            background:    'rgba(8, 25, 74, 0.88)',
+            color:         '#ffffff',
+            padding:       '12px 16px',
+            borderRadius:  '16px',
+            fontSize:      '13px',
+            lineHeight:    '1.5',
+            boxShadow:     '0 4px 14px rgba(0,0,0,0.35)',
+            backdropFilter: 'blur(6px)',
+            minWidth:      '120px',
+          }}
+        >
+          <div style={{ fontWeight: 700 }}>{driveMeta.miles.toFixed(1)} mi</div>
+          <div style={{ opacity: 0.85 }}>{driveMeta.duration}</div>
+          <div style={{ opacity: 0.85 }}>{driveMeta.timeOfDay}</div>
+        </div>
+      )}
     </div>
   )
 }
-
 
 const optionBtn: React.CSSProperties = {
   width:        '100%',

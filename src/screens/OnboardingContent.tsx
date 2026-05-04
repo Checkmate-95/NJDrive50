@@ -283,10 +283,10 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   )
 
   const handleContinue = () => {
-    if (!canContinue) return
-    persistOnboarding()
-    setScreen("onboarding")
-  }
+  if (!canContinue) return
+  persistOnboarding()
+  setScreen("home")
+}
 
   const handleTeenPanelSave = () => {
     persistOnboarding()

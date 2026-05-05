@@ -36,7 +36,7 @@ function safeNumber(val: unknown): number {
   return Number.isFinite(num) ? num : 0
 }
 
-// [FIX-4] Reads dayDurationHours directly — never derives day as (total - night)
+// [FIX‑4] Reads dayDurationHours directly — never derives day as (total − night)
 function getLightingLabel(day: number, night: number): "Day" | "Night" | "Mixed" {
   if (night > 0 && day > 0) return "Mixed"
   if (night > 0) return "Night"
@@ -54,10 +54,10 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
   const activeSession = useActiveDriveStore((s) => s.session)
   const hasActiveDrive = Boolean(activeSession?.isActive)
 
-  // [FIX-2] Reactive drive history — updates automatically when drives are saved/edited/deleted
+  // [FIX‑2] Reactive drive history — updates automatically when drives are saved/edited/deleted
   const drives = useDriveHistory() || []
 
-  // Onboarding
+  // Onboarding (used only for name/photo, not for progress data)
   const onboarding = loadOnboardingData()
   const teenName = onboarding.teenName?.trim() || "Teen Driver"
   const teenPhoto = useTeenPhoto()
@@ -69,7 +69,14 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
 
   // Canonical totals — single computation, sourced from reactive hook
   const totalHours = drives.reduce((sum, d) => sum + safeNumber(d.totalDurationHours), 0)
-  const nightHours = drives.reduce((sum, d) => sum + safeNumber(d.nightDurationHours), 0)
+
+  // ✅ Verified‑first aggregation for night hours
+  const nightHours = drives.reduce((sum, d) => {
+    const verified = safeNumber(d.verifiedNightDurationHours)
+    const estimated = safeNumber(d.nightDurationHours)
+    return sum + (verified > 0 ? verified : estimated)
+  }, 0)
+
   const totalMiles = drives.reduce((sum, d) => sum + safeNumber(d.miles), 0)
 
   // Progress — capped at 100%, hours only
@@ -79,7 +86,7 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
   const totalRemaining = Math.max(totalRequired - totalHours, 0)
   const nightRemaining = Math.max(nightRequired - nightHours, 0)
 
-  // [FIX-3] Last drive — sorted by startTime so insertion order never affects result
+  // [FIX‑3] Last drive — sorted by startTime so insertion order never affects result
   const lastDrive = drives.length
     ? [...drives].sort((a, b) => safeNumber(b.startTime) - safeNumber(a.startTime))[0]
     : null
@@ -95,11 +102,11 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
       )
     : "Day"
 
-  // toLocaleString includes full date+time — correct for midnight-crossing drives
+  // toLocaleString includes full date+time — correct for midnight‑crossing drives
   const lastDriveStart = lastDrive ? new Date(lastDrive.startTime).toLocaleString() : "--"
   const lastDriveEnd = lastDrive ? new Date(lastDrive.endTime).toLocaleString() : "--"
 
-  // [FIX-5] Solar seeding removed — belongs inside activeDriveStore.startDrive()
+  // [FIX‑5] Solar seeding removed — belongs inside activeDriveStore.startDrive()
   // using the coord passed at drive start, not at UI navigation time
   const handleStartDrive = async () => {
     if (startingDrive) return
@@ -136,6 +143,7 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
   // ------------------------------
   // UI
   // ------------------------------
+  // (UI section continues unchanged)
 
   return (
     <div className="flex w-full justify-center px-3 pt-4 pb-28 text-[#0A1E5E] sm:px-4">

@@ -34,6 +34,9 @@ import {
 import { useNav } from "./state/navStore"
 import type { DriveEntry } from "./state/driveStore"
 
+// ⭐ ADD THIS
+import { MapProvider } from "./components/map/MapProvider"
+
 export type Screen =
   | "intro"
   | "onboarding"
@@ -107,13 +110,12 @@ export default function App() {
     const data = loadOnboardingData()
 
     // CASE 1: No onboarding data → allow Intro and Onboarding
-if (!data?.teenName) {
-  if (screen !== "intro" && screen !== "onboarding") {
-    setScreen("intro")
-  }
-  return
-}
-
+    if (!data?.teenName) {
+      if (screen !== "intro" && screen !== "onboarding") {
+        setScreen("intro")
+      }
+      return
+    }
 
     // CASE 2: Onboarding complete → go Home
     if (screen === "intro" || screen === "onboarding") {
@@ -197,7 +199,6 @@ if (!data?.teenName) {
       case "practiceTest":
         return <PublicPracticeTestPage />
 
-
       case "restartOnboarding":
         return <RestartOnboarding />
 
@@ -232,11 +233,14 @@ if (!data?.teenName) {
 
   return (
     <AppShell setScreen={setScreenCompat} active={screen}>
-      <ErrorBoundary key={screen} onReset={() => setScreen("home")}>
-        <Suspense fallback={<ScreenLoader />}>
-          {renderScreen()}
-        </Suspense>
-      </ErrorBoundary>
+      {/* ⭐ FIX: MapProvider must wrap ALL screens */}
+      <MapProvider>
+        <ErrorBoundary key={screen} onReset={() => setScreen("home")}>
+          <Suspense fallback={<ScreenLoader />}>
+            {renderScreen()}
+          </Suspense>
+        </ErrorBoundary>
+      </MapProvider>
     </AppShell>
   )
 }

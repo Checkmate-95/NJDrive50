@@ -125,20 +125,26 @@ export default function DriveSummaryContent({
     isFullyCompliant,
   } = useMemo(() => {
     const totals = drives.reduce(
-      (acc, d) => {
-        acc.totalHours += safeNumber(d.totalDurationHours)
-        acc.dayHours += safeNumber(d.dayDurationHours)
-        acc.nightHours += safeNumber(d.nightDurationHours)
-        acc.totalMilesValue += safeNumber(d.miles)
-        return acc
-      },
-      {
-        totalHours: 0,
-        dayHours: 0,
-        nightHours: 0,
-        totalMilesValue: 0,
-      }
-    )
+  (acc, d) => {
+    acc.totalHours += safeNumber(d.totalDurationHours)
+    acc.dayHours += safeNumber(d.dayDurationHours)
+
+    // ✅ Verified‑first aggregation for night hours
+    const verified = safeNumber(d.verifiedNightDurationHours)
+    const estimated = safeNumber(d.nightDurationHours)
+    acc.nightHours += verified > 0 ? verified : estimated
+
+    acc.totalMilesValue += safeNumber(d.miles)
+    return acc
+  },
+  {
+    totalHours: 0,
+    dayHours: 0,
+    nightHours: 0,
+    totalMilesValue: 0,
+  }
+)
+
 
     const remainingTotalHours = Math.max(
       REQUIRED_TOTAL_HOURS - totals.totalHours,

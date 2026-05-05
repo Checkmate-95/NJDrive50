@@ -1,26 +1,26 @@
 // src/screens/ActiveDriveContent.tsx
-// [FIX-1] Preview and Save share a single frozen snapshot — no double-computation
-// [FIX-2] Day/night bucket reconciliation locked to snapshot moment, not re-sampled
-// [FIX-3] Mileage source transparent — live miles used if Routes API unavailable
-// [FIX-4] Double-save race condition prevented with ref-based atomic guard
-// [FIX-5] hardReset() deferred until AFTER navigation confirms
-// [FIX-6] nightOverride toggle no longer triggers extra tick
-// [FIX-7] Preview clearly flags drive as unsaved via isPreview field
-// [FIX-8] buildDriveSnapshot defined OUTSIDE the component — no stale closure risk
-// [FIX-9] sunrise-sunset-js used (suncalc removed from project)
+// [FIX-1]  Preview and Save share a single frozen snapshot — no double-computation
+// [FIX-2]  Day/night bucket reconciliation locked to snapshot moment, not re-sampled
+// [FIX-3]  Mileage source transparent — live miles used if Routes API unavailable
+// [FIX-4]  Double-save race condition prevented with ref-based atomic guard
+// [FIX-5]  hardReset() deferred until AFTER navigation confirms
+// [FIX-6]  nightOverride toggle no longer triggers extra tick
+// [FIX-7]  Preview clearly flags drive as unsaved via isPreview field
+// [FIX-8]  buildDriveSnapshot defined OUTSIDE the component — no stale closure risk
+// [FIX-9]  sunrise-sunset-js removed from this screen — solarEngine.ts is the single source of truth
 // [FIX-10] primeSessionCoord uses appendRoutePoint store action
 // [FIX-11] setCurrentDrive typed as DriveEntry | null — any removed
 // [FIX-12] Tooltip parent div has group class so hover works correctly
 // [FIX-13] Timer display freezes at last running value when paused (no 00:00 flicker)
 // [FIX-14] ensureLocationPermission() gates all geolocation calls — Android-safe
+// [FIX-15] solarEngine.ts used to compute sunrise/sunset and verified night hours at snapshot time
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import type { Screen } from "../App"
 import { SunIcon, MoonIcon } from "@heroicons/react/24/solid"
-import { getSunrise, getSunset } from "sunrise-sunset-js"
 import { saveDrive } from "../state/driveStore"
-import type { DriveEntry } from "../state/driveStore"
+import type { DriveEntry, NightCalcMode } from "../state/driveStore"
 import { navigate } from "../navigation/navMap"
 import {
   useActiveDriveStore,
@@ -28,6 +28,15 @@ import {
   type DriveMode,
   type RouteCoord,
 } from "../state/activeDriveStore"
+import {
+  getSolarWindowForDate,
+  computeDayNightSplit,
+} from "../engine/solarEngine"
+import { loadOnboardingData } from "../../core/ReminderEngine"
+
+
+
+
 
 type ActiveDriveContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
@@ -135,7 +144,8 @@ type PreviewDriveEntry = DriveEntry & {
   isPreview?: boolean
 }
 
-// [FIX-8] Defined outside component — reads store via getState() at call time
+// [FIX-8][FIX-15] Defined outside component — reads store via getState() at call time
+// and uses solarEngine.ts to compute verified night hours when possible.
 async function buildDriveSnapshot(
   opts?: { isPreview?: boolean }
 ): Promise<PreviewDriveEntry | null> {
@@ -156,7 +166,6 @@ async function buildDriveSnapshot(
   const currentEndCoord = await getCurrentPosition()
 
   const finalElapsedMs = fresh.dayMs + fresh.nightMs
-
   if (finalElapsedMs <= 0) return null
 
   // [FIX-2] Bucket reconciliation — runs once against locked snapshotTime
@@ -208,6 +217,30 @@ async function buildDriveSnapshot(
       ? [...baseTrail, currentEndCoord]
       : baseTrail
 
+  // [FIX-15] Compute verified night hours using solarEngine.ts when we
+  // have a valid home location from onboarding.
+  const startDate = new Date(savedStartTime)
+  const endDate = new Date(snapshotTime)
+
+  let verifiedNightDurationHours = 0
+  let nightCalcMode: NightCalcMode | undefined = "estimated"
+
+  const onboarding = loadOnboardingData()
+  const { homeLat, homeLng } = onboarding
+
+  if (
+    typeof homeLat === "number" &&
+    Number.isFinite(homeLat) &&
+    typeof homeLng === "number" &&
+    Number.isFinite(homeLng)
+  ) {
+    const solarWindow = getSolarWindowForDate(homeLat, homeLng, startDate)
+    const { nightHours } = computeDayNightSplit(startDate, endDate, solarWindow)
+
+    verifiedNightDurationHours = nightHours
+    nightCalcMode = "verified" as NightCalcMode
+  }
+
   return {
     id: crypto.randomUUID(),
     startTime: new Date(savedStartTime).toISOString(),
@@ -216,8 +249,8 @@ async function buildDriveSnapshot(
     totalDurationHours: normalizedTotalMs / 3600000,
     dayDurationHours: finalDayMs / 3600000,
     nightDurationHours: finalNightMs / 3600000,
-    verifiedNightDurationHours: 0,
-    nightCalcMode: "estimated",
+    verifiedNightDurationHours,
+    nightCalcMode,
     source: "timer",
 
     miles: safeNumber(accurateMiles),
@@ -427,7 +460,8 @@ export default function ActiveDriveContent({
     }
   }, [clearAllLoops])
 
-  // [FIX-14] handlePress gated by ensureLocationPermission — async
+  // [FIX-14][FIX-15] handlePress gated by ensureLocationPermission — async,
+  // and uses solarEngine.ts for sunrise/sunset via getSolarWindowForDate.
   const handlePress = async () => {
     if (isStopping || isPreviewing) return
 
@@ -451,14 +485,12 @@ export default function ActiveDriveContent({
         }
 
         if (!session.isActive) {
-          // [FIX-9] sunrise-sunset-js — argument order: (lat, lng, date)
           const today = new Date()
-          const sunriseDate = getSunrise(coord.lat, coord.lng, today)
-          const sunsetDate = getSunset(coord.lat, coord.lng, today)
+          const window = getSolarWindowForDate(coord.lat, coord.lng, today)
 
           startDrive(Date.now(), coord, {
-            sunrise: (sunriseDate ?? new Date(0)).getTime(),
-            sunset: (sunsetDate ?? new Date(0)).getTime(),
+            sunrise: window.sunrise ? window.sunrise.getTime() : 0,
+            sunset: window.sunset ? window.sunset.getTime() : 0,
           })
         } else {
           primeSessionCoord(coord)

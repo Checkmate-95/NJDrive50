@@ -1,13 +1,4 @@
 // src/screens/TodaysDrive.tsx
-// TRUST-CORRECTED + NAV-HOOK VERSION
-// [FIX-1]  isPreview banner — unsaved previews are visually distinguished from saved drives
-// [FIX-2]  Timestamps use toLocaleString() — date included for midnight-crossing drives
-// [FIX-3]  getMapTimeOfDay: Mixed drives render map in Night mode (safety-relevant)
-// [FIX-4]  formatHours unit included in function return — no bare unitless strings
-// [FIX-5]  drive.isPreview checked before rendering — unsaved state clearly communicated
-// [FIX-6]  Start New Drive checks for active session — no silent second-session risk
-// [NAV]   Replaced prop-based setScreen + navigate() with useNav() hook
-
 import { useNav } from "../state/navStore"
 import { useActiveDriveStore } from "../state/activeDriveStore"
 
@@ -27,22 +18,27 @@ type TodaysDriveProps = {
   }) | null
 }
 
-// [FIX-4] Returns value + unit together — no bare unitless number strings at call sites
 function formatHours(hours?: number): string {
   if (typeof hours !== "number" || Number.isNaN(hours)) return "0.00 hrs"
   return `${hours.toFixed(2)} hrs`
 }
 
+function formatClockTime(date: Date): string {
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
 function getLightingLabel(
   dayHours: number,
   nightHours: number
-): "Day" | "Night" | "Mixed" {
-  if (nightHours > 0 && dayHours > 0) return "Mixed"
-  if (nightHours > 0) return "Night"
-  return "Day"
+): "Day Drive" | "Night Drive" | "Mixed Drive" {
+  if (nightHours > 0 && dayHours > 0) return "Mixed Drive"
+  if (nightHours > 0) return "Night Drive"
+  return "Day Drive"
 }
 
-// [FIX-3] Mixed drives render as Night — the safety-relevant condition.
 function getMapTimeOfDay(nightHours: number): "Day" | "Night" {
   if (nightHours > 0) return "Night"
   return "Day"
@@ -65,10 +61,93 @@ function normalizeRoute(value: unknown): Coord[] {
   )
 }
 
+function safeNumber(value: unknown): number {
+  const num = Number(value)
+  return Number.isFinite(num) ? num : 0
+}
+
+function getNightData(drive: DriveEntry) {
+  const verifiedNight = safeNumber(drive.verifiedNightDurationHours)
+  const estimatedNight = safeNumber(drive.nightDurationHours)
+  const effectiveNight = verifiedNight > 0 ? verifiedNight : estimatedNight
+  const isVerified = verifiedNight > 0
+
+  return {
+    verifiedNight,
+    estimatedNight,
+    effectiveNight,
+    isVerified,
+  }
+}
+
+function getDisplaySegments(drive: DriveEntry) {
+  const start = new Date(drive.startTime)
+  const end = new Date(drive.endTime)
+
+  const startMs = start.getTime()
+  const endMs = end.getTime()
+  const totalMs = Math.max(endMs - startMs, 0)
+
+  const totalHours = safeNumber(drive.totalDurationHours)
+  const storedDayHours = safeNumber(drive.dayDurationHours)
+  const { effectiveNight, isVerified } = getNightData(drive)
+
+  const dayHours =
+    totalHours > 0
+      ? Math.max(totalHours - effectiveNight, 0)
+      : Math.max(storedDayHours, 0)
+
+  const nightHours = effectiveNight
+
+  let dayRange = ""
+  let nightRange = ""
+
+  if (totalMs <= 0) {
+    return {
+      dayHours,
+      nightHours,
+      dayRange,
+      nightRange,
+      isVerified,
+    }
+  }
+
+  if (nightHours <= 0) {
+    dayRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
+  } else if (dayHours <= 0) {
+    nightRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
+  } else {
+    const dayMs = dayHours * 60 * 60 * 1000
+    const split = new Date(startMs + dayMs)
+
+    dayRange = `${formatClockTime(start)} – ${formatClockTime(split)}`
+    nightRange = `${formatClockTime(split)} – ${formatClockTime(end)}`
+  }
+
+  return {
+    dayHours,
+    nightHours,
+    dayRange,
+    nightRange,
+    isVerified,
+  }
+}
+
+const VerifiedBadge = () => (
+  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">
+    Verified
+  </span>
+)
+
+const EstimatedBadge = () => (
+  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
+    Estimated
+  </span>
+)
+
 export default function TodaysDrive({ drive }: TodaysDriveProps) {
   const { setScreen } = useNav()
 
-  // [FIX-6] Check for active session to prevent silent second-session start
   const activeSession = useActiveDriveStore((s) => s.session)
   const hasActiveDrive = Boolean(activeSession?.isActive)
 
@@ -88,8 +167,6 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
     notes,
     routeCoords,
     totalDurationHours,
-    dayDurationHours,
-    nightDurationHours,
     isPreview,
     milesSource,
   } = drive
@@ -97,19 +174,22 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
   const numericMiles = normalizeMiles(miles)
   const totalHours =
     typeof totalDurationHours === "number" ? totalDurationHours : 0
-  const dayHours =
-    typeof dayDurationHours === "number" ? dayDurationHours : 0
-  const nightHours =
-    typeof nightDurationHours === "number" ? nightDurationHours : 0
+
+  const {
+    dayHours,
+    nightHours,
+    dayRange,
+    nightRange,
+    isVerified,
+  } = getDisplaySegments(drive)
 
   const lightingLabel = getLightingLabel(dayHours, nightHours)
   const mapTimeOfDay = getMapTimeOfDay(nightHours)
   const safeRoute = normalizeRoute(routeCoords)
 
-  // [FIX-6] Start New Drive handler — redirects to active drive if one exists
   const handleStartNew = () => {
-  setScreen("active")
-}
+    setScreen("active")
+  }
 
   const handleViewSummary = () => {
     setScreen("summary")
@@ -117,13 +197,12 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
 
   return (
     <div className="w-full flex flex-col items-center px-3 pb-24 pt-3 text-[#0A1E5E] sm:px-4">
-      {/* [FIX-1][FIX-5] Preview banner — unsaved preview drive */}
       {isPreview && (
         <div className="mb-4 w-full max-w-md rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">
             Preview Only — Not Saved
           </p>
-          <p className="mt-1 text-sm text-amber-800 leading-snug">
+          <p className="mt-1 text-sm leading-snug text-amber-800">
             This drive has <strong>not been saved</strong> yet. It will not
             appear in your History, Summary totals, or any exports. Return to
             the Active Drive screen and tap <strong>Stop Drive</strong> to
@@ -133,16 +212,19 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
       )}
 
       <section className="w-full max-w-md rounded-[24px] border border-white/30 bg-white/95 px-6 py-7 text-left shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md">
-        {/* Title row — shows PREVIEW badge when unsaved */}
         <div className="mb-1 flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">
             {isPreview ? "Drive Preview" : "Today's Drive"}
           </h2>
-          {isPreview && (
-            <span className="rounded-full border border-amber-400 bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
-              NOT SAVED
-            </span>
-          )}
+
+          <div className="flex items-center gap-2">
+            {isPreview && (
+              <span className="rounded-full border border-amber-400 bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
+                Not Saved
+              </span>
+            )}
+            {isVerified ? <VerifiedBadge /> : <EstimatedBadge />}
+          </div>
         </div>
 
         <p className="mb-5 text-sm text-[#1b2755]">
@@ -152,15 +234,16 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
         </p>
 
         <div className="mb-4 space-y-2 text-sm text-[#1b2755]">
-          {/* [FIX-2] Use toLocaleString() for midnight-crossing drives */}
           <p>
             <strong>Start Time:</strong>{" "}
             {new Date(startTime).toLocaleString()}
           </p>
+
           <p>
             <strong>End Time:</strong>{" "}
             {new Date(endTime).toLocaleString()}
           </p>
+
           <p>
             <strong>Miles:</strong>{" "}
             {numericMiles.toFixed(1)}
@@ -170,18 +253,37 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
               </span>
             )}
           </p>
+
           <p>
             <strong>Total Duration:</strong> {formatHours(totalHours)}
           </p>
-          <p>
-            <strong>Day Driving:</strong> {formatHours(dayHours)}
-          </p>
-          <p>
-            <strong>Night Driving:</strong> {formatHours(nightHours)}
-          </p>
+
           <p>
             <strong>Lighting:</strong> {lightingLabel}
           </p>
+
+          {dayHours > 0 && (
+            <p>
+              <strong>Day Driving:</strong> {formatHours(dayHours)}
+              {dayRange ? (
+                <span className="ml-1 text-xs text-[#0A1E5E]/60">
+                  ({dayRange})
+                </span>
+              ) : null}
+            </p>
+          )}
+
+          {nightHours > 0 && (
+            <p>
+              <strong>Night Driving:</strong> {formatHours(nightHours)}
+              {nightRange ? (
+                <span className="ml-1 text-xs text-[#0A1E5E]/60">
+                  ({nightRange})
+                </span>
+              ) : null}
+            </p>
+          )}
+
           <p>
             <strong>Weather:</strong> {weather || "—"}
           </p>
@@ -210,7 +312,6 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
       </div>
 
       <div className="flex w-full max-w-md flex-col gap-3 pt-6">
-        {/* [FIX-6] Active-session aware start */}
         <button
           onClick={handleStartNew}
           className="w-full rounded-lg bg-[#0A1E5E] py-3 font-semibold text-white transition-colors hover:bg-[#f9c80e] hover:text-[#0A1E5E]"

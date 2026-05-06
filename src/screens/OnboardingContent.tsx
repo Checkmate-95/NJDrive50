@@ -208,74 +208,62 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   }
 
   // ── Attach Autocomplete once isLoaded is true ─────────────────────────────
-  useEffect(() => {
-    if (!isLoaded || !addressInputRef.current || autocompleteRef.current) return
+useEffect(() => {
+  if (!isLoaded || !addressInputRef.current || autocompleteRef.current) return
 
-    const input = addressInputRef.current
-    const googleMaps = (window as any)?.google?.maps
+  const input = addressInputRef.current
+  const googleMaps = (window as any)?.google?.maps
 
-    // [GUARD] Prevent silent geolocation errors on Android
-    try {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          () => {}, // success ignored
-          () => console.warn("[Onboarding] Geolocation permission denied or unavailable.")
-        )
-      }
-    } catch {
-      console.warn("[Onboarding] Geolocation API not available.")
-    }
+  if (!googleMaps?.places?.Autocomplete) return
 
-    if (!googleMaps?.places?.Autocomplete) return
+  const autocomplete = new googleMaps.places.Autocomplete(input, {
+    componentRestrictions: { country: "us" },
+    types: ["address"],
+    fields: ["address_components", "formatted_address", "geometry"],
+  })
 
-    const autocomplete = new googleMaps.places.Autocomplete(input, {
-      componentRestrictions: { country: "us" },
-      types: ["address"],
-      fields: ["address_components", "formatted_address", "geometry"],
+  autocompleteRef.current = autocomplete
+
+  autocompleteListenerRef.current = autocomplete.addListener("place_changed", () => {
+    const place = autocomplete.getPlace()
+    if (!place) return
+
+    const parsed = parsePlaceResult(place)
+    const nextAddress = parsed.street || place.formatted_address || ""
+    const nextState = parsed.state || latestDataRef.current.state || "New Jersey"
+
+    addressSelectedFromAutocompleteRef.current = true
+
+    setAddress(nextAddress)
+    setHomeTown(parsed.town)
+    setHomeZip(parsed.zip)
+    setHomeCounty(parsed.county)
+    setHomeLat(parsed.lat)
+    setHomeLng(parsed.lng)
+    setStateValue(nextState)
+
+    persistOnboarding({
+      address: nextAddress,
+      homeTown: parsed.town,
+      homeZip: parsed.zip,
+      homeCounty: parsed.county,
+      homeLat: parsed.lat,
+      homeLng: parsed.lng,
+      state: nextState,
     })
+  })
 
-    autocompleteRef.current = autocomplete
-
-    autocompleteListenerRef.current = autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace()
-      if (!place) return
-
-      const parsed = parsePlaceResult(place)
-      const nextAddress = parsed.street || place.formatted_address || ""
-      const nextState = parsed.state || latestDataRef.current.state || "New Jersey"
-
-      addressSelectedFromAutocompleteRef.current = true
-
-      setAddress(nextAddress)
-      setHomeTown(parsed.town)
-      setHomeZip(parsed.zip)
-      setHomeCounty(parsed.county)
-      setHomeLat(parsed.lat)
-      setHomeLng(parsed.lng)
-      setStateValue(nextState)
-
-      persistOnboarding({
-        address: nextAddress,
-        homeTown: parsed.town,
-        homeZip: parsed.zip,
-        homeCounty: parsed.county,
-        homeLat: parsed.lat,
-        homeLng: parsed.lng,
-        state: nextState,
-      })
-    })
-
-    return () => {
-      if (autocompleteListenerRef.current?.remove) {
-        autocompleteListenerRef.current.remove()
-      }
-      if (googleMaps?.event && autocompleteRef.current) {
-        googleMaps.event.clearInstanceListeners(autocompleteRef.current)
-      }
-      autocompleteListenerRef.current = null
-      autocompleteRef.current = null
+  return () => {
+    if (autocompleteListenerRef.current?.remove) {
+      autocompleteListenerRef.current.remove()
     }
-  }, [isLoaded])
+    if (googleMaps?.event && autocompleteRef.current) {
+      googleMaps.event.clearInstanceListeners(autocompleteRef.current)
+    }
+    autocompleteListenerRef.current = null
+    autocompleteRef.current = null
+  }
+}, [isLoaded])
 
   
 
@@ -463,22 +451,33 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
               </div>
 
               <div>
-                <label className={labelClass}>Home Address</label>
-                <input
-                  ref={addressInputRef}
-                  type="text"
-                  autoComplete="off"
-                  placeholder={isLoaded ? "123 Main St" : "Loading address search..."}
-                  value={address}
-                  onChange={(e) => handleAddressManualChange(e.target.value)}
-                  className={panelInput}
-                />
-                <p className={helperClass}>
-                  {isLoaded
-                    ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
-                    : "Address search is loading…"}
-                </p>
-              </div>
+  <label className={labelClass} htmlFor="homeAddress">
+    Home Address
+  </label>
+
+  <input
+    id="homeAddress"
+    ref={addressInputRef}
+    type="text"
+    inputMode="text"
+    autoComplete="street-address"
+    autoCorrect="off"
+    autoCapitalize="words"
+    spellCheck={false}
+    enterKeyHint="done"
+    placeholder={isLoaded ? "123 Main St" : "Loading address search..."}
+    value={address}
+    onChange={(e) => handleAddressManualChange(e.target.value)}
+    className={panelInput}
+    aria-describedby="homeAddressHelp"
+  />
+
+  <p id="homeAddressHelp" className={helperClass}>
+    {isLoaded
+      ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
+      : "Address search is loading…"}
+  </p>
+</div>
 
               {hasAddressResolution && (
                 <div className="grid gap-4 sm:grid-cols-2">

@@ -11,9 +11,9 @@ const config: CapacitorConfig = {
   },
 
   android: {
-    allowMixedContent: false,
+    allowMixedContent: true, // ✅ allow external scripts like Google Maps
     captureInput: true,
-    webContentsDebuggingEnabled: false, // set true during dev if needed
+    webContentsDebuggingEnabled: true, // ✅ helpful during dev
   },
 
   plugins: {

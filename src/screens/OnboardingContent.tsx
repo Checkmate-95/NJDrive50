@@ -336,13 +336,17 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   const openPhotoPicker = () => photoInputRef.current?.click()
 
   const handleAddressManualChange = (value: string) => {
-    setAddress(value)
-    if (addressSelectedFromAutocompleteRef.current) {
-      addressSelectedFromAutocompleteRef.current = false
-      clearResolvedAddressState()
-      persistOnboarding({ address: value, ...emptyResolvedAddress })
-    }
-  }
+  setAddress(value)
+  addressSelectedFromAutocompleteRef.current = false
+
+  // ── Debounced manual typing fix ────────────────────────────────
+  if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+  typingTimeoutRef.current = setTimeout(() => {
+    clearResolvedAddressState()
+    persistOnboarding({ address: value, ...emptyResolvedAddress })
+  }, 600)
+}
+
 
   return (
     <div

@@ -139,6 +139,10 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   const autocompleteRef = useRef<any>(null)
   const autocompleteListenerRef = useRef<any>(null)
   const addressSelectedFromAutocompleteRef = useRef(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null) // ← debounce timer
+
+
 
   const globalTeenPhoto = useTeenPhoto()
   const teenPhoto = globalTeenPhoto ?? saved.teenPhoto ?? null
@@ -210,6 +214,18 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
     const input = addressInputRef.current
     const googleMaps = (window as any)?.google?.maps
 
+    // [GUARD] Prevent silent geolocation errors on Android
+    try {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          () => {}, // success ignored
+          () => console.warn("[Onboarding] Geolocation permission denied or unavailable.")
+        )
+      }
+    } catch {
+      console.warn("[Onboarding] Geolocation API not available.")
+    }
+
     if (!googleMaps?.places?.Autocomplete) return
 
     const autocomplete = new googleMaps.places.Autocomplete(input, {
@@ -260,6 +276,8 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
       autocompleteRef.current = null
     }
   }, [isLoaded])
+
+  
 
   const handleTeenPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

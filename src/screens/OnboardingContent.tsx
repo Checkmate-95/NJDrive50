@@ -207,16 +207,14 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
     setHomeLng(null)
   }
 
-  // ── Attach Autocomplete once isLoaded is true ─────────────────────────────
+  // ── Attach Autocomplete once ─────────────────────────────
 useEffect(() => {
-  if (!isLoaded || !addressInputRef.current || autocompleteRef.current) return
+  if (!addressInputRef.current || autocompleteRef.current) return
 
-  const input = addressInputRef.current
   const googleMaps = (window as any)?.google?.maps
-
   if (!googleMaps?.places?.Autocomplete) return
 
-  const autocomplete = new googleMaps.places.Autocomplete(input, {
+  const autocomplete = new googleMaps.places.Autocomplete(addressInputRef.current, {
     componentRestrictions: { country: "us" },
     types: ["address"],
     fields: ["address_components", "formatted_address", "geometry"],
@@ -263,7 +261,8 @@ useEffect(() => {
     autocompleteListenerRef.current = null
     autocompleteRef.current = null
   }
-}, [isLoaded])
+}, []) // ← fires once when Maps API is ready
+
 
   
 

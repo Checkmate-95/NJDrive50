@@ -117,10 +117,11 @@ export default function App() {
       return
     }
 
-    // CASE 2: Onboarding complete → go Home
-    if (screen === "intro" || screen === "onboarding") {
-      setScreen("home")
-    }
+    // CASE 2: Onboarding complete → go Home only if still on intro
+if (screen === "intro") {
+  setScreen("home")
+}
+
 
   }, [screen, setScreen])
 

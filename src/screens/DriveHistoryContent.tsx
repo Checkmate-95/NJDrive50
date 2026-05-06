@@ -17,13 +17,81 @@ const formatHours = (hours: number) => {
   return `${safeNumber(hours).toFixed(2)} hrs`
 }
 
+const formatClockTime = (date: Date) => {
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
 const getLightingLabel = (
   dayHours: number,
   nightHours: number
-): "Day" | "Night" | "Mixed" => {
-  if (nightHours > 0 && dayHours > 0) return "Mixed"
-  if (nightHours > 0) return "Night"
-  return "Day"
+): "Day Drive" | "Night Drive" | "Mixed Drive" => {
+  if (nightHours > 0 && dayHours > 0) return "Mixed Drive"
+  if (nightHours > 0) return "Night Drive"
+  return "Day Drive"
+}
+
+const getNightData = (d: DriveEntry) => {
+  const verifiedNight = safeNumber(d.verifiedNightDurationHours)
+  const estimatedNight = safeNumber(d.nightDurationHours)
+  const effectiveNight = verifiedNight > 0 ? verifiedNight : estimatedNight
+  const isVerified = verifiedNight > 0
+
+  return {
+    effectiveNight,
+    verifiedNight,
+    estimatedNight,
+    isVerified,
+  }
+}
+
+const getDisplaySegments = (d: DriveEntry) => {
+  const start = new Date(d.startTime)
+  const end = new Date(d.endTime)
+
+  const startMs = start.getTime()
+  const endMs = end.getTime()
+  const totalMs = Math.max(endMs - startMs, 0)
+
+  const totalHours = safeNumber(d.totalDurationHours)
+  const { effectiveNight, isVerified } = getNightData(d)
+  const dayHours = Math.max(totalHours - effectiveNight, 0)
+  const nightHours = effectiveNight
+
+  let dayRange = ""
+  let nightRange = ""
+
+  if (totalMs <= 0) {
+    return {
+      dayHours,
+      nightHours,
+      dayRange,
+      nightRange,
+      isVerified,
+    }
+  }
+
+  if (nightHours <= 0) {
+    dayRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
+  } else if (dayHours <= 0) {
+    nightRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
+  } else {
+    const dayMs = dayHours * 60 * 60 * 1000
+    const split = new Date(startMs + dayMs)
+
+    dayRange = `${formatClockTime(start)} – ${formatClockTime(split)}`
+    nightRange = `${formatClockTime(split)} – ${formatClockTime(end)}`
+  }
+
+  return {
+    dayHours,
+    nightHours,
+    dayRange,
+    nightRange,
+    isVerified,
+  }
 }
 
 const escapeCsv = (value: unknown) => {
@@ -38,6 +106,19 @@ const escapeCsv = (value: unknown) => {
   return stringValue
 }
 
+const VerifiedBadge = () => (
+  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+    <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
+    Verified
+  </span>
+)
+
+const EstimatedBadge = () => (
+  <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700">
+    Estimated
+  </span>
+)
+
 export default function DriveHistoryContent() {
   const { goBack } = useNav()
 
@@ -49,21 +130,29 @@ export default function DriveHistoryContent() {
   const [isEditOpen, setIsEditOpen] = useState(false)
 
   const summary = useMemo(() => {
-    let dayCount = 0
-    let nightCount = 0
-    let mixedCount = 0
+    let dayOnly = 0
+    let nightOnly = 0
+    let mixed = 0
+    let verifiedCount = 0
 
     for (const drive of drives) {
-      const lighting = getLightingLabel(
-        safeNumber(drive.dayDurationHours),
-        safeNumber(drive.nightDurationHours)
-      )
-      if (lighting === "Mixed") mixedCount += 1
-      else if (lighting === "Night") nightCount += 1
-      else dayCount += 1
+      const { dayHours, nightHours, isVerified } = getDisplaySegments(drive)
+      const lighting = getLightingLabel(dayHours, nightHours)
+
+      if (lighting === "Mixed Drive") mixed += 1
+      else if (lighting === "Night Drive") nightOnly += 1
+      else dayOnly += 1
+
+      if (isVerified) verifiedCount += 1
     }
 
-    return { dayCount, nightCount, mixedCount }
+    return {
+      total: drives.length,
+      dayOnly,
+      nightOnly,
+      mixed,
+      verifiedCount,
+    }
   }, [drives])
 
   function handleOpenEdit(entry: DriveEntry) {
@@ -77,9 +166,7 @@ export default function DriveHistoryContent() {
   }
 
   function handleEditSaved(updated: DriveEntry) {
-    setDrives((prev) =>
-      prev.map((d) => (d.id === updated.id ? updated : d))
-    )
+    setDrives(prev => prev.map(d => (d.id === updated.id ? updated : d)))
     setEditDrive(updated)
     handleCloseEdit()
   }
@@ -88,7 +175,7 @@ export default function DriveHistoryContent() {
     const confirmDelete = window.confirm("Delete this drive entry?")
     if (!confirmDelete) return
     deleteDriveEntry(id)
-    setDrives((prev) => prev.filter((d) => d.id !== id))
+    setDrives(prev => prev.filter(d => d.id !== id))
   }
 
   function handleExportLogs() {
@@ -104,17 +191,20 @@ export default function DriveHistoryContent() {
       "totalDurationHours",
       "dayDurationHours",
       "nightDurationHours",
+      "verifiedNightDurationHours",
+      "nightCalcMode",
       "lighting",
+      "dayRange",
+      "nightRange",
       "miles",
       "weather",
       "notes",
     ]
 
-    const rows = drives.map((d) => {
-      const dayHours   = safeNumber(d.dayDurationHours)
-      const nightHours = safeNumber(d.nightDurationHours)
+    const rows = drives.map(d => {
+      const { dayHours, nightHours, dayRange, nightRange } = getDisplaySegments(d)
       const totalHours = safeNumber(d.totalDurationHours)
-      const miles      = safeNumber(d.miles)
+      const miles = safeNumber(d.miles)
 
       return [
         d.id,
@@ -123,20 +213,24 @@ export default function DriveHistoryContent() {
         totalHours.toFixed(2),
         dayHours.toFixed(2),
         nightHours.toFixed(2),
+        safeNumber(d.verifiedNightDurationHours).toFixed(2),
+        d.nightCalcMode ?? "",
         getLightingLabel(dayHours, nightHours),
+        dayRange,
+        nightRange,
         miles.toFixed(2),
         d.weather ?? "",
-        d.notes   ?? "",
+        d.notes ?? "",
       ]
     })
 
     const csv = [
       header.map(escapeCsv).join(","),
-      ...rows.map((row) => row.map(escapeCsv).join(",")),
+      ...rows.map(row => row.map(escapeCsv).join(",")),
     ].join("\n")
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url  = URL.createObjectURL(blob)
+    const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
     link.setAttribute("download", "njdrive50_history.csv")
@@ -153,16 +247,20 @@ export default function DriveHistoryContent() {
           Drive History Logs
         </h2>
 
-        <div className="mb-3 flex flex-wrap justify-between gap-2 text-sm font-medium text-gray-600">
-          <span>Day Drives: {summary.dayCount}</span>
-          <span>Night Drives: {summary.nightCount}</span>
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-gray-500">
+          <span>Total Drives: {summary.total}</span>
+          {summary.verifiedCount > 0 && (
+            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+              {summary.verifiedCount} Verified
+            </span>
+          )}
         </div>
 
-        {summary.mixedCount > 0 && (
-          <div className="mb-3 text-xs font-medium text-[#08194A]/70">
-            Mixed Drives: {summary.mixedCount}
-          </div>
-        )}
+        <div className="mb-3 flex flex-wrap gap-3 text-sm font-medium text-gray-600">
+          <span>Day Only: {summary.dayOnly}</span>
+          <span>Night Only: {summary.nightOnly}</span>
+          <span>Mixed: {summary.mixed}</span>
+        </div>
 
         {drives.length === 0 && (
           <div className="mt-6 rounded-xl bg-gray-100 p-4 text-center text-sm text-gray-600">
@@ -171,14 +269,21 @@ export default function DriveHistoryContent() {
         )}
 
         <div className="space-y-3">
-          {drives.map((drive) => {
-            const start      = new Date(drive.startTime).toLocaleString()
-            const end        = new Date(drive.endTime).toLocaleString()
+          {drives.map(drive => {
+            const start = new Date(drive.startTime).toLocaleString()
+            const end = new Date(drive.endTime).toLocaleString()
             const totalHours = safeNumber(drive.totalDurationHours)
-            const dayHours   = safeNumber(drive.dayDurationHours)
-            const nightHours = safeNumber(drive.nightDurationHours)
-            const miles      = safeNumber(drive.miles)
-            const lighting   = getLightingLabel(dayHours, nightHours)
+            const miles = safeNumber(drive.miles)
+
+            const {
+              dayHours,
+              nightHours,
+              dayRange,
+              nightRange,
+              isVerified,
+            } = getDisplaySegments(drive)
+
+            const lighting = getLightingLabel(dayHours, nightHours)
 
             return (
               <div
@@ -190,15 +295,42 @@ export default function DriveHistoryContent() {
                     <p className="font-semibold text-[#08194A]">
                       {formatHours(totalHours)}
                     </p>
+
                     <p className="text-sm text-gray-600">
                       {start} → {end}
                     </p>
+
                     <p className="mt-1 text-xs text-gray-500">
                       {miles.toFixed(1)} miles
                     </p>
-                    <p className="mt-1 text-xs font-semibold text-[#08194A]/75">
-                      Lighting: {lighting}
-                    </p>
+
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-semibold text-[#08194A]/75">
+                        Lighting: {lighting}
+                      </p>
+                      {isVerified ? <VerifiedBadge /> : <EstimatedBadge />}
+                    </div>
+
+                    {dayHours > 0 && (
+                      <p className="mt-1 text-[11px] text-gray-500">
+                        <span className="font-semibold text-[#08194A]/80">
+                          Day:
+                        </span>{" "}
+                        {dayHours.toFixed(2)} hrs
+                        {dayRange ? ` (${dayRange})` : ""}
+                      </p>
+                    )}
+
+                    {nightHours > 0 && (
+                      <p className="mt-0.5 text-[11px] text-gray-500">
+                        <span className="font-semibold text-[#08194A]/80">
+                          Night:
+                        </span>{" "}
+                        {nightHours.toFixed(2)} hrs
+                        {nightRange ? ` (${nightRange})` : ""}
+                      </p>
+                    )}
+
                     {drive.weather ? (
                       <p className="mt-1 text-xs text-gray-500">
                         Weather: {drive.weather}
@@ -207,13 +339,12 @@ export default function DriveHistoryContent() {
                   </div>
 
                   <div className="flex shrink-0 items-center space-x-3">
-                    {/* [FIX-3] Replaced ● emoji with a styled div dot */}
                     <div
                       title={lighting}
                       className={`h-3 w-3 rounded-full ${
-                        lighting === "Night"
+                        lighting === "Night Drive"
                           ? "bg-[#f9c80e]"
-                          : lighting === "Mixed"
+                          : lighting === "Mixed Drive"
                           ? "bg-[#0A1E5E]"
                           : "bg-gray-400"
                       }`}
@@ -249,7 +380,6 @@ export default function DriveHistoryContent() {
           Export Logs
         </button>
 
-        {/* [FIX-1] goBack() replaces hardcoded setScreen("home") */}
         <button
           type="button"
           onClick={() => goBack()}

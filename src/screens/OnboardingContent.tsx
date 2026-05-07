@@ -350,15 +350,20 @@ useEffect(() => {
   setAddress(value);
 
   // prevent clearing when autocomplete selected
-  if (addressSelectedFromAutocompleteRef.current) return;
+  if (addressSelectedFromAutocompleteRef.current) {
+    addressSelectedFromAutocompleteRef.current = false;
+    return;
+  }
 
   // ── Debounced manual typing fix ────────────────────────────────
   if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
   typingTimeoutRef.current = setTimeout(() => {
     clearResolvedAddressState();
     persistOnboarding({ address: value, ...emptyResolvedAddress });
+    typingTimeoutRef.current = null;
   }, 600);
 };
+
 
 
 

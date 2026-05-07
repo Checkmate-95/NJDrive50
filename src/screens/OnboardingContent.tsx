@@ -177,6 +177,22 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
 
   const latestDataRef = useRef<OnboardingData>(saved)
 
+ 
+
+// ⭐ ADD THIS RIGHT HERE
+const handleAddressSelect = (place: google.maps.places.PlaceResult) => {
+  if (!place) return;
+
+  const parsed = parsePlaceResult(place);
+
+  setHomeTown(parsed.town);
+  setHomeZip(parsed.zip);
+  setHomeCounty(parsed.county);
+  setHomeLat(parsed.lat);
+  setHomeLng(parsed.lng);
+  setStateValue(parsed.state);
+};
+
   useEffect(() => {
     if (!globalTeenPhoto && saved.teenPhoto) {
       setGlobalTeenPhoto(saved.teenPhoto)
@@ -460,9 +476,11 @@ useEffect(() => {
   <AddressAutocomplete
   value={address}
   onChange={handleAddressManualChange}
+  onPlaceSelect={handleAddressSelect}   // <-- REQUIRED
   placeholder={isLoaded ? "123 Main St" : "Loading address search..."}
   className={panelInput}
 />
+
 
 <p id="homeAddressHelp" className={helperClass}>
   {isLoaded

@@ -487,6 +487,7 @@ useEffect(() => {
 />
 
 
+
 <p id="homeAddressHelp" className={helperClass}>
   {isLoaded
     ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."

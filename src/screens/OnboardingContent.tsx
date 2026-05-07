@@ -20,9 +20,7 @@ import {
   setTeenPhoto as setGlobalTeenPhoto,
 } from "../state/profileStore"
 import { useMapContext } from "../components/map/MapContext"
-
-import AddressAutocomplete from "../components/AddressAutocomplete";
-
+import AddressAutocomplete from "../components/AddressAutocomplete"
 
 type OnboardingContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
@@ -134,18 +132,11 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   const initialDataRef = useRef<OnboardingData>(loadOnboardingData())
   const saved = initialDataRef.current
 
-  // ── Shared Google Maps loader (MapProvider owns the single load) ──────────
   const { isLoaded } = useMapContext()
 
   const photoInputRef = useRef<HTMLInputElement | null>(null)
-  const addressInputRef = useRef<HTMLInputElement | null>(null)
-  const autocompleteRef = useRef<any>(null)
-  const autocompleteListenerRef = useRef<any>(null)
   const addressSelectedFromAutocompleteRef = useRef(false)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null) // ← debounce timer
-
-
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const globalTeenPhoto = useTeenPhoto()
   const teenPhoto = globalTeenPhoto ?? saved.teenPhoto ?? null
@@ -177,27 +168,6 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
 
   const latestDataRef = useRef<OnboardingData>(saved)
 
- 
-
-// ⭐ ADD THIS RIGHT HERE
-const handleAddressSelect = (place: google.maps.places.PlaceResult) => {
-  if (!place) return;
-
-  // ⭐ FIX: update the address field itself
-  if (place.formatted_address) {
-    setAddress(place.formatted_address);
-  }
-
-  const parsed = parsePlaceResult(place);
-
-  setHomeTown(parsed.town);
-  setHomeZip(parsed.zip);
-  setHomeCounty(parsed.county);
-  setHomeLat(parsed.lat);
-  setHomeLng(parsed.lng);
-  setStateValue(parsed.state);
-};
-
   useEffect(() => {
     if (!globalTeenPhoto && saved.teenPhoto) {
       setGlobalTeenPhoto(saved.teenPhoto)
@@ -206,15 +176,42 @@ const handleAddressSelect = (place: google.maps.places.PlaceResult) => {
 
   useEffect(() => {
     latestDataRef.current = {
-      teenName, teenBirthday, teenPhone, permitIssueDate,
-      state: stateValue, parentName, parentEmail, parentPhone,
-      relationship, teenPhoto, address, permitNumber,
-      homeTown, homeZip, homeCounty, homeLat, homeLng,
+      teenName,
+      teenBirthday,
+      teenPhone,
+      permitIssueDate,
+      state: stateValue,
+      parentName,
+      parentEmail,
+      parentPhone,
+      relationship,
+      teenPhoto,
+      address,
+      permitNumber,
+      homeTown,
+      homeZip,
+      homeCounty,
+      homeLat,
+      homeLng,
     }
   }, [
-    teenName, teenBirthday, teenPhone, permitIssueDate, stateValue,
-    parentName, parentEmail, parentPhone, relationship, teenPhoto,
-    address, permitNumber, homeTown, homeZip, homeCounty, homeLat, homeLng,
+    teenName,
+    teenBirthday,
+    teenPhone,
+    permitIssueDate,
+    stateValue,
+    parentName,
+    parentEmail,
+    parentPhone,
+    relationship,
+    teenPhoto,
+    address,
+    permitNumber,
+    homeTown,
+    homeZip,
+    homeCounty,
+    homeLat,
+    homeLng,
   ])
 
   const persistOnboarding = (overrides: Partial<OnboardingData> = {}) => {
@@ -231,24 +228,13 @@ const handleAddressSelect = (place: google.maps.places.PlaceResult) => {
     setHomeLng(null)
   }
 
-  // ── Attach Autocomplete once ─────────────────────────────
-useEffect(() => {
-  if (!addressInputRef.current || autocompleteRef.current) return
-
-  const googleMaps = (window as any)?.google?.maps
-  if (!googleMaps?.places?.Autocomplete) return
-
-  const autocomplete = new googleMaps.places.Autocomplete(addressInputRef.current, {
-    componentRestrictions: { country: "us" },
-    types: ["address"],
-    fields: ["address_components", "formatted_address", "geometry"],
-  })
-
-  autocompleteRef.current = autocomplete
-
-  autocompleteListenerRef.current = autocomplete.addListener("place_changed", () => {
-    const place = autocomplete.getPlace()
+  const handleAddressSelect = (place: google.maps.places.PlaceResult) => {
     if (!place) return
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+      typingTimeoutRef.current = null
+    }
 
     const parsed = parsePlaceResult(place)
     const nextAddress = parsed.street || place.formatted_address || ""
@@ -273,22 +259,32 @@ useEffect(() => {
       homeLng: parsed.lng,
       state: nextState,
     })
-  })
-
-  return () => {
-    if (autocompleteListenerRef.current?.remove) {
-      autocompleteListenerRef.current.remove()
-    }
-    if (googleMaps?.event && autocompleteRef.current) {
-      googleMaps.event.clearInstanceListeners(autocompleteRef.current)
-    }
-    autocompleteListenerRef.current = null
-    autocompleteRef.current = null
   }
-}, []) // ← fires once when Maps API is ready
 
+  const handleAddressManualChange = (value: string) => {
+    setAddress(value)
 
-  
+    if (addressSelectedFromAutocompleteRef.current) {
+      addressSelectedFromAutocompleteRef.current = false
+      return
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+
+    typingTimeoutRef.current = setTimeout(() => {
+      clearResolvedAddressState()
+      persistOnboarding({ address: value, ...emptyResolvedAddress })
+      typingTimeoutRef.current = null
+    }, 600)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleTeenPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -309,19 +305,19 @@ useEffect(() => {
 
   const canContinue = Boolean(
     teenName.trim() &&
-    teenBirthday.trim() &&
-    teenPhone.trim() &&
-    parentName.trim() &&
-    parentPhone.trim() &&
-    relationship.trim() &&
-    permitIssueDate.trim() &&
-    permitNumber.trim() &&
-    address.trim() &&
-    homeTown.trim() &&
-    homeZip.trim() &&
-    homeCounty.trim() &&
-    homeLat !== null &&
-    homeLng !== null
+      teenBirthday.trim() &&
+      teenPhone.trim() &&
+      parentName.trim() &&
+      parentPhone.trim() &&
+      relationship.trim() &&
+      permitIssueDate.trim() &&
+      permitNumber.trim() &&
+      address.trim() &&
+      homeTown.trim() &&
+      homeZip.trim() &&
+      homeCounty.trim() &&
+      homeLat !== null &&
+      homeLng !== null
   )
 
   const hasAddressResolution = Boolean(
@@ -346,27 +342,6 @@ useEffect(() => {
 
   const openPhotoPicker = () => photoInputRef.current?.click()
 
-  const handleAddressManualChange = (value: string) => {
-  setAddress(value);
-
-  // prevent clearing when autocomplete selected
-  if (addressSelectedFromAutocompleteRef.current) {
-    addressSelectedFromAutocompleteRef.current = false;
-    return;
-  }
-
-  // ── Debounced manual typing fix ────────────────────────────────
-  if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-  typingTimeoutRef.current = setTimeout(() => {
-    clearResolvedAddressState();
-    persistOnboarding({ address: value, ...emptyResolvedAddress });
-    typingTimeoutRef.current = null;
-  }, 600);
-};
-
-
-
-
   return (
     <div
       className="min-h-[100dvh] w-full overflow-y-auto px-3 pt-4 pb-40 text-white sm:px-4"
@@ -376,7 +351,6 @@ useEffect(() => {
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#f9c80e] via-white/80 to-[#0A1E5E]" />
 
         <div className="p-5 pt-6 pb-10 sm:p-6 sm:pt-7 sm:pb-12">
-          {/* ── Header Card ── */}
           <div className="rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white shadow-inner">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
@@ -396,9 +370,20 @@ useEffect(() => {
               </div>
 
               <div className="shrink-0">
-                <input ref={photoInputRef} id="teenPhotoInput" type="file" accept="image/*" className="hidden" onChange={handleTeenPhotoChange} />
-                <button type="button" onClick={openPhotoPicker} aria-label="Upload teen photo"
-                  className="group relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#f9c80e]/70 bg-white/10 shadow-[0_0_18px_rgba(249,200,14,0.18)] transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_22px_rgba(249,200,14,0.32)]">
+                <input
+                  ref={photoInputRef}
+                  id="teenPhotoInput"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleTeenPhotoChange}
+                />
+                <button
+                  type="button"
+                  onClick={openPhotoPicker}
+                  aria-label="Upload teen photo"
+                  className="group relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#f9c80e]/70 bg-white/10 shadow-[0_0_18px_rgba(249,200,14,0.18)] transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_22px_rgba(249,200,14,0.32)]"
+                >
                   {teenPhoto ? (
                     <img src={teenPhoto} alt="Teen profile preview" className="h-full w-full object-cover" />
                   ) : (
@@ -408,18 +393,23 @@ useEffect(() => {
                     </div>
                   )}
                 </button>
-                <button type="button" onClick={openPhotoPicker}
-                  className="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-[11px] font-semibold text-white/85 transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_16px_rgba(249,200,14,0.22)]">
+                <button
+                  type="button"
+                  onClick={openPhotoPicker}
+                  className="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-[11px] font-semibold text-white/85 transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_16px_rgba(249,200,14,0.22)]"
+                >
                   Edit
                 </button>
               </div>
             </div>
           </div>
 
-          {/* ── Profile Buttons ── */}
           <div className="mt-5 grid gap-3">
-            <button type="button" onClick={() => setShowTeenPanel(true)}
-              className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-[1px] hover:border-[#0A1E5E]/20 hover:shadow-[0_0_18px_rgba(249,200,14,0.14)]">
+            <button
+              type="button"
+              onClick={() => setShowTeenPanel(true)}
+              className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-[1px] hover:border-[#0A1E5E]/20 hover:shadow-[0_0_18px_rgba(249,200,14,0.14)]"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Driver Profile</p>
@@ -432,8 +422,11 @@ useEffect(() => {
               </div>
             </button>
 
-            <button type="button" onClick={() => setShowParentPanel(true)}
-              className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-[1px] hover:border-[#0A1E5E]/20 hover:shadow-[0_0_18px_rgba(249,200,14,0.14)]">
+            <button
+              type="button"
+              onClick={() => setShowParentPanel(true)}
+              className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-[1px] hover:border-[#0A1E5E]/20 hover:shadow-[0_0_18px_rgba(249,200,14,0.14)]"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Contact Setup</p>
@@ -447,7 +440,6 @@ useEffect(() => {
             </button>
           </div>
 
-          {/* ── Permit Details ── */}
           <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4 shadow-inner">
             <div className="mb-4">
               <p className="text-[11px] uppercase tracking-[0.22em] text-[#0A1E5E]/55">Permit Details</p>
@@ -458,51 +450,70 @@ useEffect(() => {
             <div className="space-y-4">
               <div>
                 <label className={labelClass}>Teen&apos;s Name</label>
-                <input type="text" placeholder="Enter teen driver name" value={teenName}
-                  onChange={(e) => setTeenName(e.target.value)} className={inputBase} />
+                <input
+                  type="text"
+                  placeholder="Enter teen driver name"
+                  value={teenName}
+                  onChange={(e) => setTeenName(e.target.value)}
+                  className={inputBase}
+                />
               </div>
 
               <div>
                 <label className={labelClass}>Permit Issue Date</label>
-                <input type="tel" inputMode="numeric" autoComplete="off" placeholder="mm/dd/yyyy"
-                  value={permitIssueDate} onChange={(e) => setPermitIssueDate(formatDateInput(e.target.value))} className={panelInput} />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="mm/dd/yyyy"
+                  value={permitIssueDate}
+                  onChange={(e) => setPermitIssueDate(formatDateInput(e.target.value))}
+                  className={panelInput}
+                />
                 <p className={helperClass}>Use the permit issue date so milestone timing stays accurate.</p>
               </div>
 
               <div>
                 <label className={labelClass}>State</label>
-                <input type="text" placeholder="New Jersey" value={stateValue}
-                  onChange={(e) => setStateValue(e.target.value)} className={panelInput} />
+                <input
+                  type="text"
+                  placeholder="New Jersey"
+                  value={stateValue}
+                  onChange={(e) => setStateValue(e.target.value)}
+                  className={panelInput}
+                />
               </div>
 
               <div>
                 <label className={labelClass}>Permit Number</label>
-                <input type="text" placeholder="Ex: P123-456-789-000" value={permitNumber}
-                  onChange={(e) => setPermitNumber(e.target.value)} className={panelInput} />
+                <input
+                  type="text"
+                  placeholder="Ex: P123-456-789-000"
+                  value={permitNumber}
+                  onChange={(e) => setPermitNumber(e.target.value)}
+                  className={panelInput}
+                />
               </div>
 
               <div>
-  <label className={labelClass} htmlFor="homeAddress">
-    Home Address
-  </label>
+                <label className={labelClass} htmlFor="homeAddress">
+                  Home Address
+                </label>
 
-  <AddressAutocomplete
-  value={address}
-  onChange={handleAddressManualChange}
-  onPlaceSelect={handleAddressSelect}   // <-- REQUIRED
-  placeholder={isLoaded ? "123 Main St" : "Loading address search..."}
-  className={panelInput}
-/>
+                <AddressAutocomplete
+                  value={address}
+                  onChange={handleAddressManualChange}
+                  onPlaceSelect={handleAddressSelect}
+                  placeholder={isLoaded ? "123 Main St" : "Loading address search..."}
+                  className={panelInput}
+                />
 
-
-
-<p id="homeAddressHelp" className={helperClass}>
-  {isLoaded
-    ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
-    : "Address search is loading…"}
-</p>
-
-</div>
+                <p id="homeAddressHelp" className={helperClass}>
+                  {isLoaded
+                    ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
+                    : "Address search is loading…"}
+                </p>
+              </div>
 
               {hasAddressResolution && (
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -520,16 +531,22 @@ useEffect(() => {
                   </div>
                   <div>
                     <label className={labelClass}>Latitude / Longitude</label>
-                    <input type="text"
-                      value={homeLat !== null && homeLng !== null ? `${homeLat.toFixed(6)}, ${homeLng.toFixed(6)}` : ""}
-                      disabled className={disabledInput} />
+                    <input
+                      type="text"
+                      value={
+                        homeLat !== null && homeLng !== null
+                          ? `${homeLat.toFixed(6)}, ${homeLng.toFixed(6)}`
+                          : ""
+                      }
+                      disabled
+                      className={disabledInput}
+                    />
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── Continue ── */}
           <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 pb-6 text-white shadow-[0_14px_34px_rgba(10,30,94,0.18)]">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -541,17 +558,22 @@ useEffect(() => {
                 {canContinue ? "READY" : "INCOMPLETE"}
               </div>
             </div>
-            <button type="button" onClick={handleContinue} disabled={!canContinue}
-              className={`mt-4 w-full rounded-xl py-3.5 font-bold transition duration-200 ${canContinue
-                ? "bg-[#f9c80e] text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] hover:-translate-y-[1px] hover:brightness-105 hover:shadow-[0_0_22px_rgba(249,200,14,0.38)]"
-                : "cursor-not-allowed bg-white/15 text-white/45"}`}>
+            <button
+              type="button"
+              onClick={handleContinue}
+              disabled={!canContinue}
+              className={`mt-4 w-full rounded-xl py-3.5 font-bold transition duration-200 ${
+                canContinue
+                  ? "bg-[#f9c80e] text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] hover:-translate-y-[1px] hover:brightness-105 hover:shadow-[0_0_22px_rgba(249,200,14,0.38)]"
+                  : "cursor-not-allowed bg-white/15 text-white/45"
+              }`}
+            >
               Continue to Dashboard
             </button>
           </div>
         </div>
       </section>
 
-      {/* ── Teen Panel ── */}
       <BottomPanel open={showTeenPanel} onClose={() => setShowTeenPanel(false)}>
         <div className={editPanelScrollClass} style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white">
@@ -591,7 +613,6 @@ useEffect(() => {
         </div>
       </BottomPanel>
 
-      {/* ── Parent Panel ── */}
       <BottomPanel open={showParentPanel} onClose={() => setShowParentPanel(false)}>
         <div className={editPanelScrollClass} style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white">
@@ -629,7 +650,6 @@ useEffect(() => {
         </div>
       </BottomPanel>
 
-      {/* ── Phone Info Panel ── */}
       <BottomPanel open={showPhoneInfo} onClose={() => setShowPhoneInfo(false)}>
         <div className="space-y-4 pb-10">
           <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white">

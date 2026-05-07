@@ -183,6 +183,11 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
 const handleAddressSelect = (place: google.maps.places.PlaceResult) => {
   if (!place) return;
 
+  // ⭐ FIX: update the address field itself
+  if (place.formatted_address) {
+    setAddress(place.formatted_address);
+  }
+
   const parsed = parsePlaceResult(place);
 
   setHomeTown(parsed.town);

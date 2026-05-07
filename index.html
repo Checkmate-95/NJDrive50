@@ -1,31 +1,21 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NJDrive50</title>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
-      rel="stylesheet"
-    />
-
-    <!-- Google Maps API (must load before React or use retry logic) -->
-    <script
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDrcqyiuIgE_u4kvawx1Zh395vV9JR9zto&libraries=places"
-      async
-      defer
-    ></script>
+    <!-- Ionic / React build output -->
+    <link rel="stylesheet" href="/src/index.css" />
   </head>
 
   <body>
     <div id="root"></div>
 
-    <!-- React entry point -->
+    <!-- Your React bundle -->
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- Placeholder for Google Maps script (injected at runtime) -->
+    <script id="google-maps-script"></script>
   </body>
 </html>

@@ -21,6 +21,9 @@ import {
 } from "../state/profileStore"
 import { useMapContext } from "../components/map/MapContext"
 
+import AddressAutocomplete from "../components/AddressAutocomplete";
+
+
 type OnboardingContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
 }
@@ -454,28 +457,19 @@ useEffect(() => {
     Home Address
   </label>
 
-  <input
-    id="homeAddress"
-    ref={addressInputRef}
-    type="text"
-    inputMode="text"
-    autoComplete="street-address"
-    autoCorrect="off"
-    autoCapitalize="words"
-    spellCheck={false}
-    enterKeyHint="done"
-    placeholder={isLoaded ? "123 Main St" : "Loading address search..."}
-    value={address}
-    onChange={(e) => handleAddressManualChange(e.target.value)}
-    className={panelInput}
-    aria-describedby="homeAddressHelp"
-  />
+  <AddressAutocomplete
+  value={address}
+  onChange={handleAddressManualChange}
+  placeholder={isLoaded ? "123 Main St" : "Loading address search..."}
+  className={panelInput}
+/>
 
-  <p id="homeAddressHelp" className={helperClass}>
-    {isLoaded
-      ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
-      : "Address search is loading…"}
-  </p>
+<p id="homeAddressHelp" className={helperClass}>
+  {isLoaded
+    ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
+    : "Address search is loading…"}
+</p>
+
 </div>
 
               {hasAddressResolution && (

@@ -347,16 +347,19 @@ useEffect(() => {
   const openPhotoPicker = () => photoInputRef.current?.click()
 
   const handleAddressManualChange = (value: string) => {
-  setAddress(value)
-  addressSelectedFromAutocompleteRef.current = false
+  setAddress(value);
+
+  // prevent clearing when autocomplete selected
+  if (addressSelectedFromAutocompleteRef.current) return;
 
   // ── Debounced manual typing fix ────────────────────────────────
-  if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+  if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
   typingTimeoutRef.current = setTimeout(() => {
-    clearResolvedAddressState()
-    persistOnboarding({ address: value, ...emptyResolvedAddress })
-  }, 600)
-}
+    clearResolvedAddressState();
+    persistOnboarding({ address: value, ...emptyResolvedAddress });
+  }, 600);
+};
+
 
 
   return (

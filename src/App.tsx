@@ -1,41 +1,41 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react"
-import AppShell from "./layout/AppShell"
-import ErrorBoundary from "./components/ErrorBoundary"
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import AppShell from "./layout/AppShell";
+import ErrorBoundary from "./components/ErrorBoundary";
 
-import HomeDashboard from "./screens/HomeDashboardContent"
-import ActiveDrive from "./screens/ActiveDriveContent"
-import Onboarding from "./screens/OnboardingContent"
-import HomeIntro from "./screens/HomeIntroContent"
+import HomeDashboard from "./screens/HomeDashboardContent";
+import ActiveDrive from "./screens/ActiveDriveContent";
+import Onboarding from "./screens/OnboardingContent";
+import HomeIntro from "./screens/HomeIntroContent";
 
-const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
-const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"))
-const MilestonesContent = lazy(() => import("./screens/MilestonesContent"))
-const ExportLog = lazy(() => import("./screens/ExportLog"))
-const Settings = lazy(() => import("./screens/Settings"))
-const TeenDriverRules = lazy(() => import("./screens/TeenDriverRules"))
-const ReminderSettings = lazy(() => import("./screens/ReminderSettings"))
-const DMVBundle = lazy(() => import("./screens/DMVBundle"))
-const DMVAppointmentPrep = lazy(() => import("./screens/DMVAppointmentPrep"))
-const ReminderLog = lazy(() => import("./screens/ReminderLog"))
-const ShareLogView = lazy(() => import("./screens/ShareLogView"))
-const TodaysDrive = lazy(() => import("./screens/TodaysDrive"))
-const HelpFaq = lazy(() => import("./screens/HelpFAQ"))
-const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
-const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPage"))
-const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
-const DataCleared = lazy(() => import("./screens/DataCleared"))
+import { Preferences } from "@capacitor/preferences";
+
+const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"));
+const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"));
+const MilestonesContent = lazy(() => import("./screens/MilestonesContent"));
+const ExportLog = lazy(() => import("./screens/ExportLog"));
+const Settings = lazy(() => import("./screens/Settings"));
+const TeenDriverRules = lazy(() => import("./screens/TeenDriverRules"));
+const ReminderSettings = lazy(() => import("./screens/ReminderSettings"));
+const DMVBundle = lazy(() => import("./screens/DMVBundle"));
+const DMVAppointmentPrep = lazy(() => import("./screens/DMVAppointmentPrep"));
+const ReminderLog = lazy(() => import("./screens/ReminderLog"));
+const ShareLogView = lazy(() => import("./screens/ShareLogView"));
+const TodaysDrive = lazy(() => import("./screens/TodaysDrive"));
+const HelpFaq = lazy(() => import("./screens/HelpFAQ"));
+const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"));
+const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPage"));
+const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"));
+const DataCleared = lazy(() => import("./screens/DataCleared"));
 
 import {
   loadReminderPreferences,
   initializeReminders,
   loadOnboardingData,
-} from "../core/ReminderEngine"
+} from "../core/ReminderEngine";
 
-import { useNav } from "./state/navStore"
-import type { DriveEntry } from "./state/driveStore"
-
-// ⭐ ADD THIS
-import { MapProvider } from "./components/map/MapProvider"
+import { useNav } from "./state/navStore";
+import type { DriveEntry } from "./state/driveStore";
+import { MapProvider } from "./components/map/MapProvider";
 
 export type Screen =
   | "intro"
@@ -59,7 +59,7 @@ export type Screen =
   | "manageProfile"
   | "restartOnboarding"
   | "dataCleared"
-  | "practiceTest"
+  | "practiceTest";
 
 function ScreenLoader() {
   return (
@@ -68,144 +68,129 @@ function ScreenLoader() {
         Loading screen...
       </div>
     </div>
-  )
+  );
 }
 
 export default function App() {
-  const { screen, setScreen, stack } = useNav()
+  const { screen, setScreen, stack } = useNav();
+  const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null);
+  const prevStackLengthRef = useRef(stack.length);
 
-  const setScreenCompat = (s: Screen | ((prev: Screen) => Screen)) => {
-    const next = typeof s === "function" ? s(screen) : s
-    setScreen(next)
-  }
-
-  const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
-  const prevStackLengthRef = useRef(stack.length)
+  // ✅ CLEAR PREFS ON STARTUP
+  useEffect(() => {
+    const clearPrefs = async () => {
+      await Preferences.clear();
+      localStorage.clear();
+      sessionStorage.clear();
+    };
+    clearPrefs();
+  }, []);
 
   // Initialize reminders only if onboarding exists
   useEffect(() => {
-    const data = loadOnboardingData()
-    if (!data?.teenName) return
+    const data = loadOnboardingData();
+    if (!data?.teenName) return;
 
-    const prefs = loadReminderPreferences()
-    initializeReminders(prefs)
-  }, [])
+    const prefs = loadReminderPreferences();
+    initializeReminders(prefs);
+  }, []);
 
   // ⭐ FIXED STARTUP LOGIC ⭐
   useEffect(() => {
     const checkShareUrl = () => {
-      const path = window.location.pathname
-      const hash = window.location.hash
+      const path = window.location.pathname;
+      const hash = window.location.hash;
 
       if (path === "/share" && hash.startsWith("#ey")) {
-        setScreen("share")
-        return true
+        setScreen("share");
+        return true;
       }
+      return false;
+    };
 
-      return false
-    }
+    if (checkShareUrl()) return;
 
-    if (checkShareUrl()) return
-
-    const data = loadOnboardingData()
+    const data = loadOnboardingData();
 
     // CASE 1: No onboarding data → allow Intro and Onboarding
     if (!data?.teenName) {
       if (screen !== "intro" && screen !== "onboarding") {
-        setScreen("intro")
+        setScreen("intro");
       }
-      return
+      return;
     }
 
     // CASE 2: Onboarding complete → go Home only if still on intro
-if (screen === "intro") {
-  setScreen("home")
-}
-
-
-  }, [screen, setScreen])
+    if (screen === "intro") {
+      setScreen("home");
+    }
+  }, [screen, setScreen]);
 
   useEffect(() => {
-    const wasGoBack = stack.length < prevStackLengthRef.current
-    prevStackLengthRef.current = stack.length
+    const wasGoBack = stack.length < prevStackLengthRef.current;
+    prevStackLengthRef.current = stack.length;
 
     if (!wasGoBack) {
       requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: "auto" })
-      })
+        window.scrollTo({ top: 0, behavior: "auto" });
+      });
     }
-  }, [screen, stack.length])
+  }, [screen, stack.length]);
+
+  const setScreenCompat = (s: Screen | ((prev: Screen) => Screen)) => {
+    const next = typeof s === "function" ? s(screen) : s;
+    setScreen(next);
+  };
 
   const renderScreen = () => {
     switch (screen) {
       case "intro":
-        return <HomeIntro setScreen={setScreenCompat} />
-
+        return <HomeIntro setScreen={setScreenCompat} />;
       case "onboarding":
-        return <Onboarding setScreen={setScreenCompat} />
-
+        return <Onboarding setScreen={setScreenCompat} />;
       case "home":
-        return <HomeDashboard setScreen={setScreenCompat} />
-
+        return <HomeDashboard setScreen={setScreenCompat} />;
       case "active":
         return (
           <ActiveDrive
             setScreen={setScreenCompat}
             setCurrentDrive={setCurrentDrive}
           />
-        )
-
+        );
       case "summary":
-        return <DriveSummary setScreen={setScreenCompat} />
-
+        return <DriveSummary setScreen={setScreenCompat} />;
       case "driveHistory":
-        return <DriveHistoryContent />
-
+        return <DriveHistoryContent />;
       case "export":
-        return <ExportLog setScreen={setScreenCompat} />
-
+        return <ExportLog setScreen={setScreenCompat} />;
       case "settings":
-        return <Settings />
-
+        return <Settings />;
       case "teenDriverRules":
-        return <TeenDriverRules />
-
+        return <TeenDriverRules />;
       case "reminderSettings":
-        return <ReminderSettings />
-
+        return <ReminderSettings />;
       case "reminderLog":
-        return <ReminderLog />
-
+        return <ReminderLog />;
       case "milestones":
-        return <MilestonesContent />
-
+        return <MilestonesContent />;
       case "dmv":
-        return <DMVBundle />
-
+        return <DMVBundle />;
       case "dmvPrep":
-        return <DMVAppointmentPrep />
-
+        return <DMVAppointmentPrep />;
       case "share":
-        return <ShareLogView />
-
+        return <ShareLogView />;
       case "todaysDrive":
-        return <TodaysDrive drive={currentDrive} />
-
+        return <TodaysDrive drive={currentDrive} />;
       case "helpFaq":
-        return <HelpFaq />
-
+        return <HelpFaq />;
       case "aiHelper":
-        return <AIHelperScreen />
-
+        return <AIHelperScreen />;
       case "practiceTest":
-        return <PublicPracticeTestPage />
-
+        return <PublicPracticeTestPage />;
       case "restartOnboarding":
-        return <RestartOnboarding />
-
+        return <RestartOnboarding />;
       case "dataCleared":
-        return <DataCleared />
-
+        return <DataCleared />;
       default: {
         if (import.meta.env.DEV) {
           return (
@@ -223,25 +208,21 @@ if (screen === "intro") {
                 Go Home
               </button>
             </div>
-          )
+          );
         }
-
-        setScreen("home")
-        return null
+        setScreen("home");
+        return null;
       }
     }
-  }
+  };
 
   return (
     <AppShell setScreen={setScreenCompat} active={screen}>
-      {/* ⭐ FIX: MapProvider must wrap ALL screens */}
       <MapProvider>
         <ErrorBoundary key={screen} onReset={() => setScreen("home")}>
-          <Suspense fallback={<ScreenLoader />}>
-            {renderScreen()}
-          </Suspense>
+          <Suspense fallback={<ScreenLoader />}>{renderScreen()}</Suspense>
         </ErrorBoundary>
       </MapProvider>
     </AppShell>
-  )
+  );
 }

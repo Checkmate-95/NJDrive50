@@ -4,6 +4,10 @@ import App from './App'
 import './index.css'
 import '../animations.css'
 
+localStorage.clear();
+sessionStorage.clear();
+
+
 // Inject Google Maps script dynamically
 const googleMapsScript = document.createElement('script');
 googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`;

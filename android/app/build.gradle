@@ -3,7 +3,6 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.njdrive50.app"
     compileSdk = rootProject.ext.compileSdkVersion
-
     defaultConfig {
         applicationId "com.njdrive50.app"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -11,37 +10,25 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
         aaptOptions {
-            // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-            // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
-
     buildTypes {
         release {
             minifyEnabled false
-            // ✅ Use optimized ProGuard rules for modern builds
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
-    }
-
-    // ✅ Java 17 compatibility (must be inside android block)
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
     }
 }
 
 repositories {
-    mavenCentral()
-    google()
-    maven {
-        url uri('../capacitor-cordova-android-plugins/src/main/libs')
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
 }
-
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
@@ -62,6 +49,6 @@ try {
     if (servicesJSON.text) {
         apply plugin: 'com.google.gms.google-services'
     }
-} catch (Exception ignored) {
+} catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }

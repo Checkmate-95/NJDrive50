@@ -33,6 +33,8 @@ import {
   computeDayNightSplit,
 } from "../engine/solarEngine"
 import { loadOnboardingData } from "../../core/ReminderEngine"
+import { Geolocation } from '@capacitor/geolocation'
+
 
 
 
@@ -270,6 +272,24 @@ export default function ActiveDriveContent({
   setScreen,
   setCurrentDrive,
 }: ActiveDriveContentProps) {
+const requestLocationPermission = useCallback(async (): Promise<boolean> => {
+  try {
+    const perm = await Geolocation.requestPermissions();
+    console.log("Permission status:", perm);
+
+    if (perm.location === "denied") return false;
+
+    const coordinates = await Geolocation.getCurrentPosition();
+    console.log("Current position:", coordinates);
+    return true;
+  } catch (error) {
+    console.error("Location error:", error);
+    return false;
+  }
+}, []);
+
+
+
   const [locationError, setLocationError] = useState<string | null>(null)
   const [showStopConfirm, setShowStopConfirm] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
@@ -460,52 +480,63 @@ export default function ActiveDriveContent({
     }
   }, [clearAllLoops])
 
-  // [FIX-14][FIX-15] handlePress gated by ensureLocationPermission — async,
-  // and uses solarEngine.ts for sunrise/sunset via getSolarWindowForDate.
-  const handlePress = async () => {
-    if (isStopping || isPreviewing) return
-
-    if (session.isRunning) {
-      pauseDrive()
-      setShowStopConfirm(false)
-      return
-    }
-
-    const ok = await ensureLocationPermission()
-    if (!ok) {
-      setLocationError("Location access is required to start drive tracking.")
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const coord: RouteCoord = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        }
-
-        if (!session.isActive) {
-          const today = new Date()
-          const window = getSolarWindowForDate(coord.lat, coord.lng, today)
-
-          startDrive(Date.now(), coord, {
-            sunrise: window.sunrise ? window.sunrise.getTime() : 0,
-            sunset: window.sunset ? window.sunset.getTime() : 0,
-          })
-        } else {
-          primeSessionCoord(coord)
-          resumeDrive()
-        }
-
-        setShowStopConfirm(false)
-        setLocationError(null)
-      },
-      () => {
-        setLocationError("Location access is required to start drive tracking.")
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-    )
+ // [FIX‑14][FIX‑15] handlePress gated by requestLocationPermission — async,
+// and uses solarEngine.ts for sunrise/sunset via getSolarWindowForDate.
+const handlePress = async () => {
+  // 🔑 Ask for location permission first
+  const granted: boolean = await requestLocationPermission();
+  if (!granted) {
+    setLocationError("Location access is required to start drive tracking.");
+    return;
   }
+
+  // 🚦 Guard conditions
+  if (isStopping || isPreviewing) return;
+
+  if (session.isRunning) {
+    pauseDrive();
+    setShowStopConfirm(false);
+    return;
+  }
+
+  // 📍 Get current position and start/resume drive
+  try {
+    const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 5000,
+      });
+    });
+
+    const coord: RouteCoord = {
+      lat: pos.coords.latitude,
+      lng: pos.coords.longitude,
+    };
+
+    if (!session.isActive) {
+      const today = new Date();
+      const window = getSolarWindowForDate(coord.lat, coord.lng, today);
+
+      startDrive(Date.now(), coord, {
+        sunrise: window.sunrise ? window.sunrise.getTime() : 0,
+        sunset: window.sunset ? window.sunset.getTime() : 0,
+      });
+    } else {
+      primeSessionCoord(coord);
+      resumeDrive();
+    }
+
+    setShowStopConfirm(false);
+    setLocationError(null);
+  } catch (error) {
+    console.error("Location error:", error);
+    setLocationError("Location access is required to start drive tracking.");
+  }
+};
+
+
+
 
   const handleStopRequest = () => {
     if (saveDisabled) return

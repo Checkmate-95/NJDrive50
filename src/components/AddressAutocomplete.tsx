@@ -20,25 +20,34 @@ export default function AddressAutocomplete({
 
   useEffect(() => {
     if (!inputRef.current) return;
-    if (autoRef.current) return; // prevents re-initializing
+    if (autoRef.current) return; // ✅ prevents re-initializing
 
     autoRef.current = new google.maps.places.Autocomplete(inputRef.current, {
-      fields: ["formatted_address", "address_components", "geometry"],
+      fields: [
+        "formatted_address",
+        "address_components",
+        "geometry",
+        "name",
+        "place_id"
+      ],
       types: ["address"]
     });
 
+    // ✅ Android-safe listener with slight delay
     autoRef.current.addListener("place_changed", () => {
-      const place = autoRef.current?.getPlace();
+      setTimeout(() => {
+        const place = autoRef.current?.getPlace();
 
-      // Update the text field
-      if (place?.formatted_address) {
-        onChange(place.formatted_address);
-      }
+        // Update the text field
+        if (place?.formatted_address) {
+          onChange(place.formatted_address);
+        }
 
-      // Send full place object to parent — ONLY if it exists
-      if (place && onPlaceSelect) {
-        onPlaceSelect(place);
-      }
+        // Send full place object to parent
+        if (place && onPlaceSelect) {
+          onPlaceSelect(place);
+        }
+      }, 200); // ⏱ ensures geometry + components are ready
     });
   }, []);
 

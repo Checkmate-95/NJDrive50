@@ -1,20 +1,3 @@
-// src/screens/ActiveDriveContent.tsx
-// [FIX-1]  Preview and Save share a single frozen snapshot — no double-computation
-// [FIX-2]  Day/night bucket reconciliation locked to snapshot moment, not re-sampled
-// [FIX-3]  Mileage source transparent — live miles used if Routes API unavailable
-// [FIX-4]  Double-save race condition prevented with ref-based atomic guard
-// [FIX-5]  hardReset() deferred until AFTER navigation confirms
-// [FIX-6]  nightOverride toggle no longer triggers extra tick
-// [FIX-7]  Preview clearly flags drive as unsaved via isPreview field
-// [FIX-8]  buildDriveSnapshot defined OUTSIDE the component — no stale closure risk
-// [FIX-9]  sunrise-sunset-js removed from this screen — solarEngine.ts is the single source of truth
-// [FIX-10] primeSessionCoord uses appendRoutePoint store action
-// [FIX-11] setCurrentDrive typed as DriveEntry | null — any removed
-// [FIX-12] Tooltip parent div has group class so hover works correctly
-// [FIX-13] Timer display freezes at last running value when paused (no 00:00 flicker)
-// [FIX-14] ensureLocationPermission() gates all geolocation calls — Android-safe
-// [FIX-15] solarEngine.ts used to compute sunrise/sunset and verified night hours at snapshot time
-
 import { useEffect, useRef, useState, useCallback } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import type { Screen } from "../App"
@@ -33,12 +16,8 @@ import {
   computeDayNightSplit,
 } from "../engine/solarEngine"
 import { loadOnboardingData } from "../../core/ReminderEngine"
-import { Geolocation } from '@capacitor/geolocation'
-
-
-
-
-
+import { Geolocation } from "@capacitor/geolocation"
+import { Capacitor } from "@capacitor/core"
 
 type ActiveDriveContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
@@ -108,34 +87,64 @@ async function getAccurateMileage(start: RouteCoord, end: RouteCoord) {
   }
 }
 
-function getCurrentPosition(): Promise<RouteCoord | null> {
-  return new Promise(resolve => {
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-    )
-  })
-}
-
-// [FIX-14] Permission guard — checks browser API first, then triggers native popup
-async function ensureLocationPermission(): Promise<boolean> {
+async function requestAndGetLocation(): Promise<RouteCoord | null> {
   try {
-    if (navigator.permissions) {
-      const status = await navigator.permissions.query({
-        name: "geolocation" as PermissionName,
+    if (Capacitor.isNativePlatform()) {
+      const permission = await Geolocation.checkPermissions()
+
+      if (
+        permission.location !== "granted" &&
+        permission.coarseLocation !== "granted"
+      ) {
+        const requested = await Geolocation.requestPermissions()
+
+        if (
+          requested.location !== "granted" &&
+          requested.coarseLocation !== "granted"
+        ) {
+          return null
+        }
+      }
+
+      const pos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 5000,
       })
-      if (status.state === "granted") return true
+
+      const lat = pos.coords.latitude
+      const lng = pos.coords.longitude
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+      if (lat === 0 && lng === 0) return null
+
+      return { lat, lng }
     }
 
-    return new Promise(resolve => {
+    return await new Promise<RouteCoord | null>(resolve => {
       navigator.geolocation.getCurrentPosition(
-        () => resolve(true),
-        () => resolve(false)
+        pos => {
+          const lat = pos.coords.latitude
+          const lng = pos.coords.longitude
+
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            resolve(null)
+            return
+          }
+
+          if (lat === 0 && lng === 0) {
+            resolve(null)
+            return
+          }
+
+          resolve({ lat, lng })
+        },
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
       )
     })
   } catch {
-    return false
+    return null
   }
 }
 
@@ -146,8 +155,6 @@ type PreviewDriveEntry = DriveEntry & {
   isPreview?: boolean
 }
 
-// [FIX-8][FIX-15] Defined outside component — reads store via getState() at call time
-// and uses solarEngine.ts to compute verified night hours when possible.
 async function buildDriveSnapshot(
   opts?: { isPreview?: boolean }
 ): Promise<PreviewDriveEntry | null> {
@@ -165,12 +172,11 @@ async function buildDriveSnapshot(
   const liveMode =
     useActiveDriveStore.getState().getCurrentMode() ?? fresh.currentMode ?? "day"
 
-  const currentEndCoord = await getCurrentPosition()
+  const currentEndCoord = await requestAndGetLocation()
 
   const finalElapsedMs = fresh.dayMs + fresh.nightMs
   if (finalElapsedMs <= 0) return null
 
-  // [FIX-2] Bucket reconciliation — runs once against locked snapshotTime
   let finalDayMs = Math.max(0, fresh.dayMs)
   let finalNightMs = Math.max(0, fresh.nightMs)
   const bucketTotal = finalDayMs + finalNightMs
@@ -195,7 +201,6 @@ async function buildDriveSnapshot(
     finalDayMs + finalNightMs
   )
 
-  // [FIX-3] Routes API first, GPS accumulated as fallback
   let accurateMiles = safeNumber(fresh.liveMiles)
   let milesSource: MilesSource = "gps-accumulated"
 
@@ -219,8 +224,6 @@ async function buildDriveSnapshot(
       ? [...baseTrail, currentEndCoord]
       : baseTrail
 
-  // [FIX-15] Compute verified night hours using solarEngine.ts when we
-  // have a valid home location from onboarding.
   const startDate = new Date(savedStartTime)
   const endDate = new Date(snapshotTime)
 
@@ -263,33 +266,14 @@ async function buildDriveSnapshot(
     startLatitude: fresh.startCoord?.lat ?? null,
     startLongitude: fresh.startCoord?.lng ?? null,
 
-    // [FIX-7] Downstream panels check this to distinguish preview from saved
     isPreview: opts?.isPreview ?? false,
   }
 }
 
-export default function ActiveDriveContent({
+function ActiveDriveContent({
   setScreen,
   setCurrentDrive,
 }: ActiveDriveContentProps) {
-const requestLocationPermission = useCallback(async (): Promise<boolean> => {
-  try {
-    const perm = await Geolocation.requestPermissions();
-    console.log("Permission status:", perm);
-
-    if (perm.location === "denied") return false;
-
-    const coordinates = await Geolocation.getCurrentPosition();
-    console.log("Current position:", coordinates);
-    return true;
-  } catch (error) {
-    console.error("Location error:", error);
-    return false;
-  }
-}, []);
-
-
-
   const [locationError, setLocationError] = useState<string | null>(null)
   const [showStopConfirm, setShowStopConfirm] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
@@ -297,12 +281,8 @@ const requestLocationPermission = useCallback(async (): Promise<boolean> => {
 
   const timerRef = useRef<number | null>(null)
   const gpsRef = useRef<number | null>(null)
-
-  // [FIX-1] Single frozen snapshot shared between Preview and Save
   const frozenSnapshotRef =
     useRef<Promise<PreviewDriveEntry | null> | null>(null)
-
-  // [FIX-4] Atomic save guard — synchronous flip prevents double-save
   const isSavingRef = useRef(false)
 
   const {
@@ -338,7 +318,6 @@ const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     clearGpsLoop()
   }, [clearTimerLoop, clearGpsLoop])
 
-  // [FIX-10] Uses store's appendRoutePoint action
   const primeSessionCoord = useCallback(
     (coord: RouteCoord) => {
       useActiveDriveStore.setState(state => {
@@ -357,7 +336,6 @@ const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     [appendRoutePoint]
   )
 
-  // [FIX-13] Freeze displayed timer while paused to avoid 00:00 flicker
   const [frozenElapsedMs, setFrozenElapsedMs] = useState(0)
 
   const elapsedSeconds = getElapsedSeconds()
@@ -398,17 +376,18 @@ const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     ? "Drive Paused"
     : "Ready to Start"
 
-  // [FIX-6] session.nightOverride intentionally excluded from deps —
-  // this effect only initialises coords when isActive first becomes true.
   useEffect(() => {
     if (!session.isActive) return
 
     let cancelled = false
 
     ;(async () => {
-      const coord = await getCurrentPosition()
+      const coord = await requestAndGetLocation()
       if (cancelled) return
-      if (coord) primeSessionCoord(coord)
+      if (coord) {
+        primeSessionCoord(coord)
+        setLocationError(null)
+      }
       tick(undefined, Date.now())
     })()
 
@@ -430,44 +409,20 @@ const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     return clearTimerLoop
   }, [session.isActive, session.isRunning, tick, clearTimerLoop])
 
-  // [FIX-14] GPS polling loop gated by ensureLocationPermission
   useEffect(() => {
     clearGpsLoop()
 
     if (!session.isRunning) return
 
     gpsRef.current = window.setInterval(() => {
-      ensureLocationPermission().then(ok => {
-        if (!ok) {
+      requestAndGetLocation().then(coord => {
+        if (!coord) {
           setLocationError("Location access is required for accurate mileage.")
           return
         }
 
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            const newCoord: RouteCoord = {
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude,
-            }
-
-            if (
-              !Number.isFinite(newCoord.lat) ||
-              !Number.isFinite(newCoord.lng)
-            )
-              return
-            if (newCoord.lat === 0 && newCoord.lng === 0) return
-            if (pos.coords.accuracy && pos.coords.accuracy > 100) return
-
-            setLocationError(null)
-            tick(newCoord, Date.now())
-          },
-          () => {
-            setLocationError(
-              "Location access is required for accurate mileage."
-            )
-          },
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-        )
+        setLocationError(null)
+        tick(coord, Date.now())
       })
     }, 10000)
 
@@ -480,69 +435,48 @@ const requestLocationPermission = useCallback(async (): Promise<boolean> => {
     }
   }, [clearAllLoops])
 
- // [FIX‑14][FIX‑15] handlePress gated by requestLocationPermission — async,
-// and uses solarEngine.ts for sunrise/sunset via getSolarWindowForDate.
-const handlePress = async () => {
-  // 🔑 Ask for location permission first
-  const granted: boolean = await requestLocationPermission();
-  if (!granted) {
-    setLocationError("Location access is required to start drive tracking.");
-    return;
-  }
+  const handlePress = async () => {
+    if (isStopping || isPreviewing) return
 
-  // 🚦 Guard conditions
-  if (isStopping || isPreviewing) return;
-
-  if (session.isRunning) {
-    pauseDrive();
-    setShowStopConfirm(false);
-    return;
-  }
-
-  // 📍 Get current position and start/resume drive
-  try {
-    const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 5000,
-      });
-    });
-
-    const coord: RouteCoord = {
-      lat: pos.coords.latitude,
-      lng: pos.coords.longitude,
-    };
-
-    if (!session.isActive) {
-      const today = new Date();
-      const window = getSolarWindowForDate(coord.lat, coord.lng, today);
-
-      startDrive(Date.now(), coord, {
-        sunrise: window.sunrise ? window.sunrise.getTime() : 0,
-        sunset: window.sunset ? window.sunset.getTime() : 0,
-      });
-    } else {
-      primeSessionCoord(coord);
-      resumeDrive();
+    if (session.isRunning) {
+      pauseDrive()
+      setShowStopConfirm(false)
+      return
     }
 
-    setShowStopConfirm(false);
-    setLocationError(null);
-  } catch (error) {
-    console.error("Location error:", error);
-    setLocationError("Location access is required to start drive tracking.");
+    const coord = await requestAndGetLocation()
+
+    if (!coord) {
+      setLocationError("Location access is required to start drive tracking.")
+      return
+    }
+
+    try {
+      if (!session.isActive) {
+        const today = new Date()
+        const window = getSolarWindowForDate(coord.lat, coord.lng, today)
+
+        startDrive(Date.now(), coord, {
+          sunrise: window.sunrise ? window.sunrise.getTime() : 0,
+          sunset: window.sunset ? window.sunset.getTime() : 0,
+        })
+      } else {
+        primeSessionCoord(coord)
+        resumeDrive()
+      }
+
+      setShowStopConfirm(false)
+      setLocationError(null)
+    } catch (error) {
+      console.error("Location error:", error)
+      setLocationError("Location access is required to start drive tracking.")
+    }
   }
-};
-
-
-
 
   const handleStopRequest = () => {
     if (saveDisabled) return
     if (session.isRunning) pauseDrive()
 
-    // [FIX-1] Build frozen snapshot once — reused by both Preview and Save
     frozenSnapshotRef.current = buildDriveSnapshot({ isPreview: false })
     setShowStopConfirm(true)
   }
@@ -553,7 +487,6 @@ const handlePress = async () => {
     resumeDrive()
   }
 
-  // [FIX-4] Atomic guard prevents double-save on rapid taps
   const handleSaveDrive = async () => {
     if (isSavingRef.current) return
 
@@ -569,7 +502,6 @@ const handlePress = async () => {
 
       if (!finalizedDrive) return
 
-      // Strip preview flag and milesSource before persisting
       const {
         isPreview: _stripped,
         milesSource: _src,
@@ -580,7 +512,6 @@ const handlePress = async () => {
       setCurrentDrive(driveToSave as DriveEntry)
       setShowStopConfirm(false)
 
-      // [FIX-5] Navigate FIRST, then reset
       navigate("active", "confirm", setScreen)
       hardReset()
     } catch (err) {
@@ -595,7 +526,6 @@ const handlePress = async () => {
     }
   }
 
-  // [FIX-1][FIX-7] Preview awaits the SAME frozen snapshot as Save
   const handlePreviewSummary = async () => {
     if (previewDisabled) return
 
@@ -826,7 +756,6 @@ const handlePress = async () => {
                 </div>
 
                 <div className="sm:col-span-2">
-                  {/* [FIX-12] group class on parent enables CSS group-hover tooltip */}
                   <div className="group relative flex items-center gap-1">
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                       Weather Conditions
@@ -995,3 +924,5 @@ const handlePress = async () => {
     </div>
   )
 }
+
+export default ActiveDriveContent

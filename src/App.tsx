@@ -76,15 +76,7 @@ export default function App() {
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null);
   const prevStackLengthRef = useRef(stack.length);
 
-  // ✅ CLEAR PREFS ON STARTUP
-  useEffect(() => {
-    const clearPrefs = async () => {
-      await Preferences.clear();
-      localStorage.clear();
-      sessionStorage.clear();
-    };
-    clearPrefs();
-  }, []);
+  
 
   // Initialize reminders only if onboarding exists
   useEffect(() => {

@@ -90,63 +90,68 @@ async function getAccurateMileage(start: RouteCoord, end: RouteCoord) {
 async function requestAndGetLocation(): Promise<RouteCoord | null> {
   try {
     if (Capacitor.isNativePlatform()) {
-      const permission = await Geolocation.checkPermissions()
+      // 1. Check location permissions
+      const permission = await Geolocation.checkPermissions();
 
-      if (
+      const needsLocation =
         permission.location !== "granted" &&
-        permission.coarseLocation !== "granted"
-      ) {
-        const requested = await Geolocation.requestPermissions()
+        permission.coarseLocation !== "granted";
 
-        if (
-          requested.location !== "granted" &&
-          requested.coarseLocation !== "granted"
-        ) {
-          return null
-        }
+      if (needsLocation) {
+        const requested = await Geolocation.requestPermissions();
+
+        const granted =
+          requested.location === "granted" ||
+          requested.coarseLocation === "granted";
+
+        if (!granted) return null;
       }
 
+      // 2. Get current position
       const pos = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 5000,
-      })
+      });
 
-      const lat = pos.coords.latitude
-      const lng = pos.coords.longitude
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
 
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-      if (lat === 0 && lng === 0) return null
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      if (lat === 0 && lng === 0) return null;
 
-      return { lat, lng }
+      return { lat, lng };
     }
 
-    return await new Promise<RouteCoord | null>(resolve => {
+    // Browser fallback
+    return await new Promise<RouteCoord | null>((resolve) => {
       navigator.geolocation.getCurrentPosition(
-        pos => {
-          const lat = pos.coords.latitude
-          const lng = pos.coords.longitude
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
 
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            resolve(null)
-            return
+            resolve(null);
+            return;
           }
 
           if (lat === 0 && lng === 0) {
-            resolve(null)
-            return
+            resolve(null);
+            return;
           }
 
-          resolve({ lat, lng })
+          resolve({ lat, lng });
         },
         () => resolve(null),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-      )
-    })
-  } catch {
-    return null
+      );
+    });
+  } catch (err) {
+    console.error("Location error:", err);
+    return null;
   }
 }
+
 
 type MilesSource = "routes-api" | "gps-accumulated"
 

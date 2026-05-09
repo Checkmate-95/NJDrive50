@@ -21,6 +21,8 @@ import {
 } from "../state/profileStore"
 import { useMapContext } from "../components/map/MapContext"
 import AddressAutocomplete from "../components/AddressAutocomplete"
+import { Preferences } from "@capacitor/preferences";
+
 
 type OnboardingContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
@@ -149,6 +151,10 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   const [homeCounty, setHomeCounty] = useState(saved.homeCounty ?? "")
   const [homeLat, setHomeLat] = useState<number | null>(saved.homeLat ?? null)
   const [homeLng, setHomeLng] = useState<number | null>(saved.homeLng ?? null)
+  const hasAddressResolution = Boolean(
+  homeTown || homeZip || homeCounty || homeLat !== null || homeLng !== null
+)
+
 
   const [showTeenPanel, setShowTeenPanel] = useState(false)
   const [showParentPanel, setShowParentPanel] = useState(false)
@@ -320,27 +326,44 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
       homeLng !== null
   )
 
-  const hasAddressResolution = Boolean(
-    homeTown || homeZip || homeCounty || homeLat !== null || homeLng !== null
-  )
+const handleContinue = async () => {
+  if (!canContinue) return
 
-  const handleContinue = () => {
-    if (!canContinue) return
-    persistOnboarding()
-    setScreen("home")
+  // ✅ Save onboarding data locally before navigating away
+  const onboardingData = {
+    teenName,
+    parentName,
+    parentPhone,
+    teenPhone,
+    teenBirthday, // make sure this matches your actual state variable name
+    address,
+    permitNumber,
   }
 
-  const handleTeenPanelSave = () => {
-    persistOnboarding()
-    setShowTeenPanel(false)
-  }
+  await Preferences.set({
+    key: "onboardingData",
+    value: JSON.stringify(onboardingData),
+  })
 
-  const handleParentPanelSave = () => {
-    persistOnboarding()
-    setShowParentPanel(false)
-  }
+  persistOnboarding()
+  setScreen("home")
+}
 
-  const openPhotoPicker = () => photoInputRef.current?.click()
+// ✅ These must be defined OUTSIDE of handleContinue
+const handleTeenPanelSave = () => {
+  persistOnboarding()
+  setShowTeenPanel(false)
+}
+
+const handleParentPanelSave = () => {
+  persistOnboarding()
+  setShowParentPanel(false)
+}
+
+const openPhotoPicker = () => {
+  photoInputRef.current?.click()
+}
+
 
   return (
     <div

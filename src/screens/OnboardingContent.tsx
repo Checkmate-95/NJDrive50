@@ -21,7 +21,7 @@ import {
 } from "../state/profileStore"
 import { useMapContext } from "../components/map/MapContext"
 import AddressAutocomplete from "../components/AddressAutocomplete"
-import { Preferences } from "@capacitor/preferences";
+
 
 
 type OnboardingContentProps = {
@@ -306,55 +306,37 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
     reader.readAsDataURL(file)
   }
 
-  const teenComplete = Boolean(teenName.trim() && teenBirthday.trim())
-  const parentComplete = Boolean(parentName.trim() && relationship.trim())
+ const teenComplete = Boolean(teenName.trim() && teenBirthday.trim())
+const parentComplete = Boolean(parentName.trim() && relationship.trim())
 
-  const canContinue = Boolean(
-    teenName.trim() &&
-      teenBirthday.trim() &&
-      teenPhone.trim() &&
-      parentName.trim() &&
-      parentPhone.trim() &&
-      relationship.trim() &&
-      permitIssueDate.trim() &&
-      permitNumber.trim() &&
-      address.trim() &&
-      homeTown.trim() &&
-      homeZip.trim() &&
-      homeCounty.trim() &&
-      homeLat !== null &&
-      homeLng !== null
-  )
+// ✅ Dev-only bypass for testing
+const isDevBypass = import.meta.env.DEV
 
+const canContinue = isDevBypass || Boolean(
+  teenName.trim() &&
+    teenBirthday.trim() &&
+    teenPhone.trim() &&
+    parentName.trim() &&
+    parentPhone.trim() &&
+    relationship.trim() &&
+    permitIssueDate.trim() &&
+    permitNumber.trim() &&
+    address.trim() &&
+    homeTown.trim() &&
+    homeZip.trim() &&
+    homeCounty.trim() &&
+    homeLat !== null &&
+    homeLng !== null
+)
+
+// ✅ Simplified handleContinue for dev testing
 const handleContinue = async () => {
   if (!canContinue) return
 
-  const onboardingData = {
-    teenName,
-    teenBirthday,
-    teenPhone,
-    parentName,
-    parentPhone,
-    relationship,
-    permitIssueDate,
-    permitNumber,
-    address,
-    homeTown,
-    homeZip,
-    homeCounty,
-    homeLat,
-    homeLng,
-  }
-
-  await Preferences.set({
-    key: "onboardingData",
-    value: JSON.stringify(onboardingData),
-  })
-
+  // Only persist onboarding data; Preferences.set is handled elsewhere
   persistOnboarding()
   setScreen("home")
 }
-
 
 // ✅ These must be defined OUTSIDE of handleContinue
 const handleTeenPanelSave = () => {
@@ -370,6 +352,7 @@ const handleParentPanelSave = () => {
 const openPhotoPicker = () => {
   photoInputRef.current?.click()
 }
+
 
 
   return (

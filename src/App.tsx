@@ -7,7 +7,7 @@ import ActiveDrive from "./screens/ActiveDriveContent";
 import Onboarding from "./screens/OnboardingContent";
 import HomeIntro from "./screens/HomeIntroContent";
 
-
+import { Preferences } from "@capacitor/preferences";
 
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"));
 const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"));
@@ -76,8 +76,6 @@ export default function App() {
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null);
   const prevStackLengthRef = useRef(stack.length);
 
-  
-
   // Initialize reminders only if onboarding exists
   useEffect(() => {
     const data = loadOnboardingData();
@@ -87,37 +85,33 @@ export default function App() {
     initializeReminders(prefs);
   }, []);
 
-  // ⭐ FIXED STARTUP LOGIC ⭐
+  // ⭐ Load onboarding data from Capacitor Preferences ⭐
   useEffect(() => {
-    const checkShareUrl = () => {
-      const path = window.location.pathname;
-      const hash = window.location.hash;
+    const load = async () => {
+      const result = await Preferences.get({ key: "onboardingData" });
 
-      if (path === "/share" && hash.startsWith("#ey")) {
-        setScreen("share");
-        return true;
+      if (result.value) {
+        const data = JSON.parse(result.value);
+
+        // If onboarding is complete → go home
+        if (data.teenName) {
+          if (screen === "intro" || screen === "onboarding") {
+            setScreen("home");
+          }
+          return;
+        }
       }
-      return false;
-    };
 
-    if (checkShareUrl()) return;
-
-    const data = loadOnboardingData();
-
-    // CASE 1: No onboarding data → allow Intro and Onboarding
-    if (!data?.teenName) {
+      // No saved data → go to intro
       if (screen !== "intro" && screen !== "onboarding") {
         setScreen("intro");
       }
-      return;
-    }
+    };
 
-    // CASE 2: Onboarding complete → go Home only if still on intro
-    if (screen === "intro") {
-      setScreen("home");
-    }
-  }, [screen, setScreen]);
+    load();
+  }, []); // runs once on startup
 
+  // Scroll reset logic
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current;
     prevStackLengthRef.current = stack.length;

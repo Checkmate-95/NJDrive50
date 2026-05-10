@@ -329,15 +329,21 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
 const handleContinue = async () => {
   if (!canContinue) return
 
-  // ✅ Save onboarding data locally before navigating away
   const onboardingData = {
     teenName,
+    teenBirthday,
+    teenPhone,
     parentName,
     parentPhone,
-    teenPhone,
-    teenBirthday, // make sure this matches your actual state variable name
-    address,
+    relationship,
+    permitIssueDate,
     permitNumber,
+    address,
+    homeTown,
+    homeZip,
+    homeCounty,
+    homeLat,
+    homeLng,
   }
 
   await Preferences.set({
@@ -348,6 +354,7 @@ const handleContinue = async () => {
   persistOnboarding()
   setScreen("home")
 }
+
 
 // ✅ These must be defined OUTSIDE of handleContinue
 const handleTeenPanelSave = () => {

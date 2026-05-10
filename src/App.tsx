@@ -7,7 +7,7 @@ import ActiveDrive from "./screens/ActiveDriveContent";
 import Onboarding from "./screens/OnboardingContent";
 import HomeIntro from "./screens/HomeIntroContent";
 
-import { Preferences } from "@capacitor/preferences";
+
 
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"));
 const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"));

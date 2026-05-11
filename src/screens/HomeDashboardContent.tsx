@@ -219,22 +219,21 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
           </div>
 
           {/* PROGRESS CARDS — Plan B layout: 2 panels on top, 1 full-width panel below */}
-<div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
-
+<div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 items-stretch">
 
   {/* Total Hours — top left */}
-  <div className="grid h-full min-h-[210px] grid-rows-[auto_auto_auto_auto_auto] justify-items-center rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-center shadow-sm sm:min-h-[240px]">
-    <div className="flex h-[40px] min-h-[40px] flex-col items-center justify-center">
+  <div className="flex flex-col justify-between h-full min-h-[210px] rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-center shadow-sm sm:min-h-[240px]">
+    <div className="flex flex-col items-center justify-center h-[40px]">
       <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Total</p>
       <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Hours</p>
     </div>
 
-    <p className="flex min-h-[42px] items-end text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
+    <p className="flex items-end justify-center text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
       {totalHours.toFixed(1)}
       <span className="text-lg font-semibold text-[#0A1E5E]/65"> / {totalRequired}</span>
     </p>
 
-    <p className="flex min-h-[32px] items-center text-sm leading-snug text-[#0A1E5E]/68">
+    <p className="text-sm leading-snug text-[#0A1E5E]/68">
       {totalRemaining.toFixed(1)} Hours Remaining
     </p>
 
@@ -251,18 +250,18 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
   </div>
 
   {/* Night Hours — top right */}
-  <div className="grid h-full min-h-[210px] grid-rows-[auto_auto_auto_auto_auto] justify-items-center rounded-2xl border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4 text-center shadow-sm sm:min-h-[240px]">
-    <div className="flex h-[40px] min-h-[40px] flex-col items-center justify-center">
+  <div className="flex flex-col justify-between h-full min-h-[210px] rounded-2xl border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4 text-center shadow-sm sm:min-h-[240px]">
+    <div className="flex flex-col items-center justify-center h-[40px]">
       <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Night</p>
       <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Hours</p>
     </div>
 
-    <p className="flex min-h-[42px] items-end text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
+    <p className="flex items-end justify-center text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
       {nightHours.toFixed(1)}
       <span className="text-lg font-semibold text-[#0A1E5E]/65"> / {nightRequired}</span>
     </p>
 
-    <p className="flex min-h-[32px] items-center text-sm leading-snug text-[#0A1E5E]/68">
+    <p className="text-sm leading-snug text-[#0A1E5E]/68">
       {nightRemaining.toFixed(1)} Hours Remaining
     </p>
 
@@ -279,26 +278,23 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
   </div>
 
   {/* Total Miles — short wide horizontal panel */}
-<div className="col-span-2 flex items-center justify-between rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] px-4 py-2 shadow-sm">
+  <div className="col-span-2 flex items-center justify-between rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] px-4 py-2 shadow-sm">
+    <div className="flex flex-col leading-tight">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Total Miles</p>
+      <p className="text-xs text-[#0A1E5E]/60">Across all drives</p>
+    </div>
 
-  {/* Left side: label */}
-  <div className="flex flex-col leading-tight">
-    <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">Total Miles</p>
-    <p className="text-xs text-[#0A1E5E]/60">Across all drives</p>
-  </div>
+    <p className="flex items-end text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
+      {totalMiles.toFixed(1)}
+      <span className="ml-1 text-lg font-semibold text-[#0A1E5E]/65">mi</span>
+    </p>
 
-  {/* Middle: big number */}
-  <p className="flex items-end text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
-    {totalMiles.toFixed(1)}
-    <span className="ml-1 text-lg font-semibold text-[#0A1E5E]/65">mi</span>
-  </p>
-
-  {/* Right side: pill */}
-  <div className="inline-flex h-[26px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70">
-    INFO
+    <div className="inline-flex h-[26px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70">
+      INFO
+    </div>
   </div>
 </div>
-</div>
+
 
           {/* LAST DRIVE CARD */}
           <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 shadow-sm sm:p-5">

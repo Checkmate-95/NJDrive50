@@ -173,50 +173,49 @@ export default function HomeDashboardContent({ setScreen }: HomeDashboardContent
           )}
 
           {/* HERO CARD */}
-          <div className="rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white shadow-inner sm:p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-[#f9c80e]/90">
-                  Driving Progress
-                </p>
+<div className="rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] px-5 pt-6 pb-5 text-white shadow-inner sm:px-6 sm:pt-8 sm:pb-6">
+  <div className="flex items-start justify-between gap-4">
+    <div className="min-w-0 flex-1">
+      <p className="text-[11px] uppercase tracking-[0.24em] text-[#f9c80e]/90">
+        Driving Progress
+      </p>
 
-                <h2 className="mt-2 text-[1.75rem] font-extrabold leading-tight sm:text-3xl">
-                  Welcome back, {teenName}
-                </h2>
+      <h2 className="mt-2 text-[1.75rem] font-extrabold leading-tight sm:text-3xl">
+        Welcome back, {teenName}
+      </h2>
 
-                <p className="mt-2 max-w-[34rem] text-sm leading-relaxed text-white/75">
-                  Track total hours, monitor night driving, and start a new drive when you&apos;re ready.
-                </p>
+      <p className="mt-2 max-w-[34rem] text-sm leading-relaxed text-white/75">
+        Track total hours, monitor night driving, and start a new drive when you're ready.
+      </p>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-white/85">
-                    TOTAL HOURS
-                  </span>
-                  <span className="rounded-full border border-[#f9c80e]/35 bg-[#f9c80e]/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-[#f9c80e]">
-                    NIGHT HOURS
-                  </span>
-                </div>
-              </div>
+      <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+        <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-white/85">
+          TOTAL HOURS
+        </span>
+        <span className="rounded-full border border-[#f9c80e]/35 bg-[#f9c80e]/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-[#f9c80e]">
+          NIGHT HOURS
+        </span>
+      </div>
+    </div>
 
-              <div className="shrink-0">
-                <div className="flex flex-col items-center">
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#f9c80e]/70 bg-white/10 shadow-[0_0_18px_rgba(249,200,14,0.18)] sm:h-20 sm:w-20">
-                    {teenPhoto ? (
-                      <img
-                        src={teenPhoto}
-                        alt={`${teenName} profile`}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-sm font-extrabold tracking-[0.14em] text-[#f9c80e] sm:text-base">
-                        {teenInitials}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <div className="shrink-0 flex flex-col items-center justify-center">
+      <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#f9c80e]/70 bg-white/10 shadow-[0_0_18px_rgba(249,200,14,0.18)] sm:h-20 sm:w-20">
+        {teenPhoto ? (
+          <img
+            src={teenPhoto}
+            alt={`${teenName} profile`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span className="text-sm font-extrabold tracking-[0.14em] text-[#f9c80e] sm:text-base">
+            {teenInitials}
+          </span>
+        )}
+      </div>
+    </div>
+  </div>
+</div>
+
 
           {/* PROGRESS CARDS — Plan B layout: 2 panels on top, 1 full-width panel below */}
 <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 items-stretch">

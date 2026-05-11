@@ -1,5 +1,12 @@
 // src/screens/ExportLog.tsx
-import { useMemo, useCallback, type Dispatch, type SetStateAction } from "react"
+import {
+  useMemo,
+  useCallback,
+  useEffect,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react"
 import type { Screen } from "../App"
 import { useDriveHistory } from "../state/driveStore"
 import jsPDF from "jspdf"
@@ -13,6 +20,14 @@ import { Capacitor } from "@capacitor/core"
 type ExportLogProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
 }
+
+type StatusState =
+  | {
+      type: "success" | "error"
+      title: string
+      message: string
+    }
+  | null
 
 const safeNumber = (value: unknown) => {
   const num = Number(value)
@@ -52,8 +67,76 @@ const downloadBlob = (blob: Blob, filename: string) => {
   }, 1000)
 }
 
+function StatusBanner({
+  status,
+  onDismiss,
+}: {
+  status: NonNullable<StatusState>
+  onDismiss: () => void
+}) {
+  const isSuccess = status.type === "success"
+
+  return (
+    <div
+      role={isSuccess ? "status" : "alert"}
+      aria-live={isSuccess ? "polite" : "assertive"}
+      className={[
+        "rounded-[24px] border px-4 py-3 shadow-sm sm:px-5",
+        isSuccess
+          ? "border-[#08194A]/12 bg-[#F7F9FC] text-[#08194A]"
+          : "border-[#f9c80e]/45 bg-[#FFF8DB] text-[#08194A]",
+      ].join(" ")}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div
+            aria-hidden="true"
+            className={[
+              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black",
+              isSuccess
+                ? "bg-[#08194A] text-white"
+                : "bg-[#f9c80e] text-[#08194A]",
+            ].join(" ")}
+          >
+            {isSuccess ? "✓" : "!"}
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-sm font-extrabold tracking-tight">
+              {status.title}
+            </p>
+            <p className="mt-1 text-sm text-[#08194A]/78">{status.message}</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Dismiss status message"
+          className="shrink-0 rounded-lg border border-[#08194A]/10 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#08194A] transition hover:bg-[#F3F6FB]"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function ExportLog({ setScreen }: ExportLogProps) {
   const drives = useDriveHistory() || []
+  const [status, setStatus] = useState<StatusState>(null)
+
+  useEffect(() => {
+    if (!status) return
+
+    const timeout = window.setTimeout(() => {
+      setStatus(null)
+    }, status.type === "error" ? 6500 : 4200)
+
+    return () => {
+      window.clearTimeout(timeout)
+    }
+  }, [status])
 
   const rows = useMemo(() => {
     return drives.map((d) => {
@@ -147,6 +230,11 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
 
       if (!isNative) {
         doc.save("NJDrive50_Log.pdf")
+        setStatus({
+          type: "success",
+          title: "PDF export started",
+          message: "Your PDF file has been prepared for download.",
+        })
         return
       }
 
@@ -170,9 +258,19 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         url: uri,
         dialogTitle: "Share PDF",
       })
+
+      setStatus({
+        type: "success",
+        title: "PDF ready",
+        message: "Your drive log PDF is ready to share.",
+      })
     } catch (error) {
       console.error("PDF export failed:", error)
-      window.alert("Could not export PDF. Please try again.")
+      setStatus({
+        type: "error",
+        title: "PDF export did not finish",
+        message: "We couldn’t generate your PDF right now. Please try again.",
+      })
     }
   }, [rows, totals])
 
@@ -207,6 +305,11 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       if (!isNative) {
         const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
         downloadBlob(blob, "NJDrive50_Log.csv")
+        setStatus({
+          type: "success",
+          title: "CSV export started",
+          message: "Your CSV file has been prepared for download.",
+        })
         return
       }
 
@@ -229,9 +332,19 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         url: uri,
         dialogTitle: "Share CSV",
       })
+
+      setStatus({
+        type: "success",
+        title: "CSV ready",
+        message: "Your drive log CSV is ready to share.",
+      })
     } catch (error) {
       console.error("CSV export failed:", error)
-      window.alert("Could not export CSV. Please try again.")
+      setStatus({
+        type: "error",
+        title: "CSV export did not finish",
+        message: "We couldn’t generate your CSV right now. Please try again.",
+      })
     }
   }, [rows])
 
@@ -240,6 +353,10 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
   return (
     <main className="min-h-screen bg-white px-4 py-6 text-[#08194A] sm:px-6">
       <section className="mx-auto w-full max-w-3xl space-y-6">
+        {status ? (
+          <StatusBanner status={status} onDismiss={() => setStatus(null)} />
+        ) : null}
+
         <div className="rounded-[28px] border border-[#08194A]/10 bg-[#08194A] px-5 py-6 text-white shadow-[0_14px_34px_rgba(10,30,94,0.18)] sm:px-6">
           <div className="flex flex-col items-center gap-4 text-center">
             <img

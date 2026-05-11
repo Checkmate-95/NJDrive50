@@ -4,13 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-  "dev": "vite",
-  "build": "tsc -b && vite build",
-  "lint": "eslint .",
-  "preview": "vite preview",
-  "ai-server": "node server/index.cjs",
-  "routes-proxy": "tsx routesProxy.ts"
-},
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "ai-server": "node server/index.cjs",
+    "routes-proxy": "tsx routesProxy.ts"
+  },
   "dependencies": {
     "@capacitor/android": "^8.3.2",
     "@capacitor/core": "^8.3.1",

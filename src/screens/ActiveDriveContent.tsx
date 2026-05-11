@@ -712,101 +712,107 @@ function ActiveDriveContent({
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-left shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                  Duration
-                </p>
-                <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
-                  {formattedElapsed}
-                </p>
-              </div>
+            <div className="mt-5 flex flex-col gap-3">
+  <div className="rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm w-full">
+    <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+      Duration
+    </p>
+    <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+      {formattedElapsed}
+    </p>
+  </div>
 
-              <div className="rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-left shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                  Distance
-                </p>
-                <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
-                  {safeNumber(session.liveMiles).toFixed(1)}
-                  <span className="ml-1 text-sm font-bold text-[#0A1E5E]/65 sm:text-base">
-                    mi
-                  </span>
-                </p>
-                <p className="mt-1 text-[10px] text-[#0A1E5E]/40">
-                  Live GPS estimate
-                </p>
-              </div>
-            </div>
+  <div className="rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm w-full">
+    <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+      Distance
+    </p>
+    <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+      {safeNumber(session.liveMiles).toFixed(1)}
+      <span className="ml-1 text-sm font-bold text-[#0A1E5E]/65 sm:text-base">
+        mi
+      </span>
+    </p>
+    <p className="mt-1 text-[10px] text-[#0A1E5E]/40">
+      Live GPS estimate
+    </p>
+  </div>
+</div>
+
+
 
             <div className="mt-4 rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F4F6FA] p-4 shadow-sm">
-              <div className="grid grid-cols-1 gap-3 text-left sm:grid-cols-2">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                    Start Time
-                  </p>
-                  <p className="mt-1 tabular-nums text-sm font-semibold text-[#08194A]">
-                    {session.startTime
-                      ? new Date(session.startTime).toLocaleTimeString()
-                      : "--"}
-                  </p>
-                </div>
+  <div className="grid grid-cols-1 gap-4 text-center items-center sm:grid-cols-2">
+    
+    {/* Start Time */}
+    <div>
+      <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+        Start Time
+      </p>
+      <p className="mt-1 tabular-nums text-sm font-semibold text-[#08194A]">
+        {session.startTime
+          ? new Date(session.startTime).toLocaleTimeString()
+          : "--"}
+      </p>
+    </div>
 
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                    Lighting
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#08194A]">
-                    {effectiveNight ? "Night driving" : "Day driving"}
-                  </p>
-                </div>
+    {/* Lighting */}
+    <div>
+      <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+        Lighting
+      </p>
+      <p className="mt-1 text-sm font-semibold text-[#08194A]">
+        {effectiveNight ? "Night driving" : "Day driving"}
+      </p>
+    </div>
 
-                <div className="sm:col-span-2">
-                  <div className="group relative flex items-center gap-1">
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                      Weather Conditions
-                    </p>
-                    <span className="ml-1 cursor-pointer text-[#0A1E5E]/40 hover:text-[#0A1E5E]/70">
-                      ⓘ
-                    </span>
-                    <div className="absolute left-1/2 top-full z-20 mt-2 hidden w-60 -translate-x-1/2 rounded-lg bg-white p-3 text-xs text-[#08194A] shadow-lg ring-1 ring-black/10 group-hover:block">
-                      <p className="font-semibold text-[#0A1E5E]">
-                        Optional Weather Tag
-                      </p>
-                      <p className="mt-1 leading-snug">
-                        This is optional and does not affect drive time,
-                        mileage, or day/night status. Choose a weather
-                        condition only if you want it included in the saved
-                        summary.
-                      </p>
-                      <p className="mt-1 italic text-[#0A1E5E]/70">
-                        If you don&apos;t select anything, weather will simply
-                        be left blank.
-                      </p>
-                    </div>
-                  </div>
+    {/* Weather */}
+    <div className="sm:col-span-2 flex flex-col items-center">
+      <div className="group relative flex items-center justify-center gap-1">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+          Weather Conditions
+        </p>
+        <span className="ml-1 cursor-pointer text-[#0A1E5E]/40 hover:text-[#0A1E5E]/70">
+          ⓘ
+        </span>
 
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {["Clear", "Rain", "Snow", "Fog"].map(w => {
-                      const isSelected = session.weather === w
-                      return (
-                        <button
-                          key={w}
-                          type="button"
-                          onClick={() => setWeather(isSelected ? null : w)}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
-                            isSelected
-                              ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_12px_rgba(249,200,14,0.28)]"
-                              : "border-[#0A1E5E]/15 bg-white text-[#0A1E5E]/70 hover:bg-[#f9c80e]/10"
-                          }`}
-                        >
-                          {w}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Tooltip */}
+        <div className="absolute left-1/2 top-full z-20 mt-2 hidden w-60 -translate-x-1/2 rounded-lg bg-white p-3 text-xs text-[#08194A] shadow-lg ring-1 ring-black/10 group-hover:block">
+          <p className="font-semibold text-[#0A1E5E]">Optional Weather Tag</p>
+          <p className="mt-1 leading-snug">
+            This is optional and does not affect drive time, mileage, or
+            day/night status. Choose a weather condition only if you want it
+            included in the saved summary.
+          </p>
+          <p className="mt-1 italic text-[#0A1E5E]/70">
+            If you don’t select anything, weather will simply be left blank.
+          </p>
+        </div>
+      </div>
+
+      {/* Weather Buttons */}
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
+        {["Clear", "Rain", "Snow", "Fog"].map(w => {
+          const isSelected = session.weather === w
+          return (
+            <button
+              key={w}
+              type="button"
+              onClick={() => setWeather(isSelected ? null : w)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
+                isSelected
+                  ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_12px_rgba(249,200,14,0.28)]"
+                  : "border-[#0A1E5E]/15 bg-white text-[#0A1E5E]/70 hover:bg-[#f9c80e]/10"
+              }`}
+            >
+              {w}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+
+  </div>
+</div>
 
             {locationError && (
               <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 text-left shadow-sm">

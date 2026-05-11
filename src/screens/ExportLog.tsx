@@ -1,10 +1,14 @@
 // src/screens/ExportLog.tsx
-import { useMemo, type Dispatch, type SetStateAction } from "react"
+import { useMemo, useCallback, type Dispatch, type SetStateAction } from "react"
 import type { Screen } from "../App"
-import { useDriveHistory } from "../state/driveStore"  // [FIX-1] reactive hook
+import { useDriveHistory } from "../state/driveStore"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { navigate } from "../navigation/navMap"
+
+import { Filesystem, Directory } from "@capacitor/filesystem"
+import { Share } from "@capacitor/share"
+import { Capacitor } from "@capacitor/core"
 
 type ExportLogProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
@@ -25,7 +29,8 @@ const formatDateTime = (value: unknown) => {
 const getLightingLabel = (dayHours: number, nightHours: number) => {
   if (nightHours > 0 && dayHours > 0) return "Mixed"
   if (nightHours > 0) return "Night"
-  return "Day"
+  if (dayHours > 0) return "Day"
+  return "—"
 }
 
 const csvEscape = (value: unknown) => {
@@ -48,15 +53,14 @@ const downloadBlob = (blob: Blob, filename: string) => {
 }
 
 export default function ExportLog({ setScreen }: ExportLogProps) {
-  // [FIX-1] useDriveHistory() — reactive, triggers recompute when drives change
   const drives = useDriveHistory() || []
 
   const rows = useMemo(() => {
     return drives.map((d) => {
       const totalHours = safeNumber(d.totalDurationHours)
-      const dayHours   = safeNumber(d.dayDurationHours)
+      const dayHours = safeNumber(d.dayDurationHours)
       const nightHours = safeNumber(d.nightDurationHours)
-      const miles      = safeNumber(d.miles)
+      const miles = safeNumber(d.miles)
 
       return {
         id: d.id,
@@ -75,7 +79,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
     return rows.reduce(
       (acc, row) => {
         acc.totalHours += row.totalHours
-        acc.dayHours   += row.dayHours
+        acc.dayHours += row.dayHours
         acc.nightHours += row.nightHours
         acc.totalMiles += row.miles
         return acc
@@ -84,90 +88,152 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
     )
   }, [rows])
 
-  const exportCSV = () => {
-    const header = [
-      "Start Time",
-      "End Time",
-      "Total Hours",
-      "Day Hours",
-      "Night Hours",
-      "Miles",
-      "Lighting",
-    ]
+  const exportPDF = useCallback(async () => {
+    try {
+      const doc = new jsPDF({ orientation: "landscape" })
 
-    const csvRows = rows.map((row) =>
-      [
-        csvEscape(row.start),
-        csvEscape(row.end),
-        csvEscape(formatHours(row.totalHours)),
-        csvEscape(formatHours(row.dayHours)),
-        csvEscape(formatHours(row.nightHours)),
-        csvEscape(row.miles.toFixed(1)),
-        csvEscape(row.lighting),
-      ].join(",")
-    )
+      doc.setFontSize(18)
+      doc.text("NJDrive50 Drive Log", 14, 18)
 
-    const csv = [header.join(","), ...csvRows].join("\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    downloadBlob(blob, "NJDrive50_Log.csv")
-  }
+      doc.setFontSize(11)
+      doc.text("Supervised driving export", 14, 26)
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 32)
 
-  const exportPDF = () => {
-    const doc = new jsPDF({ orientation: "landscape" })
+      doc.setFontSize(10)
+      doc.text(`Saved drives: ${rows.length}`, 14, 40)
+      doc.text(`Total hours: ${formatHours(totals.totalHours)}`, 70, 40)
+      doc.text(`Day hours: ${formatHours(totals.dayHours)}`, 128, 40)
+      doc.text(`Night hours: ${formatHours(totals.nightHours)}`, 182, 40)
+      doc.text(`Total miles: ${totals.totalMiles.toFixed(1)}`, 242, 40)
 
-    doc.setFontSize(18)
-    doc.text("NJDrive50 Drive Log", 14, 18)
-
-    doc.setFontSize(11)
-    doc.text("Supervised driving export", 14, 26)
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 32)
-
-    doc.setFontSize(10)
-    doc.text(`Saved drives: ${rows.length}`, 14, 40)
-    doc.text(`Total hours: ${formatHours(totals.totalHours)}`, 70, 40)
-    doc.text(`Day hours: ${formatHours(totals.dayHours)}`, 128, 40)
-    doc.text(`Night hours: ${formatHours(totals.nightHours)}`, 182, 40)
-    doc.text(`Total miles: ${totals.totalMiles.toFixed(1)}`, 242, 40)
-
-    autoTable(doc, {
-      startY: 48,
-      head: [
-        [
-          "Start Time",
-          "End Time",
-          "Total Hours",
-          "Day Hours",
-          "Night Hours",
-          "Miles",
-          "Lighting",
+      autoTable(doc, {
+        startY: 48,
+        head: [
+          [
+            "Start Time",
+            "End Time",
+            "Total Hours",
+            "Day Hours",
+            "Night Hours",
+            "Miles",
+            "Lighting",
+          ],
         ],
-      ],
-      body: rows.map((row) => [
-        row.start,
-        row.end,
-        formatHours(row.totalHours),
-        formatHours(row.dayHours),
-        formatHours(row.nightHours),
-        row.miles.toFixed(1),
-        row.lighting,
-      ]),
-      styles: {
-        fontSize: 9,
-        cellPadding: 2.5,
-        overflow: "linebreak",
-      },
-      headStyles: {
-        fillColor: [8, 25, 74],
-        textColor: [255, 255, 255],
-      },
-      alternateRowStyles: {
-        fillColor: [247, 249, 252],
-      },
-      margin: { left: 14, right: 14 },
-    })
+        body: rows.map((row) => [
+          row.start,
+          row.end,
+          formatHours(row.totalHours),
+          formatHours(row.dayHours),
+          formatHours(row.nightHours),
+          row.miles.toFixed(1),
+          row.lighting,
+        ]),
+        styles: {
+          fontSize: 9,
+          cellPadding: 2.5,
+          overflow: "linebreak",
+        },
+        headStyles: {
+          fillColor: [8, 25, 74],
+          textColor: [255, 255, 255],
+        },
+        alternateRowStyles: {
+          fillColor: [247, 249, 252],
+        },
+        margin: { left: 14, right: 14 },
+      })
 
-    doc.save("NJDrive50_Log.pdf")
-  }
+      const isNative = Capacitor.isNativePlatform()
+
+      if (!isNative) {
+        doc.save("NJDrive50_Log.pdf")
+        return
+      }
+
+      const fileName = `NJDrive50_Log_${Date.now()}.pdf`
+      const base64Data = doc.output("datauristring").split(",")[1]
+
+      await Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: Directory.Cache,
+      })
+
+      const { uri } = await Filesystem.getUri({
+        path: fileName,
+        directory: Directory.Cache,
+      })
+
+      await Share.share({
+        title: "NJDrive50 Drive Log",
+        text: "Your supervised driving log is ready.",
+        url: uri,
+        dialogTitle: "Share PDF",
+      })
+    } catch (error) {
+      console.error("PDF export failed:", error)
+      window.alert("Could not export PDF. Please try again.")
+    }
+  }, [rows, totals])
+
+  const exportCSV = useCallback(async () => {
+    try {
+      const header = [
+        "Start Time",
+        "End Time",
+        "Total Hours",
+        "Day Hours",
+        "Night Hours",
+        "Miles",
+        "Lighting",
+      ]
+
+      const csvRows = rows.map((row) =>
+        [
+          csvEscape(row.start),
+          csvEscape(row.end),
+          csvEscape(formatHours(row.totalHours)),
+          csvEscape(formatHours(row.dayHours)),
+          csvEscape(formatHours(row.nightHours)),
+          csvEscape(row.miles.toFixed(1)),
+          csvEscape(row.lighting),
+        ].join(",")
+      )
+
+      const csv = [header.join(","), ...csvRows].join("\n")
+      const fileName = `NJDrive50_Log_${Date.now()}.csv`
+      const isNative = Capacitor.isNativePlatform()
+
+      if (!isNative) {
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+        downloadBlob(blob, "NJDrive50_Log.csv")
+        return
+      }
+
+      const base64Data = btoa(unescape(encodeURIComponent(csv)))
+
+      await Filesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: Directory.Cache,
+      })
+
+      const { uri } = await Filesystem.getUri({
+        path: fileName,
+        directory: Directory.Cache,
+      })
+
+      await Share.share({
+        title: "NJDrive50 Drive Log CSV",
+        text: "Your supervised driving CSV export is ready.",
+        url: uri,
+        dialogTitle: "Share CSV",
+      })
+    } catch (error) {
+      console.error("CSV export failed:", error)
+      window.alert("Could not export CSV. Please try again.")
+    }
+  }, [rows])
 
   const hasDrives = rows.length > 0
 

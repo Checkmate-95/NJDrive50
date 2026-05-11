@@ -35,7 +35,7 @@ const formatTime = (ms: number) => {
   const minutes = Math.floor((totalSec % 3600) / 60)
   const seconds = totalSec % 60
   return [hours, minutes, seconds]
-    .map(part => String(part).padStart(2, "0"))
+    .map((part) => String(part).padStart(2, "0"))
     .join(":")
 }
 
@@ -90,68 +90,64 @@ async function getAccurateMileage(start: RouteCoord, end: RouteCoord) {
 async function requestAndGetLocation(): Promise<RouteCoord | null> {
   try {
     if (Capacitor.isNativePlatform()) {
-      // 1. Check location permissions
-      const permission = await Geolocation.checkPermissions();
+      const permission = await Geolocation.checkPermissions()
 
       const needsLocation =
         permission.location !== "granted" &&
-        permission.coarseLocation !== "granted";
+        permission.coarseLocation !== "granted"
 
       if (needsLocation) {
-        const requested = await Geolocation.requestPermissions();
+        const requested = await Geolocation.requestPermissions()
 
         const granted =
           requested.location === "granted" ||
-          requested.coarseLocation === "granted";
+          requested.coarseLocation === "granted"
 
-        if (!granted) return null;
+        if (!granted) return null
       }
 
-      // 2. Get current position
       const pos = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
         timeout: 15000,
         maximumAge: 5000,
-      });
+      })
 
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
+      const lat = pos.coords.latitude
+      const lng = pos.coords.longitude
 
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      if (lat === 0 && lng === 0) return null;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+      if (lat === 0 && lng === 0) return null
 
-      return { lat, lng };
+      return { lat, lng }
     }
 
-    // Browser fallback
     return await new Promise<RouteCoord | null>((resolve) => {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
+          const lat = pos.coords.latitude
+          const lng = pos.coords.longitude
 
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            resolve(null);
-            return;
+            resolve(null)
+            return
           }
 
           if (lat === 0 && lng === 0) {
-            resolve(null);
-            return;
+            resolve(null)
+            return
           }
 
-          resolve({ lat, lng });
+          resolve({ lat, lng })
         },
         () => resolve(null),
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-      );
-    });
+      )
+    })
   } catch (err) {
-    console.error("Location error:", err);
-    return null;
+    console.error("Location error:", err)
+    return null
   }
 }
-
 
 type MilesSource = "routes-api" | "gps-accumulated"
 
@@ -201,19 +197,13 @@ async function buildDriveSnapshot(
     }
   }
 
-  const normalizedTotalMs = Math.max(
-    finalElapsedMs,
-    finalDayMs + finalNightMs
-  )
+  const normalizedTotalMs = Math.max(finalElapsedMs, finalDayMs + finalNightMs)
 
   let accurateMiles = safeNumber(fresh.liveMiles)
   let milesSource: MilesSource = "gps-accumulated"
 
   if (fresh.startCoord && currentEndCoord) {
-    const routeMiles = await getAccurateMileage(
-      fresh.startCoord,
-      currentEndCoord
-    )
+    const routeMiles = await getAccurateMileage(fresh.startCoord, currentEndCoord)
     if (routeMiles !== null) {
       accurateMiles = routeMiles
       milesSource = "routes-api"
@@ -300,7 +290,6 @@ function ActiveDriveContent({
     setNightOverride,
     setWeather,
     appendRoutePoint,
-    getElapsedSeconds,
     getCurrentMode,
   } = useActiveDriveStore()
 
@@ -325,7 +314,7 @@ function ActiveDriveContent({
 
   const primeSessionCoord = useCallback(
     (coord: RouteCoord) => {
-      useActiveDriveStore.setState(state => {
+      useActiveDriveStore.setState((state) => {
         const s = state.session
         return {
           session: {
@@ -341,18 +330,10 @@ function ActiveDriveContent({
     [appendRoutePoint]
   )
 
-  const [frozenElapsedMs, setFrozenElapsedMs] = useState(0)
-
-  const elapsedSeconds = getElapsedSeconds()
-  const rawElapsedMs = elapsedSeconds * 1000
-
-  useEffect(() => {
-    if (session.isRunning) {
-      setFrozenElapsedMs(rawElapsedMs)
-    }
-  }, [rawElapsedMs, session.isRunning])
-
-  const displayedMs = session.isRunning ? rawElapsedMs : frozenElapsedMs
+  const displayedMs = Math.max(
+    0,
+    safeNumber(session.dayMs) + safeNumber(session.nightMs)
+  )
   const formattedElapsed = formatTime(displayedMs)
 
   const isRunning = session.isRunning
@@ -378,8 +359,8 @@ function ActiveDriveContent({
   const statusText = isRunning
     ? "Drive Active"
     : hasActiveDrive
-    ? "Drive Paused"
-    : "Ready to Start"
+      ? "Drive Paused"
+      : "Ready to Start"
 
   useEffect(() => {
     if (!session.isActive) return
@@ -399,8 +380,7 @@ function ActiveDriveContent({
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.isActive])
+  }, [session.isActive, primeSessionCoord, tick])
 
   useEffect(() => {
     clearTimerLoop()
@@ -420,7 +400,7 @@ function ActiveDriveContent({
     if (!session.isRunning) return
 
     gpsRef.current = window.setInterval(() => {
-      requestAndGetLocation().then(coord => {
+      requestAndGetLocation().then((coord) => {
         if (!coord) {
           setLocationError("Location access is required for accurate mileage.")
           return
@@ -551,7 +531,7 @@ function ActiveDriveContent({
   }
 
   return (
-    <div className="flex w-full justify-center px-3 pt-3 pb-8 text-white sm:px-4">
+    <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
       <div className="w-full max-w-[46rem]">
         <div className="mx-auto w-full max-w-[42rem]">
           <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
@@ -626,7 +606,7 @@ function ActiveDriveContent({
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-1.5">
                 <div className="grid grid-cols-3 gap-2">
-                  {(["auto", "day", "night"] as NightOverride[]).map(mode => (
+                  {(["auto", "day", "night"] as NightOverride[]).map((mode) => (
                     <button
                       key={mode}
                       type="button"
@@ -637,8 +617,8 @@ function ActiveDriveContent({
                           ? mode === "auto"
                             ? "bg-[#f9c80e] text-[#08194A] shadow-md"
                             : mode === "day"
-                            ? "bg-white text-[#08194A] shadow-md"
-                            : "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40 shadow-md"
+                              ? "bg-white text-[#08194A] shadow-md"
+                              : "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40 shadow-md"
                           : "bg-transparent text-white/80 hover:bg-white/10"
                       }`}
                     >
@@ -664,21 +644,21 @@ function ActiveDriveContent({
                 isRunning
                   ? "Pause drive timer"
                   : hasActiveDrive
-                  ? "Resume drive timer"
-                  : "Start drive timer"
+                    ? "Resume drive timer"
+                    : "Start drive timer"
               }
               className={`flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-95 ${
                 isRunning
                   ? "animate-pulse-slow bg-[#00A651]"
                   : hasActiveDrive
-                  ? "bg-green-600"
-                  : "bg-red-600"
+                    ? "bg-green-600"
+                    : "bg-red-600"
               }`}
             >
               {isRunning ? (
                 <div className="h-3.5 w-3.5 rounded-sm bg-white" />
               ) : (
-                <div className="ml-1 h-0 w-0 border-t-[7px] border-b-[7px] border-l-[12px] border-t-transparent border-b-transparent border-l-white" />
+                <div className="ml-1 h-0 w-0 border-b-[7px] border-l-[12px] border-t-[7px] border-b-transparent border-l-white border-t-transparent" />
               )}
             </button>
 
@@ -713,106 +693,99 @@ function ActiveDriveContent({
             </div>
 
             <div className="mt-5 flex flex-col gap-3">
-  <div className="rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm w-full">
-    <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-      Duration
-    </p>
-    <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
-      {formattedElapsed}
-    </p>
-  </div>
+              <div className="w-full rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                  Duration
+                </p>
+                <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+                  {formattedElapsed}
+                </p>
+              </div>
 
-  <div className="rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm w-full">
-    <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-      Distance
-    </p>
-    <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
-      {safeNumber(session.liveMiles).toFixed(1)}
-      <span className="ml-1 text-sm font-bold text-[#0A1E5E]/65 sm:text-base">
-        mi
-      </span>
-    </p>
-    <p className="mt-1 text-[10px] text-[#0A1E5E]/40">
-      Live GPS estimate
-    </p>
-  </div>
-</div>
-
-
+              <div className="w-full rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm">
+                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                  Distance
+                </p>
+                <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+                  {safeNumber(session.liveMiles).toFixed(1)}
+                  <span className="ml-1 text-sm font-bold text-[#0A1E5E]/65 sm:text-base">
+                    mi
+                  </span>
+                </p>
+                <p className="mt-1 text-[10px] text-[#0A1E5E]/40">
+                  Live GPS estimate
+                </p>
+              </div>
+            </div>
 
             <div className="mt-4 rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F4F6FA] p-4 shadow-sm">
-  <div className="grid grid-cols-1 gap-4 text-center items-center sm:grid-cols-2">
-    
-    {/* Start Time */}
-    <div>
-      <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-        Start Time
-      </p>
-      <p className="mt-1 tabular-nums text-sm font-semibold text-[#08194A]">
-        {session.startTime
-          ? new Date(session.startTime).toLocaleTimeString()
-          : "--"}
-      </p>
-    </div>
+              <div className="grid grid-cols-1 items-center gap-4 text-center sm:grid-cols-2">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                    Start Time
+                  </p>
+                  <p className="mt-1 tabular-nums text-sm font-semibold text-[#08194A]">
+                    {session.startTime
+                      ? new Date(session.startTime).toLocaleTimeString()
+                      : "--"}
+                  </p>
+                </div>
 
-    {/* Lighting */}
-    <div>
-      <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-        Lighting
-      </p>
-      <p className="mt-1 text-sm font-semibold text-[#08194A]">
-        {effectiveNight ? "Night driving" : "Day driving"}
-      </p>
-    </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                    Lighting
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[#08194A]">
+                    {effectiveNight ? "Night driving" : "Day driving"}
+                  </p>
+                </div>
 
-    {/* Weather */}
-    <div className="sm:col-span-2 flex flex-col items-center">
-      <div className="group relative flex items-center justify-center gap-1">
-        <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-          Weather Conditions
-        </p>
-        <span className="ml-1 cursor-pointer text-[#0A1E5E]/40 hover:text-[#0A1E5E]/70">
-          ⓘ
-        </span>
+                <div className="flex flex-col items-center sm:col-span-2">
+                  <div className="group relative flex items-center justify-center gap-1">
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                      Weather Conditions
+                    </p>
+                    <span className="ml-1 cursor-pointer text-[#0A1E5E]/40 hover:text-[#0A1E5E]/70">
+                      ⓘ
+                    </span>
 
-        {/* Tooltip */}
-        <div className="absolute left-1/2 top-full z-20 mt-2 hidden w-60 -translate-x-1/2 rounded-lg bg-white p-3 text-xs text-[#08194A] shadow-lg ring-1 ring-black/10 group-hover:block">
-          <p className="font-semibold text-[#0A1E5E]">Optional Weather Tag</p>
-          <p className="mt-1 leading-snug">
-            This is optional and does not affect drive time, mileage, or
-            day/night status. Choose a weather condition only if you want it
-            included in the saved summary.
-          </p>
-          <p className="mt-1 italic text-[#0A1E5E]/70">
-            If you don’t select anything, weather will simply be left blank.
-          </p>
-        </div>
-      </div>
+                    <div className="absolute left-1/2 top-full z-20 mt-2 hidden w-60 -translate-x-1/2 rounded-lg bg-white p-3 text-xs text-[#08194A] shadow-lg ring-1 ring-black/10 group-hover:block">
+                      <p className="font-semibold text-[#0A1E5E]">
+                        Optional Weather Tag
+                      </p>
+                      <p className="mt-1 leading-snug">
+                        This is optional and does not affect drive time, mileage, or
+                        day/night status. Choose a weather condition only if you want it
+                        included in the saved summary.
+                      </p>
+                      <p className="mt-1 italic text-[#0A1E5E]/70">
+                        If you don’t select anything, weather will simply be left blank.
+                      </p>
+                    </div>
+                  </div>
 
-      {/* Weather Buttons */}
-      <div className="mt-3 flex flex-wrap justify-center gap-2">
-        {["Clear", "Rain", "Snow", "Fog"].map(w => {
-          const isSelected = session.weather === w
-          return (
-            <button
-              key={w}
-              type="button"
-              onClick={() => setWeather(isSelected ? null : w)}
-              className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
-                isSelected
-                  ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_12px_rgba(249,200,14,0.28)]"
-                  : "border-[#0A1E5E]/15 bg-white text-[#0A1E5E]/70 hover:bg-[#f9c80e]/10"
-              }`}
-            >
-              {w}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-
-  </div>
-</div>
+                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                    {["Clear", "Rain", "Snow", "Fog"].map((w) => {
+                      const isSelected = session.weather === w
+                      return (
+                        <button
+                          key={w}
+                          type="button"
+                          onClick={() => setWeather(isSelected ? null : w)}
+                          className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
+                            isSelected
+                              ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_12px_rgba(249,200,14,0.28)]"
+                              : "border-[#0A1E5E]/15 bg-white text-[#0A1E5E]/70 hover:bg-[#f9c80e]/10"
+                          }`}
+                        >
+                          {w}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {locationError && (
               <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 text-left shadow-sm">
@@ -835,17 +808,17 @@ function ActiveDriveContent({
                     isStopping || isPreviewing
                       ? "cursor-not-allowed bg-gray-300 text-gray-600"
                       : isRunning
-                      ? "bg-red-600 text-white hover:bg-red-700"
-                      : hasActiveDrive
-                      ? "bg-green-600 text-white hover:bg-green-700"
-                      : "bg-[#08194A] text-white hover:bg-[#0A1E5E]"
+                        ? "bg-red-600 text-white hover:bg-red-700"
+                        : hasActiveDrive
+                          ? "bg-green-600 text-white hover:bg-green-700"
+                          : "bg-[#08194A] text-white hover:bg-[#0A1E5E]"
                   }`}
                 >
                   {isRunning
                     ? "Pause Timer"
                     : hasActiveDrive
-                    ? "Resume Timer"
-                    : "Start Timer"}
+                      ? "Resume Timer"
+                      : "Start Timer"}
                 </button>
 
                 <button

@@ -52,30 +52,26 @@ async function getAccurateMileage(start: RouteCoord, end: RouteCoord) {
     const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
     if (!apiKey) return null
 
-    const res = await fetch(
-      "https://routes.googleapis.com/directions/v2:computeRoutes",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "routes.distanceMeters",
-        },
-        body: JSON.stringify({
-          origin: {
-            location: { latLng: { latitude: start.lat, longitude: start.lng } },
-          },
-          destination: {
-            location: { latLng: { latitude: end.lat, longitude: end.lng } },
-          },
-          travelMode: "DRIVE",
-          routingPreference: "TRAFFIC_AWARE",
-          units: "IMPERIAL",
-        }),
-      }
-    )
+   const res = await fetch("http://localhost:3001/api/computeRoutes", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    origin: {
+      location: { latLng: { latitude: start.lat, longitude: start.lng } },
+    },
+    destination: {
+      location: { latLng: { latitude: end.lat, longitude: end.lng } },
+    },
+    travelMode: "DRIVE",
+    routingPreference: "TRAFFIC_AWARE",
+    units: "IMPERIAL",
+  }),
+})
 
-    if (!res.ok) return null
+if (!res.ok) return null
+
 
     const data = await res.json()
     const meters = data?.routes?.[0]?.distanceMeters

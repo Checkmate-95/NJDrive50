@@ -587,7 +587,7 @@ const openPhotoPicker = () => {
         </div>
       </section>
 
-      <BottomPanel open={showTeenPanel} onClose={() => setShowTeenPanel(false)}>
+      <BottomPanel open={showTeenPanel} onClose={() => {}}>
         <div className={editPanelScrollClass} style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white">
             <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">Driver Profile</p>
@@ -626,7 +626,7 @@ const openPhotoPicker = () => {
         </div>
       </BottomPanel>
 
-      <BottomPanel open={showParentPanel} onClose={() => setShowParentPanel(false)}>
+      <BottomPanel open={showParentPanel} onClose={() => {}}>
         <div className={editPanelScrollClass} style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white">
             <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">Contact Setup</p>

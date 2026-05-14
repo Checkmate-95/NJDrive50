@@ -71,7 +71,13 @@ type ActiveDriveStore = {
     nightSeconds: number
   }
   getCurrentMode: () => DriveMode
+
+  // ✅ Add these new ones for global ticking
+  _tickInterval: number | null
+  startGlobalTick: () => void
+  stopGlobalTick: () => void
 }
+
 
 const STORAGE_KEY = "njdrive50_active_drive"
 const MAX_ROUTE_POINTS = 500
@@ -305,6 +311,9 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             routeTrail: initialCoord ? [initialCoord] : [],
           },
         })
+
+        // ✅ Start global tick when drive begins
+        get().startGlobalTick()
       },
 
       pauseDrive: (nowArg) => {
@@ -353,6 +362,9 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             },
           }
         })
+
+        // ✅ Resume ticking globally
+        get().startGlobalTick()
       },
 
       stopDrive: (nowArg) => {
@@ -372,6 +384,9 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             },
           }
         })
+
+        // ✅ Stop global tick when drive ends
+        get().stopGlobalTick()
       },
 
       tick: (coord, nowOverride) => {
@@ -427,30 +442,15 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         })
       },
 
+      // ✅ Restored methods required by ActiveDriveStore type
       setNightOverride: (mode) => {
-        const now = Date.now()
-
-        set((state) => {
-          const s = state.session
-          let next = flushSessionToNow(s, now)
-
-          const resolved = resolveDriveMode(
-            now,
-            mode,
-            s.solarSunrise,
-            s.solarSunset
-          )
-
-          next = {
-            ...next,
+        set((state) => ({
+          session: {
+            ...state.session,
             nightOverride: mode,
-            currentMode: resolved,
-            lastModeChangeAt: now,
-            lastUpdated: now,
-          }
-
-          return { session: next }
-        })
+            lastUpdated: Date.now(),
+          },
+        }))
       },
 
       setWeather: (weather) => {
@@ -466,14 +466,14 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
       appendRoutePoint: (coord) => {
         set((state) => {
           const s = state.session
-          if (!s.isActive) return { session: s }
-
+          const routeTrail = [...s.routeTrail, coord].slice(-MAX_ROUTE_POINTS)
           return {
             session: {
               ...s,
-              startCoord: s.startCoord ?? coord,
+              routeTrail,
               lastCoord: coord,
-              routeTrail: [...s.routeTrail, coord].slice(-MAX_ROUTE_POINTS),
+              liveMiles:
+                s.lastCoord ? s.liveMiles + haversineMiles(s.lastCoord, coord) : s.liveMiles,
               lastUpdated: Date.now(),
             },
           }
@@ -497,7 +497,6 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         const { session: s } = get()
         const now = Date.now()
         const flushed = flushSessionToNow(s, now)
-
         return Math.floor((flushed.dayMs + flushed.nightMs) / 1000)
       },
 
@@ -505,7 +504,6 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         const { session: s } = get()
         const now = Date.now()
         const flushed = flushSessionToNow(s, now)
-
         return {
           daySeconds: Math.floor(flushed.dayMs / 1000),
           nightSeconds: Math.floor(flushed.nightMs / 1000),
@@ -514,15 +512,35 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
 
       getCurrentMode: () => {
         const { session: s } = get()
-
         if (!s.isActive) return s.currentMode
-
         return resolveDriveMode(
           Date.now(),
           s.nightOverride,
           s.solarSunrise,
           s.solarSunset
         )
+      },
+
+      // ✅ Global tick logic to keep timer running across screens
+      _tickInterval: null as number | null,
+
+      startGlobalTick: () => {
+        if (get()._tickInterval) return
+        const id = window.setInterval(() => {
+          const s = get().session
+          if (s.isActive && s.isRunning) {
+            get().tick(undefined, Date.now())
+          }
+        }, 1000)
+        set({ _tickInterval: id })
+      },
+
+      stopGlobalTick: () => {
+        const id = get()._tickInterval
+        if (id) {
+          clearInterval(id)
+          set({ _tickInterval: null })
+        }
       },
     }),
     {

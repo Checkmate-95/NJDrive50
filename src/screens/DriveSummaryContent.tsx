@@ -90,28 +90,20 @@ export default function DriveSummaryContent({
   const hasLastDrive = !!lastDrive
 
   // [FIX-3] Timer reads from store's getElapsedSeconds() — single source of truth
-  useEffect(() => {
+  // ✅ Replace your current useEffect block with this
+useEffect(() => {
+  // Always set initial value
+  setActiveDurationSeconds(getElapsedSeconds())
+
+  // ✅ Subscribe correctly — only one argument (listener)
+  const unsub = useActiveDriveStore.subscribe(() => {
     setActiveDurationSeconds(getElapsedSeconds())
+  })
 
-    if (!activeSession?.isActive || !activeSession?.isRunning) {
-      return
-    }
+  // Cleanup on unmount
+  return () => unsub()
+}, [getElapsedSeconds])
 
-    const intervalId = window.setInterval(() => {
-      setActiveDurationSeconds(getElapsedSeconds())
-    }, 1000)
-
-    return () => {
-      window.clearInterval(intervalId)
-    }
-  }, [
-  activeSession?.isActive,
-  activeSession?.isRunning,
-  activeSession?.startTime,
-  activeSession?.dayMs,
-  activeSession?.nightMs,
-  getElapsedSeconds,
-])
 
   const {
     totalHours,

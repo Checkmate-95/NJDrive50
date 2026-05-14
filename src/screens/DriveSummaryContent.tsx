@@ -407,18 +407,28 @@ export default function DriveSummaryContent({
               </div>
 
               <div className="rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                  Last Drive
-                </p>
-                <p className="mt-2 text-xl font-black leading-tight text-[#08194A] sm:text-2xl">
-                  {hasLastDrive
-                    ? formatHours(safeNumber(lastDrive?.totalDurationHours))
-                    : "—"}
-                </p>
-                <p className="mt-1 text-xs font-semibold text-[#0A1E5E]/65 sm:text-sm">
-                  {hasLastDrive ? lastDriveTimeOfDay : "No drive saved"}
-                </p>
-              </div>
+  <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+    Last Drive
+  </p>
+  <p className="mt-2 text-xl font-black leading-tight text-[#08194A] sm:text-2xl">
+    {hasActiveDrive
+      ? formatHours(activeDurationSeconds / 3600) // live timer from store
+      : hasLastDrive
+        ? formatHours(safeNumber(lastDrive?.totalDurationHours)) // saved drive
+        : "—"}
+  </p>
+  <p className="mt-1 text-xs font-semibold text-[#0A1E5E]/65 sm:text-sm">
+    {hasActiveDrive
+      ? getLightingLabel(
+          safeNumber(activeSession?.dayMs) / 3600000,
+          safeNumber(activeSession?.nightMs) / 3600000
+        )
+      : hasLastDrive
+        ? lastDriveTimeOfDay
+        : "No drive saved"}
+  </p>
+</div>
+
 
               {/* Miles — informational only, no compliance bar */}
               <div className="col-span-2 rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">

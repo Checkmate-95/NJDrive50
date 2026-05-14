@@ -53,8 +53,7 @@ const helperClass = "mt-2 text-xs leading-relaxed text-[#0A1E5E]/60"
 const actionButtonClass =
   "w-full rounded-xl py-3.5 font-semibold transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_0_18px_rgba(249,200,14,0.28)]"
 
-const editPanelScrollClass =
-  "max-h-[78dvh] space-y-4 overflow-y-auto overscroll-contain pb-24 pr-1"
+
 
 const digitsOnly = (value: string, max: number) =>
   value.replace(/\D/g, "").slice(0, max)
@@ -587,81 +586,98 @@ const openPhotoPicker = () => {
         </div>
       </section>
 
-      <BottomPanel open={showTeenPanel} onClose={() => {}}>
-        <div className={editPanelScrollClass} style={{ WebkitOverflowScrolling: "touch" }}>
-          <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">Driver Profile</p>
-            <h2 className="mt-1 text-xl font-bold">Teen Driver Info</h2>
-            <p className="mt-1 text-sm text-white/72">Add the details used throughout the driving log and reminder flow.</p>
-          </div>
-          <div className="space-y-4 rounded-2xl border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4">
-            <div>
-              <label className={labelClass}>Teen Name</label>
-              <input type="text" placeholder="Teen Name" value={teenName} onChange={(e) => setTeenName(e.target.value)} className={inputBase} />
-            </div>
-            <div>
-              <label className={labelClass}>Birthday</label>
-              <input type="tel" inputMode="numeric" autoComplete="bday" placeholder="mm/dd/yyyy" value={teenBirthday}
-                onChange={(e) => setTeenBirthday(formatDateInput(e.target.value))} className={inputBase} />
-            </div>
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label className={labelClass + " mb-0"}>Teen Phone Number</label>
-                <button type="button" onClick={() => setShowPhoneInfo(true)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-[#0A1E5E]/15 bg-white text-sm font-bold text-[#0A1E5E] transition duration-200 hover:shadow-[0_0_14px_rgba(249,200,14,0.24)]"
-                  aria-label="Why we ask for phone numbers">i</button>
-              </div>
-              <input type="tel" inputMode="tel" autoComplete="tel" placeholder="(555) 555-5555" value={teenPhone}
-                onChange={(e) => setTeenPhone(formatPhoneInput(e.target.value))} className={inputBase} />
-              <p className={helperClass}>Used only for helpful reminders and progress-related notifications.</p>
-            </div>
-            <div>
-              <label className={labelClass}>State</label>
-              <input type="text" value={stateValue} disabled className={disabledInput} />
-            </div>
-          </div>
-          <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-3">
-            <button type="button" className={`${actionButtonClass} bg-[#0A1E5E] text-white`} onClick={handleTeenPanelSave}>Save Teen Info</button>
-          </div>
-        </div>
-      </BottomPanel>
+      {/* Teen Panel */}
+<BottomPanel open={showTeenPanel} onClose={() => setShowTeenPanel(false)}>
+  <div className="overflow-y-auto max-h-[80vh] p-6" style={{ WebkitOverflowScrolling: "touch" }}>
+    <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">Driver Profile</p>
+      <h2 className="mt-1 text-xl font-bold">Teen Driver Info</h2>
+      <p className="mt-1 text-sm text-white/72">Add the details used throughout the driving log and reminder flow.</p>
+    </div>
 
-      <BottomPanel open={showParentPanel} onClose={() => {}}>
-        <div className={editPanelScrollClass} style={{ WebkitOverflowScrolling: "touch" }}>
-          <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">Contact Setup</p>
-            <h2 className="mt-1 text-xl font-bold">Parent / Guardian Info</h2>
-            <p className="mt-1 text-sm text-white/72">Add the adult contact who helps monitor permit progress.</p>
-          </div>
-          <div className="space-y-4 rounded-2xl border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4">
-            <div>
-              <label className={labelClass}>Parent Name</label>
-              <input type="text" placeholder="Parent Name" value={parentName} onChange={(e) => setParentName(e.target.value)} className={inputBase} />
-            </div>
-            <div>
-              <label className={labelClass}>Email</label>
-              <input type="email" placeholder="Email" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} className={inputBase} />
-            </div>
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label className={labelClass + " mb-0"}>Parent Phone Number</label>
-                <button type="button" onClick={() => setShowPhoneInfo(true)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-[#0A1E5E]/15 bg-white text-sm font-bold text-[#0A1E5E] transition duration-200 hover:shadow-[0_0_14px_rgba(249,200,14,0.24)]"
-                  aria-label="Why we ask for phone numbers">i</button>
-              </div>
-              <input type="tel" inputMode="tel" autoComplete="tel" placeholder="(555) 555-5555" value={parentPhone}
-                onChange={(e) => setParentPhone(formatPhoneInput(e.target.value))} className={inputBase} />
-            </div>
-            <div>
-              <label className={labelClass}>Relationship</label>
-              <input type="text" placeholder="Mother, Father, Guardian" value={relationship} onChange={(e) => setRelationship(e.target.value)} className={inputBase} />
-            </div>
-          </div>
-          <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-3">
-            <button type="button" className={`${actionButtonClass} bg-[#0A1E5E] text-white`} onClick={handleParentPanelSave}>Save Parent Info</button>
-          </div>
+    <div className="space-y-4 rounded-2xl border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4">
+      <div>
+        <label className={labelClass}>Teen Name</label>
+        <input type="text" placeholder="Teen Name" value={teenName} onChange={(e) => setTeenName(e.target.value)} className={inputBase} />
+      </div>
+
+      <div>
+        <label className={labelClass}>Birthday</label>
+        <input type="tel" inputMode="numeric" autoComplete="bday" placeholder="mm/dd/yyyy" value={teenBirthday}
+          onChange={(e) => setTeenBirthday(formatDateInput(e.target.value))} className={inputBase} />
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <label className={labelClass + " mb-0"}>Teen Phone Number</label>
+          <button type="button" onClick={() => setShowPhoneInfo(true)}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-[#0A1E5E]/15 bg-white text-sm font-bold text-[#0A1E5E] transition duration-200 hover:shadow-[0_0_14px_rgba(249,200,14,0.24)]"
+            aria-label="Why we ask for phone numbers">i</button>
         </div>
-      </BottomPanel>
+        <input type="tel" inputMode="tel" autoComplete="tel" placeholder="(555) 555-5555" value={teenPhone}
+          onChange={(e) => setTeenPhone(formatPhoneInput(e.target.value))} className={inputBase} />
+        <p className={helperClass}>Used only for helpful reminders and progress-related notifications.</p>
+      </div>
+
+      <div>
+        <label className={labelClass}>State</label>
+        <input type="text" value={stateValue} disabled className={disabledInput} />
+      </div>
+    </div>
+
+    <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-3">
+      <button type="button" className={`${actionButtonClass} bg-[#0A1E5E] text-white`} onClick={handleTeenPanelSave}>
+        Save Teen Info
+      </button>
+    </div>
+  </div>
+</BottomPanel>
+
+{/* Parent Panel */}
+<BottomPanel open={showParentPanel} onClose={() => setShowParentPanel(false)}>
+  <div className="overflow-y-auto max-h-[80vh] p-6" style={{ WebkitOverflowScrolling: "touch" }}>
+    <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">Contact Setup</p>
+      <h2 className="mt-1 text-xl font-bold">Parent / Guardian Info</h2>
+      <p className="mt-1 text-sm text-white/72">Add the adult contact who helps monitor permit progress.</p>
+    </div>
+
+    <div className="space-y-4 rounded-2xl border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4">
+      <div>
+        <label className={labelClass}>Parent Name</label>
+        <input type="text" placeholder="Parent Name" value={parentName} onChange={(e) => setParentName(e.target.value)} className={inputBase} />
+      </div>
+
+      <div>
+        <label className={labelClass}>Email</label>
+        <input type="email" placeholder="Email" value={parentEmail} onChange={(e) => setParentEmail(e.target.value)} className={inputBase} />
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <label className={labelClass + " mb-0"}>Parent Phone Number</label>
+          <button type="button" onClick={() => setShowPhoneInfo(true)}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-[#0A1E5E]/15 bg-white text-sm font-bold text-[#0A1E5E] transition duration-200 hover:shadow-[0_0_14px_rgba(249,200,14,0.24)]"
+            aria-label="Why we ask for phone numbers">i</button>
+        </div>
+        <input type="tel" inputMode="tel" autoComplete="tel" placeholder="(555) 555-5555" value={parentPhone}
+          onChange={(e) => setParentPhone(formatPhoneInput(e.target.value))} className={inputBase} />
+      </div>
+
+      <div>
+        <label className={labelClass}>Relationship</label>
+        <input type="text" placeholder="Mother, Father, Guardian" value={relationship} onChange={(e) => setRelationship(e.target.value)} className={inputBase} />
+      </div>
+    </div>
+
+    <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-3">
+      <button type="button" className={`${actionButtonClass} bg-[#0A1E5E] text-white`} onClick={handleParentPanelSave}>
+        Save Parent Info
+      </button>
+    </div>
+  </div>
+</BottomPanel>
+
 
       <BottomPanel open={showPhoneInfo} onClose={() => setShowPhoneInfo(false)}>
         <div className="space-y-4 pb-10">

@@ -2,7 +2,7 @@
 
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// @ts-ignore: subscribeWithSelector is used inside create()
 import { subscribeWithSelector } from "zustand/middleware"
 
 

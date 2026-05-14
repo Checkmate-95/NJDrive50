@@ -9,7 +9,7 @@
 // [FIX-7] Hour format uses shared toFixed(1) consistent with other panels pending shared util
 // [FIX-8] Timer hydration fix — paused timer now shows correct elapsed time on Home panel
 
-import { useState, type Dispatch, type SetStateAction } from "react"
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
 import type { Screen } from "../App"
 import { useDriveHistory } from "../state/driveStore"
 import { loadOnboardingData } from "../../core/ReminderEngine"
@@ -19,6 +19,9 @@ import { useActiveDriveStore } from "../state/activeDriveStore"
 type HomeDashboardContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
 }
+
+
+
 
 // ------------------------------
 // Helpers
@@ -56,8 +59,22 @@ export default function HomeDashboardContent({
   const activeSession = useActiveDriveStore((s) => s.session)
   const hasActiveDrive = Boolean(activeSession?.isActive)
 
-  // ✅ derive elapsed from existing fields (dayMs + nightMs)
-  const elapsedMs = (activeSession?.dayMs ?? 0) + (activeSession?.nightMs ?? 0)
+  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds)
+const [activeDurationSeconds, setActiveDurationSeconds] = useState(getElapsedSeconds())
+
+useEffect(() => {
+  // Set initial value
+  setActiveDurationSeconds(getElapsedSeconds())
+
+  // ✅ Subscribe to store updates so timer stays live on Home Dashboard
+  const unsub = useActiveDriveStore.subscribe(() => {
+    setActiveDurationSeconds(getElapsedSeconds())
+  })
+
+  return () => unsub()
+}, [getElapsedSeconds])
+
+  
 
   // [FIX-2] Reactive drive history — updates automatically when drives are saved/edited/deleted
   const drives = useDriveHistory() || []
@@ -153,11 +170,12 @@ export default function HomeDashboardContent({
               }`}
             >
               <span className="text-lg">🚗</span>
-              <span>
-                {activeSession?.isRunning
-                  ? `Drive Active — ${formatElapsed(elapsedMs)}`
-                  : `Drive Paused — ${formatElapsed(elapsedMs)} (Tap to resume)`}
-              </span>
+<span>
+  {activeSession?.isRunning
+    ? `Drive Active — ${formatElapsed(activeDurationSeconds * 1000)}`
+    : `Drive Paused — ${formatElapsed(activeDurationSeconds * 1000)} (Tap to resume)`}
+</span>
+
             </button>
           )}
 

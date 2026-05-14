@@ -176,6 +176,13 @@ Tone: warm, conversational, reassuring, detailed when needed.
   }
 })
 
+app.post("/api/computeRoutes", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "computeRoutes placeholder active — replace with real logic later",
+  })
+})
+
 // ------------------------------
 // Graceful Shutdown
 // ------------------------------

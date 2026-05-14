@@ -95,7 +95,7 @@ useEffect(() => {
   // Always set initial value
   setActiveDurationSeconds(getElapsedSeconds())
 
-  // ✅ Subscribe correctly — only one argument (listener)
+  // ✅ Subscribe correctly — single listener argument
   const unsub = useActiveDriveStore.subscribe(() => {
     setActiveDurationSeconds(getElapsedSeconds())
   })
@@ -103,6 +103,7 @@ useEffect(() => {
   // Cleanup on unmount
   return () => unsub()
 }, [getElapsedSeconds])
+
 
 
   const {

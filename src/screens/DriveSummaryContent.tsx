@@ -89,13 +89,14 @@ export default function DriveSummaryContent({
   const hasActiveDrive = !!activeSession?.isActive
   const hasLastDrive = !!lastDrive
 
-  // [FIX-3] Timer reads from store's getElapsedSeconds() — single source of truth
-  // ✅ Replace your current useEffect block with this
+ 
+
+
 useEffect(() => {
   // Always set initial value
   setActiveDurationSeconds(getElapsedSeconds())
 
-  // ✅ Subscribe correctly — single listener argument
+  // ✅ Use single-argument form for subscribe (compatible with all Zustand versions)
   const unsub = useActiveDriveStore.subscribe(() => {
     setActiveDurationSeconds(getElapsedSeconds())
   })
@@ -103,6 +104,8 @@ useEffect(() => {
   // Cleanup on unmount
   return () => unsub()
 }, [getElapsedSeconds])
+
+
 
 
 

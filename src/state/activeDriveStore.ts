@@ -1,6 +1,11 @@
 // src/state/activeDriveStore.ts
+
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { subscribeWithSelector } from "zustand/middleware"
+
+
 
 export type DriveMode = "day" | "night"
 export type NightOverride = "auto" | "day" | "night"
@@ -443,105 +448,106 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
       },
 
       // ✅ Restored methods required by ActiveDriveStore type
-      setNightOverride: (mode) => {
-        set((state) => ({
-          session: {
-            ...state.session,
-            nightOverride: mode,
-            lastUpdated: Date.now(),
-          },
-        }))
-      },
+setNightOverride: (mode) => {
+  set((state) => ({
+    session: {
+      ...state.session,
+      nightOverride: mode,
+      lastUpdated: Date.now(),
+    },
+  }))
+},
 
-      setWeather: (weather) => {
-        set((state) => ({
-          session: {
-            ...state.session,
-            weather,
-            lastUpdated: Date.now(),
-          },
-        }))
-      },
+setWeather: (weather) => {
+  set((state) => ({
+    session: {
+      ...state.session,
+      weather,
+      lastUpdated: Date.now(),
+    },
+  }))
+},
 
-      appendRoutePoint: (coord) => {
-        set((state) => {
-          const s = state.session
-          const routeTrail = [...s.routeTrail, coord].slice(-MAX_ROUTE_POINTS)
-          return {
-            session: {
-              ...s,
-              routeTrail,
-              lastCoord: coord,
-              liveMiles:
-                s.lastCoord ? s.liveMiles + haversineMiles(s.lastCoord, coord) : s.liveMiles,
-              lastUpdated: Date.now(),
-            },
-          }
-        })
+appendRoutePoint: (coord) => {
+  set((state) => {
+    const s = state.session
+    const routeTrail = [...s.routeTrail, coord].slice(-MAX_ROUTE_POINTS)
+    return {
+      session: {
+        ...s,
+        routeTrail,
+        lastCoord: coord,
+        liveMiles:
+          s.lastCoord ? s.liveMiles + haversineMiles(s.lastCoord, coord) : s.liveMiles,
+        lastUpdated: Date.now(),
       },
+    }
+  })
+},
 
-      clearRoute: () => {
-        set((state) => ({
-          session: {
-            ...state.session,
-            routeTrail: [],
-            liveMiles: 0,
-            startCoord: null,
-            lastCoord: null,
-            lastUpdated: Date.now(),
-          },
-        }))
-      },
+clearRoute: () => {
+  set((state) => ({
+    session: {
+      ...state.session,
+      routeTrail: [],
+      liveMiles: 0,
+      startCoord: null,
+      lastCoord: null,
+      lastUpdated: Date.now(),
+    },
+  }))
+},
 
-      getElapsedSeconds: () => {
-        const { session: s } = get()
-        const now = Date.now()
-        const flushed = flushSessionToNow(s, now)
-        return Math.floor((flushed.dayMs + flushed.nightMs) / 1000)
-      },
+getElapsedSeconds: () => {
+  const { session: s } = get()
+  const now = Date.now()
+  const flushed = flushSessionToNow(s, now)
+  return Math.floor((flushed.dayMs + flushed.nightMs) / 1000)
+},
 
-      getDayNightSeconds: () => {
-        const { session: s } = get()
-        const now = Date.now()
-        const flushed = flushSessionToNow(s, now)
-        return {
-          daySeconds: Math.floor(flushed.dayMs / 1000),
-          nightSeconds: Math.floor(flushed.nightMs / 1000),
-        }
-      },
+getDayNightSeconds: () => {
+  const { session: s } = get()
+  const now = Date.now()
+  const flushed = flushSessionToNow(s, now)
+  return {
+    daySeconds: Math.floor(flushed.dayMs / 1000),
+    nightSeconds: Math.floor(flushed.nightMs / 1000),
+  }
+},
 
-      getCurrentMode: () => {
-        const { session: s } = get()
-        if (!s.isActive) return s.currentMode
-        return resolveDriveMode(
-          Date.now(),
-          s.nightOverride,
-          s.solarSunrise,
-          s.solarSunset
-        )
-      },
+getCurrentMode: () => {
+  const { session: s } = get()
+  if (!s.isActive) return s.currentMode
+  return resolveDriveMode(
+    Date.now(),
+    s.nightOverride,
+    s.solarSunrise,
+    s.solarSunset
+  )
+},
 
-      // ✅ Global tick logic to keep timer running across screens
-      _tickInterval: null as number | null,
+// ✅ Global tick logic to keep timer running across screens
+_tickInterval: null as number | null,
 
-      startGlobalTick: () => {
-        if (get()._tickInterval) return
-        const id = window.setInterval(() => {
-          const s = get().session
-          if (s.isActive && s.isRunning) {
-            get().tick(undefined, Date.now())
-          }
-        }, 1000)
-        set({ _tickInterval: id })
-      },
+startGlobalTick: () => {
+  if (get()._tickInterval) return
+  const id = window.setInterval(() => {
+    const s = get().session
+    if (s.isActive && s.isRunning) {
+      get().tick(undefined, Date.now())
+    }
+  }, 1000)
+  set({ _tickInterval: id })
+},
 
-      stopGlobalTick: () => {
-        const id = get()._tickInterval
-        if (id) {
-          clearInterval(id)
-          set({ _tickInterval: null })
-        }
-      },
+stopGlobalTick: () => {
+  const id = get()._tickInterval
+  if (id) {
+    clearInterval(id)
+    set({ _tickInterval: null })
+  }
+},
+
     }),
     {
       name: STORAGE_KEY,

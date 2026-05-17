@@ -501,14 +501,29 @@ clearRoute: () => {
 getElapsedSeconds: () => {
   const { session: s } = get()
   const now = Date.now()
-  const flushed = flushSessionToNow(s, now)
-  return Math.floor((flushed.dayMs + flushed.nightMs) / 1000)
+
+  // No active drive → no elapsed time
+  if (!s.isActive || s.startTime === null) return 0
+
+  // Total accumulated time from dayMs + nightMs
+  const accumulated = s.dayMs + s.nightMs
+
+  // If running, include time since lastTickAt
+  if (s.isRunning && s.lastTickAt) {
+    return Math.floor((accumulated + (now - s.lastTickAt)) / 1000)
+  }
+
+  // If paused, return accumulated only
+  return Math.floor(accumulated / 1000)
 },
 
 getDayNightSeconds: () => {
   const { session: s } = get()
   const now = Date.now()
+
+  // Flush once to get updated day/night split
   const flushed = flushSessionToNow(s, now)
+
   return {
     daySeconds: Math.floor(flushed.dayMs / 1000),
     nightSeconds: Math.floor(flushed.nightMs / 1000),
@@ -518,6 +533,7 @@ getDayNightSeconds: () => {
 getCurrentMode: () => {
   const { session: s } = get()
   if (!s.isActive) return s.currentMode
+
   return resolveDriveMode(
     Date.now(),
     s.nightOverride,
@@ -528,6 +544,7 @@ getCurrentMode: () => {
 
 // ✅ Global tick logic to keep timer running across screens
 _tickInterval: null as number | null,
+
 
 startGlobalTick: () => {
   if (get()._tickInterval) return

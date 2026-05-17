@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { practiceQuestions as QUESTIONS } from "../data/practiceQuestions"
 import {
   buildTestQuestions,
@@ -36,6 +36,31 @@ export default function PracticeTestPanel() {
   )
 
   const passed = isPassing(scorePercent, PASSING_PERCENT)
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (showResult || !current) return
+
+      if (e.key >= "1" && e.key <= String(current.answers.length)) {
+        setSelected(Number(e.key) - 1)
+      }
+
+      if (e.key.toLowerCase() >= "a" && e.key.toLowerCase() <= "z") {
+        const optionIndex = e.key.toLowerCase().charCodeAt(0) - 97
+        if (optionIndex >= 0 && optionIndex < current.answers.length) {
+          setSelected(optionIndex)
+        }
+      }
+
+      if (e.key === "Enter" && selected !== null) {
+        e.preventDefault()
+        handleSubmit()
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [current, selected, showResult])
 
   const handleSelect = (i: number) => {
     if (showResult) return
@@ -76,7 +101,7 @@ export default function PracticeTestPanel() {
   if (isFinished) {
     return (
       <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4">
-        <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_18px_40px_rgba(0,0,0,0.14)]">
+        <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
           <div className="h-1.5 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#08194A]" />
 
           <div className="p-5 sm:p-6">
@@ -102,7 +127,7 @@ export default function PracticeTestPanel() {
             </div>
 
             <div className="mt-5 grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border-2 border-[#08194A]/50 bg-[#F7F9FC] p-4 shadow-sm">
+              <div className="rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-4 shadow-sm">
                 <p className="text-xs uppercase tracking-[0.16em] text-[#08194A]/55">
                   Final Score
                 </p>
@@ -114,7 +139,7 @@ export default function PracticeTestPanel() {
                 </p>
               </div>
 
-              <div className="rounded-2xl border-2 border-[#08194A]/50 bg-[#F7F9FC] p-4 shadow-sm">
+              <div className="rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-4 shadow-sm">
                 <p className="text-xs uppercase tracking-[0.16em] text-[#08194A]/55">
                   Score %
                 </p>
@@ -124,15 +149,15 @@ export default function PracticeTestPanel() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl border-2 border-[#08194A]/50 bg-[#F4F6FA] p-4 shadow-sm">
+            <div className="mt-4 rounded-2xl border border-[#08194A]/10 bg-[#F4F6FA] p-4 shadow-sm">
               <p className="text-sm font-semibold text-[#08194A]">
                 {passed
-                  ? "Nice work — you're in a strong range for the NJ knowledge test."
+                  ? "Nice work — you&apos;re in a strong range for the NJ knowledge test."
                   : "Good start — keep practicing until you can consistently score at or above 80%."}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-[#08194A]/72">
-                This practice quiz is based on New Jersey permit-test concepts
-                and is for study support only.
+                This practice quiz is based on New Jersey permit-test concepts and
+                is for study support only.
               </p>
             </div>
 
@@ -181,7 +206,7 @@ export default function PracticeTestPanel() {
 
   return (
     <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4">
-      <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_18px_40px_rgba(0,0,0,0.14)]">
+      <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
         <div className="h-1.5 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#08194A]" />
 
         <div className="p-5 sm:p-6">
@@ -207,7 +232,7 @@ export default function PracticeTestPanel() {
                   Progress
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[#08194A]">
-                  {answeredCount} answered • Score {score}/{totalQuestions}
+                  {answeredCount} answered • {score} correct so far
                 </p>
               </div>
 
@@ -216,7 +241,10 @@ export default function PracticeTestPanel() {
               </div>
             </div>
 
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#08194A]/10">
+            <div
+              className="mt-3 h-2 overflow-hidden rounded-full bg-[#08194A]/10"
+              aria-hidden="true"
+            >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-[#f9c80e] to-[#08194A] transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
@@ -224,16 +252,23 @@ export default function PracticeTestPanel() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border-2 border-[#08194A]/50 bg-[#F4F6FA] p-4 shadow-sm">
+          <div className="mt-4 rounded-2xl border border-[#08194A]/10 bg-[#F4F6FA] p-4 shadow-sm">
             <p className="text-xs uppercase tracking-[0.16em] text-[#08194A]/55">
               Current Question
             </p>
             <p className="mt-2 text-lg font-bold leading-snug text-[#08194A]">
               {current.question}
             </p>
+            <p className="mt-2 text-xs text-[#08194A]/55">
+              Select one answer, then check your response.
+            </p>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div
+            className="mt-4 space-y-3"
+            role="radiogroup"
+            aria-label={`Question ${index + 1} answer choices`}
+          >
             {current.answers.map((answer, i) => {
               const isSelected = selected === i
               const isCorrect = i === current.correctIndex
@@ -259,9 +294,10 @@ export default function PracticeTestPanel() {
                 <button
                   key={`${current.id}-${i}`}
                   type="button"
+                  role="radio"
+                  aria-checked={isSelected}
                   onClick={() => handleSelect(i)}
                   disabled={showResult}
-                  aria-pressed={isSelected}
                   className={`w-full rounded-2xl border-2 p-4 text-left transition ${classes} ${
                     showResult ? "cursor-default" : "active:scale-[0.99]"
                   }`}
@@ -272,10 +308,10 @@ export default function PracticeTestPanel() {
                         showCorrect
                           ? "bg-[#08194A] text-[#f9c80e]"
                           : showWrong
-                          ? "bg-red-100 text-red-700"
-                          : isSelected
-                          ? "bg-[#08194A] text-[#f9c80e]"
-                          : "bg-[#F4F6FA] text-[#08194A]"
+                            ? "bg-red-100 text-red-700"
+                            : isSelected
+                              ? "bg-[#08194A] text-[#f9c80e]"
+                              : "bg-[#F4F6FA] text-[#08194A]"
                       }`}
                     >
                       {String.fromCharCode(65 + i)}
@@ -320,7 +356,11 @@ export default function PracticeTestPanel() {
           )}
 
           {showResult && (
-            <div className="mt-5 overflow-hidden rounded-2xl border border-[#08194A]/10 bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)]">
+            <div
+              className="mt-5 overflow-hidden rounded-2xl border border-[#08194A]/10 bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)]"
+              role="status"
+              aria-live="polite"
+            >
               <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
 
               <div className="p-4">

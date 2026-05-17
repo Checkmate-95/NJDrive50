@@ -1,14 +1,5 @@
 // src/screens/MilestonesContent.tsx
-// TRUST-CORRECTED VERSION
-// [FIX-1] useDriveHistory() falls back to [] — null state never crashes reduce()
-// [FIX-2] Night milestone text explicitly says "(night hours)"
-// [FIX-3] Shared-style formatHours() for consistency with Summary
-// [FIX-4] Day Hours labeled informationally in compliance grid
-// [FIX-5] Compliance completion message is direct and certification-oriented
-// [FIX-6] Close button uses goBack() — consistent with app-wide back-stack pattern
-// [FIX-7] setScreen prop removed — no longer needed after goBack() adoption
-
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "framer-motion"
 import { useMemo, useState } from "react"
 import { useTeenPhoto } from "../state/profileStore"
 import { useDriveHistory, type DriveEntry } from "../state/driveStore"
@@ -42,18 +33,17 @@ type MilestoneItem = {
 }
 
 export default function MilestonesContent() {
-  // [FIX-1] Safe fallback prevents crash if store hydrates as null/undefined
   const history = useDriveHistory() || []
   const teenPhoto = useTeenPhoto()
   const [teenImgFailed, setTeenImgFailed] = useState(false)
-  // [FIX-6] goBack() for close — consistent with app-wide back-stack pattern
   const { goBack } = useNav()
+  const prefersReducedMotion = useReducedMotion()
 
   const summary = useMemo(() => {
     return history.reduce(
       (acc, entry: DriveEntry) => {
         acc.totalHours += safeNumber(entry.totalDurationHours)
-        acc.dayHours   += safeNumber(entry.dayDurationHours)
+        acc.dayHours += safeNumber(entry.dayDurationHours)
         acc.nightHours += safeNumber(entry.nightDurationHours)
         return acc
       },
@@ -63,14 +53,10 @@ export default function MilestonesContent() {
 
   const { totalHours, dayHours, nightHours } = summary
 
-  const remainingHours      = Math.max(REQUIRED_TOTAL_HOURS - totalHours, 0)
+  const remainingHours = Math.max(REQUIRED_TOTAL_HOURS - totalHours, 0)
   const remainingNightHours = Math.max(REQUIRED_NIGHT_HOURS - nightHours, 0)
 
-  const progressPercent = Math.min(
-    (totalHours / REQUIRED_TOTAL_HOURS) * 100,
-    100
-  )
-
+  const progressPercent = Math.min((totalHours / REQUIRED_TOTAL_HOURS) * 100, 100)
   const nightProgressPercent = Math.min(
     (nightHours / REQUIRED_NIGHT_HOURS) * 100,
     100
@@ -81,34 +67,34 @@ export default function MilestonesContent() {
     nightHours >= REQUIRED_NIGHT_HOURS
 
   const milestones: MilestoneItem[] = [
-    { label: "First 10 Hours",  requirement: 10,                   value: totalHours, kind: "total" },
-    { label: "20 Hours Logged", requirement: 20,                   value: totalHours, kind: "total" },
-    { label: "Night Driving",   requirement: REQUIRED_NIGHT_HOURS, value: nightHours, kind: "night" },
-    { label: "40 Hours Logged", requirement: 40,                   value: totalHours, kind: "total" },
-    { label: "Full 50 Hours",   requirement: REQUIRED_TOTAL_HOURS, value: totalHours, kind: "total" },
+    { label: "First 10 Hours", requirement: 10, value: totalHours, kind: "total" },
+    { label: "20 Hours Logged", requirement: 20, value: totalHours, kind: "total" },
+    { label: "Night Driving", requirement: REQUIRED_NIGHT_HOURS, value: nightHours, kind: "night" },
+    { label: "40 Hours Logged", requirement: 40, value: totalHours, kind: "total" },
+    { label: "Full 50 Hours", requirement: REQUIRED_TOTAL_HOURS, value: totalHours, kind: "total" },
   ]
 
   const complianceMessage = isFullyCompliant
-    ? "50 total supervised hours and 10 night hours are complete — ready for NJ supervised-driving certification."
+    ? "All requirements met — ready for New Jersey certification."
     : totalHours >= REQUIRED_TOTAL_HOURS && nightHours < REQUIRED_NIGHT_HOURS
-    ? `Total hours are complete — ${formatHours(remainingNightHours)} of night driving still needed.`
-    : `Keep going — ${formatHours(remainingHours)} total and ${formatHours(remainingNightHours)} night hours still needed.`
+      ? `Total hours complete — ${formatHours(remainingNightHours)} of night driving still needed.`
+      : `Keep going — ${formatHours(remainingHours)} total and ${formatHours(remainingNightHours)} night hours to go.`
 
   return (
     <div className="w-full px-3 py-4 sm:px-4 sm:py-6">
-      <div className="mx-auto max-w-3xl overflow-hidden rounded-3xl bg-white shadow-[0_20px_48px_rgba(8,25,74,0.08)]">
-        <div className="relative border-b-4 border-[#f9c80e] bg-white p-8 pb-12 text-[#08194A]">
+      <div className="mx-auto max-w-3xl overflow-hidden rounded-[28px] border border-[#08194A]/8 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.06)]">
+        <div className="relative border-b border-[#08194A]/8 bg-white p-6 pb-8 text-[#08194A] sm:p-8 sm:pb-10">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#f9c80e] via-[#FFF4C2] to-[#08194A]" />
 
-          {/* [FIX-6] goBack() replaces navigate() */}
           <button
             type="button"
             onClick={() => goBack("summary")}
-            className="absolute right-6 top-6 flex h-10 w-10 items-center justify-center rounded-full border border-[#08194A]/10 bg-white shadow-sm transition hover:bg-[#F7FAFF]"
-            aria-label="Close"
+            className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] text-[#08194A]/70 shadow-sm transition hover:bg-[#EEF3FA] hover:text-[#08194A] sm:right-6 sm:top-6"
+            aria-label="Close milestones"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-[#08194A]"
+              className="h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -123,16 +109,22 @@ export default function MilestonesContent() {
           </button>
 
           <div className="text-center">
-            <h1 className="text-3xl font-extrabold tracking-tight">
+            <div className="inline-flex items-center rounded-full border border-[#f9c80e]/40 bg-[#FFF7DB] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#8A6500]">
+              Progress Milestones
+            </div>
+
+            <h1 className="mt-4 text-3xl font-extrabold tracking-tight">
               Milestones
             </h1>
-            <p className="mt-1 text-sm text-[#08194A]/70">
-              Track your teen's progress toward New Jersey's supervised driving requirements.
+
+            <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-[#08194A]/68">
+              Track progress toward New Jersey&apos;s supervised driving
+              requirements and see how close your teen is to certification.
             </p>
           </div>
 
           <div className="mt-6 flex justify-center">
-            <div className="h-20 w-20 overflow-hidden rounded-full border-2 border-[#f9c80e] shadow-[0_4px_12px_rgba(8,25,74,0.25)]">
+            <div className="h-20 w-20 overflow-hidden rounded-full border-2 border-[#f9c80e] shadow-[0_8px_18px_rgba(8,25,74,0.16)]">
               {teenPhoto && !teenImgFailed ? (
                 <img
                   src={teenPhoto}
@@ -149,25 +141,25 @@ export default function MilestonesContent() {
           </div>
         </div>
 
-        <div className="space-y-5 p-6">
+        <div className="space-y-4 p-5 sm:space-y-5 sm:p-6">
           {milestones.map((m, i) => {
-            const pct       = Math.min((m.value / m.requirement) * 100, 100)
-            const done      = m.value >= m.requirement
+            const pct = Math.min((m.value / m.requirement) * 100, 100)
+            const done = m.value >= m.requirement
             const remaining = Math.max(m.requirement - m.value, 0)
 
             return (
               <motion.div
                 key={m.label}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 * i }}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                transition={prefersReducedMotion ? { duration: 0 } : { delay: 0.05 * i }}
                 className="rounded-2xl border border-[#08194A]/10 bg-[#F7FAFF] p-5"
               >
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-bold text-[#08194A]">{m.label}</h3>
                   <span
                     className={`text-xs font-bold uppercase tracking-[0.12em] ${
-                      done ? "text-[#00C49A]" : "text-[#f9c80e]"
+                      done ? "text-[#00A97F]" : "text-[#B88900]"
                     }`}
                   >
                     {done ? "Complete" : `${pct.toFixed(0)}%`}
@@ -176,13 +168,17 @@ export default function MilestonesContent() {
 
                 <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-[#E2E9F5]">
                   <motion.div
-                    initial={{ width: 0 }}
+                    initial={prefersReducedMotion ? false : { width: 0 }}
                     animate={{ width: `${pct}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    transition={
+                      prefersReducedMotion
+                        ? { duration: 0 }
+                        : { duration: 0.8, ease: "easeOut" }
+                    }
                     className="h-full rounded-full"
                     style={{
                       background: done
-                        ? "linear-gradient(90deg,#00C49A,#00e8b8)"
+                        ? "linear-gradient(90deg,#00B894,#34D6AE)"
                         : "linear-gradient(90deg,#08194A,#f9c80e)",
                     }}
                   />
@@ -190,17 +186,17 @@ export default function MilestonesContent() {
 
                 <p className="mt-2 text-sm text-[#08194A]/70">
                   {done
-                    ? "Milestone completed — great progress!"
+                    ? "Milestone complete — nice work."
                     : m.kind === "night"
-                    ? `${formatHours(remaining)} remaining (night hours)`
-                    : `${formatHours(remaining)} remaining`}
+                      ? `${formatHours(remaining)} to go (night hours)`
+                      : `${formatHours(remaining)} to go`}
                 </p>
               </motion.div>
             )
           })}
         </div>
 
-        <div className="border-t border-[#08194A]/10 bg-[#F9FAFF] p-6">
+        <div className="border-t border-[#08194A]/10 bg-[#F9FAFF] p-5 sm:p-6">
           <h2 className="mb-3 text-lg font-bold text-[#08194A]">
             Compliance Summary
           </h2>
@@ -233,7 +229,7 @@ export default function MilestonesContent() {
                   {s.label}
                   {"info" in s && s.info && (
                     <span className="ml-1.5 rounded-full border border-[#08194A]/10 bg-[#F4F6FA] px-1.5 py-0.5 text-[9px] font-bold tracking-[0.1em] text-[#08194A]/45">
-                      INFO
+                      Info
                     </span>
                   )}
                 </p>
@@ -268,12 +264,13 @@ export default function MilestonesContent() {
             </p>
           </div>
 
-          <div className="mt-4 rounded-xl border border-[#f9c80e]/60 bg-white px-4 py-3 text-center text-sm font-medium text-[#08194A] shadow-sm">
+          <div className="mt-4 rounded-2xl border border-[#f9c80e]/50 bg-white px-4 py-3 text-center text-sm font-medium text-[#08194A] shadow-sm">
             {complianceMessage}
           </div>
 
           <p className="mt-4 text-center text-xs text-[#08194A]/60">
-            NJ GDL law requires 50 total supervised hours, including 10 night hours.
+            New Jersey requires 50 supervised hours, including 10 night hours,
+            for eligible under-21 permit holders. [web:713][web:962]
           </p>
         </div>
       </div>

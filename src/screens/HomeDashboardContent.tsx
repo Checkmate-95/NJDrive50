@@ -1,17 +1,5 @@
 // src/screens/HomeDashboardContent.tsx
-// TRUST-CORRECTED VERSION
-// [FIX-1] Miles card progress bar removed — no false NJ GDL compliance signal
-// [FIX-2] useDriveHistory() reactive hook (was imperative getDriveHistory())
-// [FIX-3] lastDrive sorted by startTime timestamp (was array tail — insertion-order dependent)
-// [FIX-4] getLightingLabel reads dayDurationHours directly (was total − night derivation)
-// [FIX-5] updateSolarForDrive() removed — solar seeding belongs in activeDriveStore.startDrive()
-// [FIX-6] Miles card redesigned as informational stat — no bar, no false compliance framing
-// [FIX-7] Hour format uses shared toFixed(1) consistent with other panels pending shared util
-// [FIX-8] Timer hydration fix — paused timer now shows correct elapsed time on Home panel
-// [FIX-9] Location disclosure modal now appears before requesting permission
-// [FIX-10] Removed redundant “background permission” naming and duplicate permission requests
-
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react"
 import { Geolocation } from "@capacitor/geolocation"
 import type { Screen } from "../App"
 import { useDriveHistory } from "../state/driveStore"
@@ -22,10 +10,6 @@ import { useActiveDriveStore } from "../state/activeDriveStore"
 type HomeDashboardContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
 }
-
-// ------------------------------
-// Helpers
-// ------------------------------
 
 function safeNumber(val: unknown): number {
   const num = Number(val)
@@ -45,73 +29,79 @@ function formatElapsed(ms: number = 0) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
 }
 
-// ------------------------------
-// Component
-// ------------------------------
-
 export default function HomeDashboardContent({
   setScreen,
 }: HomeDashboardContentProps) {
   const [startingDrive, setStartingDrive] = useState(false)
   const [showLocationDisclosure, setShowLocationDisclosure] = useState(false)
 
+  const drives = useDriveHistory() || []
+
   const activeSession = useActiveDriveStore((s) => s.session)
+  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds)
+
   const hasActiveDrive = Boolean(activeSession?.isActive)
 
-  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds)
   const [activeDurationSeconds, setActiveDurationSeconds] = useState(() =>
     getElapsedSeconds()
   )
 
   useEffect(() => {
-    setActiveDurationSeconds(getElapsedSeconds())
+    setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds())
 
     if (!hasActiveDrive) return
 
     const interval = window.setInterval(() => {
-      const secs = useActiveDriveStore.getState().getElapsedSeconds()
-      setActiveDurationSeconds(secs)
+      setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds())
     }, 1000)
 
     return () => window.clearInterval(interval)
-  }, [getElapsedSeconds, hasActiveDrive, activeSession?.isRunning])
+  }, [hasActiveDrive, activeSession?.isRunning, getElapsedSeconds])
 
-  const drives = useDriveHistory() || []
-
-  const onboarding = loadOnboardingData()
+  const onboarding = useMemo(() => loadOnboardingData(), [])
   const teenName = onboarding.teenName?.trim() || "Teen Driver"
 
   const totalRequired = 50
   const nightRequired = 10
 
-  const totalHours = drives.reduce(
-    (sum, d) => sum + safeNumber(d.totalDurationHours),
-    0
+  const totalHours = useMemo(
+    () =>
+      drives.reduce((sum, d) => sum + safeNumber(d.totalDurationHours), 0),
+    [drives]
   )
 
-  const nightHours = drives.reduce((sum, d) => {
-    const verified = safeNumber(d.verifiedNightDurationHours)
-    const estimated = safeNumber(d.nightDurationHours)
-    return sum + (verified > 0 ? verified : estimated)
-  }, 0)
+  const nightHours = useMemo(
+    () =>
+      drives.reduce((sum, d) => {
+        const verified = safeNumber(d.verifiedNightDurationHours)
+        const estimated = safeNumber(d.nightDurationHours)
+        return sum + (verified > 0 ? verified : estimated)
+      }, 0),
+    [drives]
+  )
 
-  const totalMiles = drives.reduce((sum, d) => sum + safeNumber(d.miles), 0)
+  const totalMiles = useMemo(
+    () => drives.reduce((sum, d) => sum + safeNumber(d.miles), 0),
+    [drives]
+  )
 
   const totalPercent = Math.min((totalHours / totalRequired) * 100, 100)
   const nightPercent = Math.min((nightHours / nightRequired) * 100, 100)
   const totalRemaining = Math.max(totalRequired - totalHours, 0)
   const nightRemaining = Math.max(nightRequired - nightHours, 0)
 
-  const lastDrive = drives.length
-    ? [...drives].sort(
-        (a, b) =>
-          new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-      )[0]
-    : null
+  const lastDrive = useMemo(() => {
+    if (!drives.length) return null
+
+    return [...drives].sort(
+      (a, b) =>
+        new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+    )[0]
+  }, [drives])
 
   const lastDriveDuration = lastDrive
-    ? `${safeNumber(lastDrive.totalDurationHours).toFixed(2)} hrs`
-    : "0.00 hrs"
+    ? `${safeNumber(lastDrive.totalDurationHours).toFixed(1)} hrs`
+    : "0.0 hrs"
 
   const lastDriveMode = lastDrive
     ? getLightingLabel(
@@ -137,18 +127,11 @@ export default function HomeDashboardContent({
       return null
     }
   }
+
   const requestLocationPermission = async () => {
     try {
-      const fg = await Geolocation.checkPermissions()
-
-      if (fg.location !== "granted") {
-        const fgReq = await Geolocation.requestPermissions()
-        if (fgReq.location !== "granted") {
-          return null
-        }
-      }
-
-      return "granted"
+      const result = await Geolocation.requestPermissions()
+      return result.location
     } catch (err) {
       console.error("Location permission request failed:", err)
       return null
@@ -202,15 +185,20 @@ export default function HomeDashboardContent({
     <>
       {showLocationDisclosure && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-800 shadow-xl">
-            <h2 className="mb-3 text-xl font-bold">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="location-disclosure-title"
+            className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-800 shadow-xl"
+          >
+            <h2 id="location-disclosure-title" className="mb-3 text-xl font-bold">
               Why NJDrive50 Needs Your Location
             </h2>
 
             <p className="mb-6 text-sm leading-6 text-slate-600">
               NJDrive50 tracks your supervised driving sessions to create accurate
               mileage logs. To keep tracking even when the screen is off, the app
-              needs permission to access your location while you’re driving.
+              needs location permission while you’re driving.
               <br />
               <br />
               Location is only used during active drives and never when a drive is

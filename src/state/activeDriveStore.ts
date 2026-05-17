@@ -502,18 +502,19 @@ getElapsedSeconds: () => {
   const { session: s } = get()
   const now = Date.now()
 
-  // No active drive → no elapsed time
   if (!s.isActive || s.startTime === null) return 0
 
-  // Total accumulated time from dayMs + nightMs
   const accumulated = s.dayMs + s.nightMs
 
-  // If running, include time since lastTickAt
-  if (s.isRunning && s.lastTickAt) {
-    return Math.floor((accumulated + (now - s.lastTickAt)) / 1000)
+  // Use lastModeChangeAt as the stable baseline
+  const baseline =
+    s.lastModeChangeAt ??
+    s.startTime
+
+  if (s.isRunning) {
+    return Math.floor((accumulated + (now - baseline)) / 1000)
   }
 
-  // If paused, return accumulated only
   return Math.floor(accumulated / 1000)
 },
 
@@ -521,7 +522,6 @@ getDayNightSeconds: () => {
   const { session: s } = get()
   const now = Date.now()
 
-  // Flush once to get updated day/night split
   const flushed = flushSessionToNow(s, now)
 
   return {
@@ -542,8 +542,8 @@ getCurrentMode: () => {
   )
 },
 
-// ✅ Global tick logic to keep timer running across screens
 _tickInterval: null as number | null,
+
 
 
 startGlobalTick: () => {

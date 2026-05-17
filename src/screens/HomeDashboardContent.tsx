@@ -58,21 +58,23 @@ export default function HomeDashboardContent({
   const activeSession = useActiveDriveStore((s) => s.session)
   const hasActiveDrive = Boolean(activeSession?.isActive)
 
-  // ⭐ Select the VALUE, not the function
-  const elapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds())
-
-  // ⭐ Local state mirrors the store value
-  const [activeDurationSeconds, setActiveDurationSeconds] = useState(elapsedSeconds)
+  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds)
+  const [activeDurationSeconds, setActiveDurationSeconds] = useState(() =>
+    getElapsedSeconds()
+  )
 
   useEffect(() => {
-    // ⭐ Subscribe using the 1‑argument form (your store supports this)
-    const unsub = useActiveDriveStore.subscribe(() => {
+    setActiveDurationSeconds(getElapsedSeconds())
+
+    if (!hasActiveDrive) return
+
+    const interval = window.setInterval(() => {
       const secs = useActiveDriveStore.getState().getElapsedSeconds()
       setActiveDurationSeconds(secs)
-    })
+    }, 1000)
 
-    return () => unsub()
-  }, [])
+    return () => window.clearInterval(interval)
+  }, [getElapsedSeconds, hasActiveDrive, activeSession?.isRunning])
 
   const drives = useDriveHistory() || []
 
@@ -86,8 +88,6 @@ export default function HomeDashboardContent({
     (sum, d) => sum + safeNumber(d.totalDurationHours),
     0
   )
-
-
 
   const nightHours = drives.reduce((sum, d) => {
     const verified = safeNumber(d.verifiedNightDurationHours)
@@ -137,7 +137,6 @@ export default function HomeDashboardContent({
       return null
     }
   }
-
   const requestLocationPermission = async () => {
     try {
       const fg = await Geolocation.checkPermissions()

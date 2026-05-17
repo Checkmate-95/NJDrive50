@@ -58,20 +58,21 @@ export default function HomeDashboardContent({
   const activeSession = useActiveDriveStore((s) => s.session)
   const hasActiveDrive = Boolean(activeSession?.isActive)
 
-  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds)
-  const [activeDurationSeconds, setActiveDurationSeconds] = useState(
-    getElapsedSeconds()
-  )
+  // ⭐ Select the VALUE, not the function
+  const elapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds())
+
+  // ⭐ Local state mirrors the store value
+  const [activeDurationSeconds, setActiveDurationSeconds] = useState(elapsedSeconds)
 
   useEffect(() => {
-    setActiveDurationSeconds(getElapsedSeconds())
-
+    // ⭐ Subscribe using the 1‑argument form (your store supports this)
     const unsub = useActiveDriveStore.subscribe(() => {
-      setActiveDurationSeconds(getElapsedSeconds())
+      const secs = useActiveDriveStore.getState().getElapsedSeconds()
+      setActiveDurationSeconds(secs)
     })
 
     return () => unsub()
-  }, [getElapsedSeconds])
+  }, [])
 
   const drives = useDriveHistory() || []
 
@@ -85,6 +86,8 @@ export default function HomeDashboardContent({
     (sum, d) => sum + safeNumber(d.totalDurationHours),
     0
   )
+
+
 
   const nightHours = drives.reduce((sum, d) => {
     const verified = safeNumber(d.verifiedNightDurationHours)

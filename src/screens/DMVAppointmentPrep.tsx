@@ -2,111 +2,170 @@
 import { loadOnboardingData } from "../../core/ReminderEngine"
 import { useNav } from "../state/navStore"
 
+type PrepCardProps = {
+  title: string
+  children: React.ReactNode
+}
+
+function PrepCard({ title, children }: PrepCardProps) {
+  return (
+    <section className="rounded-2xl border border-[#08194A]/10 bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.05)] sm:p-6">
+      <h2 className="text-lg font-extrabold tracking-tight text-[#08194A] sm:text-xl">
+        {title}
+      </h2>
+      <div className="mt-3 text-sm leading-6 text-[#08194A]/72 sm:text-[15px]">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function PrepList({ items }: { items: React.ReactNode[] }) {
+  return (
+    <ul className="space-y-2">
+      {items.map((item, index) => (
+        <li
+          key={index}
+          className="rounded-xl border border-[#08194A]/8 bg-[#F7F9FC] px-4 py-3"
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export default function DMVAppointmentPrep() {
   const { goBack } = useNav()
   const onboarding = loadOnboardingData()
   const teenName = onboarding?.teenName || "Teen Driver"
 
   return (
-    <main className="min-h-screen bg-white text-[#08194A] p-6 space-y-8">
+    <main className="min-h-screen bg-[#F7F9FC] px-4 py-6 text-[#08194A] sm:px-6">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
+        <header className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
+          <button
+            type="button"
+            onClick={() => goBack()}
+            className="inline-flex min-h-[44px] items-center rounded-xl bg-[#08194A] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
+          >
+            ← Back to DMV Paperwork
+          </button>
 
-      {/* Heading */}
-      <h1 className="text-3xl font-bold text-center tracking-tight">
-        DMV Driving Test Appointment Prep
-      </h1>
+          <div className="mt-5 inline-flex rounded-full border border-[#D4AF37]/30 bg-[#FFF8DB] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#6B5600]">
+            DMV Prep
+          </div>
 
-      {/* Preparing For Panel */}
-      <div className="rounded-xl bg-[#08194A] p-4 text-center text-white">
-        <p className="text-sm font-semibold">Preparing for:</p>
-        <p className="text-lg font-bold mt-1">{teenName}</p>
+          <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-[#08194A] sm:text-4xl">
+            DMV Driving Test Appointment Prep
+          </h1>
+
+          <p className="mt-3 text-sm leading-6 text-[#08194A]/70 sm:text-base">
+            Review what to bring, what to practice, and what to expect before
+            the road test appointment.
+          </p>
+
+          <div className="mt-5 rounded-2xl border border-[#08194A]/10 bg-[#08194A] p-4 text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#f9c80e]/85">
+              Preparing for
+            </p>
+            <p className="mt-2 text-xl font-extrabold sm:text-2xl">
+              {teenName}
+            </p>
+          </div>
+        </header>
+
+        <PrepCard title="Arrival Time">
+          <p>
+            Arrive <strong>15 minutes early</strong> to avoid delays and allow
+            time for check-in.
+          </p>
+        </PrepCard>
+
+        <PrepCard title="Required Documents">
+          <PrepList
+            items={[
+              <>
+                <strong>Teen&apos;s 6 Points of ID</strong> (the teen is the
+                applicant)
+              </>,
+              <>Teen&apos;s permit</>,
+              <>Vehicle registration</>,
+              <>Insurance card</>,
+              <>
+                <strong>Completed BA-CSD Form</strong> (parent-signed)
+              </>,
+              <>Parent/guardian&apos;s driver&apos;s license</>,
+            ]}
+          />
+          <p className="mt-4 rounded-xl border border-[#f9c80e]/35 bg-[#FFF8DB] px-4 py-3 text-xs leading-snug text-[#6B5600] sm:text-sm">
+            Only the teen needs a full 6-Point ID set. The parent does{" "}
+            <strong>not</strong> need 6 Points — just their driver&apos;s
+            license and signature on the BA-CSD.
+          </p>
+        </PrepCard>
+
+        <PrepCard title="Vehicle Requirements">
+          <PrepList
+            items={[
+              <>Valid inspection sticker</>,
+              <>Working brake lights and turn signals</>,
+              <>No dashboard warning lights</>,
+              <>Accessible parking brake (examiner must reach it)</>,
+            ]}
+          />
+        </PrepCard>
+
+        <PrepCard title="Skills to Review">
+          <PrepList
+            items={[
+              <>Parallel parking</>,
+              <>K-turn / 3-point turn</>,
+              <>Smooth braking</>,
+              <>Lane changes with signaling</>,
+              <>Reverse driving control</>,
+            ]}
+          />
+        </PrepCard>
+
+        <PrepCard title="What to Expect at MVC">
+          <PrepList
+            items={[
+              <>Check in at the counter with your teen.</>,
+              <>The clerk will verify the teen&apos;s 6 Points of ID.</>,
+              <>
+                Parent/guardian signs the BA-CSD if not already signed.
+              </>,
+              <>The examiner will confirm the vehicle&apos;s safety basics.</>,
+              <>Your teen will be called for the road test when ready.</>,
+              <>After the test, the examiner will give immediate results.</>,
+              <>If passed, the teen receives their permit validation.</>,
+            ]}
+          />
+          <p className="mt-4 rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-4 py-3 text-xs leading-snug text-[#08194A]/65 sm:text-sm">
+            MVC visits can feel unpredictable, but the process is usually quick
+            and straightforward. Staying calm and organized helps your teen feel
+            confident.
+          </p>
+        </PrepCard>
+
+        <PrepCard title="Final Ready Check">
+          <p>
+            Make sure your teen is calm, confident, and familiar with the
+            test-route area before arriving.
+          </p>
+        </PrepCard>
+
+        <div className="rounded-3xl border border-[#08194A]/10 bg-white p-4 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-5">
+          <button
+            type="button"
+            onClick={() => goBack()}
+            className="min-h-[44px] w-full rounded-xl bg-[#E9EDF5] px-6 py-3.5 font-semibold text-[#08194A] transition hover:bg-[#DCE4F2]"
+          >
+            Back to DMV Paperwork
+          </button>
+        </div>
       </div>
-
-      {/* Arrival */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
-        <h3 className="font-semibold text-lg">Arrival Time</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Arrive <strong>15 minutes early</strong> to avoid delays and allow time for check-in.
-        </p>
-      </div>
-
-      {/* Required Documents */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
-        <h3 className="font-semibold text-lg">Required Documents</h3>
-        <ul className="list-disc list-inside text-sm text-gray-700 mt-2 space-y-1">
-          <li><strong>Teen's 6 Points of ID</strong> (the teen is the applicant)</li>
-          <li>Teen's permit</li>
-          <li>Vehicle registration</li>
-          <li>Insurance card</li>
-          <li><strong>Completed BA-CSD Form</strong> (parent-signed)</li>
-          <li>Parent/guardian's driver's license</li>
-        </ul>
-        <p className="text-xs text-gray-500 mt-3 leading-snug">
-          Only the teen needs a full 6-Point ID set. The parent does{" "}
-          <strong>not</strong> need 6 Points — just their driver's license and
-          signature on the BA-CSD.
-        </p>
-      </div>
-
-      {/* Vehicle Requirements */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
-        <h3 className="font-semibold text-lg">Vehicle Requirements</h3>
-        <ul className="list-disc list-inside text-sm text-gray-700 mt-2 space-y-1">
-          <li>Valid inspection sticker</li>
-          <li>Working brake lights &amp; turn signals</li>
-          <li>No dashboard warning lights</li>
-          <li>Accessible parking brake (examiner must reach it)</li>
-        </ul>
-      </div>
-
-      {/* Skills to Review */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
-        <h3 className="font-semibold text-lg">Skills to Review</h3>
-        <ul className="list-disc list-inside text-sm text-gray-700 mt-2 space-y-1">
-          <li>Parallel parking</li>
-          <li>K-turn / 3-point turn</li>
-          <li>Smooth braking</li>
-          <li>Lane changes with signaling</li>
-          <li>Reverse driving control</li>
-        </ul>
-      </div>
-
-      {/* What to Expect at MVC */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
-        <h3 className="font-semibold text-lg">What to Expect at MVC</h3>
-        <ul className="list-disc list-inside text-sm text-gray-700 mt-2 space-y-2">
-          <li>Check in at the counter with your teen.</li>
-          <li>The clerk will verify the teen's 6 Points of ID.</li>
-          <li>Parent/guardian signs the BA-CSD if not already signed.</li>
-          <li>The examiner will confirm the vehicle's safety basics.</li>
-          <li>Your teen will be called for the road test when ready.</li>
-          <li>After the test, the examiner will give immediate results.</li>
-          <li>If passed, the teen receives their permit validation.</li>
-        </ul>
-        <p className="text-xs text-gray-500 mt-3 leading-snug">
-          MVC visits can feel unpredictable, but the process is usually quick
-          and straightforward. Staying calm and organized helps your teen feel
-          confident.
-        </p>
-      </div>
-
-      {/* Final Ready Check */}
-      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 shadow-sm">
-        <h3 className="font-semibold text-lg">Final Ready Check</h3>
-        <p className="text-sm text-gray-600 mt-2">
-          Make sure your teen is calm, confident, and familiar with the
-          test-route area.
-        </p>
-      </div>
-
-      {/* Back Button */}
-      <button
-        onClick={() => goBack()}
-        className="w-full bg-gray-200 text-[#08194A] px-6 py-3 rounded-lg font-semibold
-                   hover:bg-[#f9c80e] hover:text-[#08194A] transition-colors"
-      >
-        Back to DMV Paperwork
-      </button>
-
     </main>
   )
 }

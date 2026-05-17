@@ -13,14 +13,19 @@ type SettingsState = {
 }
 
 type PersistedSettingsState = {
+  notifications: boolean
+  autoExport: boolean
+}
+
+type RawPersistedSettingsState = {
   notifications?: unknown
   autoExport?: unknown
 }
 
 function normalizePersistedSettings(
   value: unknown
-): Pick<SettingsState, "notifications" | "autoExport"> {
-  const raw = (value ?? null) as PersistedSettingsState | null
+): PersistedSettingsState {
+  const raw = (value ?? null) as RawPersistedSettingsState | null
 
   return {
     notifications:
@@ -49,7 +54,7 @@ export const useSettingsStore = create<SettingsState>()(
       migrate: (persistedState: unknown) => {
         return normalizePersistedSettings(persistedState)
       },
-      partialize: (state) => ({
+      partialize: (state): PersistedSettingsState => ({
         notifications: state.notifications,
         autoExport: state.autoExport,
       }),

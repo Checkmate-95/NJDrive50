@@ -1,6 +1,13 @@
+// src/navigation/navMap.ts
 import type { Screen } from "../App"
 
-export const NAV: Record<Screen, Record<string, Screen>> = {
+// Each screen maps to a set of named actions → target screens
+type NavDefinition = {
+  [K in Screen]: Partial<Record<string, Screen>>
+}
+
+// Explicit annotation prevents TS inference bugs
+export const NAV: NavDefinition = {
   intro: {
     continue: "onboarding",
   },
@@ -53,14 +60,10 @@ export const NAV: Record<Screen, Record<string, Screen>> = {
     home: "home",
   },
 
-  // ⚠ back is dynamic — components should call goBack() from navStore
-  driveHistory: {
-    back: "home",
-  },
+  driveHistory: {},
 
   export: {
     history: "driveHistory",
-    back: "home",
   },
 
   settings: {
@@ -68,7 +71,6 @@ export const NAV: Record<Screen, Record<string, Screen>> = {
     history: "driveHistory",
     reminderSettings: "reminderSettings",
     home: "home",
-    back: "home",
     helpFaq: "helpFaq",
     aiHelper: "aiHelper",
     manageProfile: "manageProfile",
@@ -77,65 +79,75 @@ export const NAV: Record<Screen, Record<string, Screen>> = {
     close: "home",
   },
 
-  reminderSettings: {
-    back: "settings",
-  },
+  reminderSettings: {},
 
-  reminderLog: {
-    back: "settings",
-  },
+  reminderLog: {},
 
   manageProfile: {
     close: "settings",
     saved: "settings",
   },
 
-  restartOnboarding: {
-    back: "settings",
-  },
+  restartOnboarding: {},
 
-  dataCleared: {
-    back: "home",
-  },
+  dataCleared: {},
 
   dmv: {
     next: "dmvPrep",
-    back: "home",
   },
 
-  dmvPrep: {
-    back: "dmv",
-  },
+  dmvPrep: {},
 
-  share: {
-    back: "summary",
-  },
+  share: {},
 
-  // ⚠ back is dynamic — component should call goBack() from navStore
-  helpFaq: {
-    back: "home",
-  },
+  helpFaq: {},
 
-  // ⚠ back is dynamic — component should call goBack() from navStore
-  aiHelper: {
-    back: "home",
-  },
+  aiHelper: {},
 
-  teenDriverRules: {
-    back: "settings",
-  },
+  teenDriverRules: {},
 
-  practiceTest: {
-    back: "home",
-  },
+  practiceTest: {},
 }
 
+export type NavMap = typeof NAV
+export type NavScreen = keyof NavMap
+
+// Action keys are always strings
+export type NavAction<S extends NavScreen> = Extract<keyof NavMap[S], string>
+
+// Type guard: checks if an action is valid for a given screen
+export function canNavigate<S extends NavScreen>(
+  current: S,
+  action: string
+): action is NavAction<S> {
+  return action in NAV[current]
+}
+
+// Get the next screen for a given action
+export function getNextScreen(
+  current: Screen,
+  action: string
+): Screen | undefined {
+  const routes = NAV[current]
+  if (action in routes) {
+    return routes[action as keyof typeof routes]
+  }
+  return undefined
+}
+
+// Navigate with full type safety
 export function navigate(
   current: Screen,
   action: string,
-  setScreen: (s: Screen) => void
-) {
-  const next = NAV[current]?.[action]
-  if (next) setScreen(next)
-  else console.warn(`No route for action "${action}" from screen "${current}"`)
+  setScreen: (screen: Screen) => void
+): Screen | undefined {
+  const next = getNextScreen(current, action)
+
+  if (next) {
+    setScreen(next)
+    return next
+  }
+
+  console.warn(`No route for action "${action}" from screen "${current}"`)
+  return undefined
 }

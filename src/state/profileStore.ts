@@ -7,6 +7,8 @@ const PROFILE_KEY = "njdrive50_profile"
 const PHOTO_EVENT = "njdrive50-teen-photo-change"
 const PROFILE_EVENT = "njdrive50-profile-change"
 
+const isDev = typeof import.meta !== "undefined" && import.meta.env?.DEV
+
 export type Profile = {
   teenName: string
   parentName: string
@@ -26,7 +28,11 @@ const defaultProfile: Profile = {
 }
 
 let cachedTeenPhoto: string | null = null
-let cachedProfileSnapshot: Profile = { ...defaultProfile }
+let cachedProfileSnapshot: Profile = freezeProfile({ ...defaultProfile })
+
+function freezeProfile(profile: Profile): Profile {
+  return isDev ? Object.freeze(profile) : profile
+}
 
 function normalizeTeenAge(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null
@@ -56,6 +62,18 @@ function normalizeProfile(value: unknown): Profile {
   }
 }
 
+function emitPhotoChange() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(PHOTO_EVENT))
+  }
+}
+
+function emitProfileChange() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(PROFILE_EVENT))
+  }
+}
+
 function loadTeenPhotoFromStorage(): string | null {
   try {
     cachedTeenPhoto = localStorage.getItem(PHOTO_KEY)
@@ -70,15 +88,16 @@ function loadProfileFromStorage(): Profile {
   try {
     const raw = localStorage.getItem(PROFILE_KEY)
     if (!raw) {
-      cachedProfileSnapshot = { ...defaultProfile }
+      cachedProfileSnapshot = freezeProfile({ ...defaultProfile })
       return cachedProfileSnapshot
     }
 
     const parsed: unknown = JSON.parse(raw)
-    cachedProfileSnapshot = normalizeProfile(parsed)
+    const normalized = normalizeProfile(parsed)
+    cachedProfileSnapshot = freezeProfile(normalized)
     return cachedProfileSnapshot
   } catch {
-    cachedProfileSnapshot = { ...defaultProfile }
+    cachedProfileSnapshot = freezeProfile({ ...defaultProfile })
     return cachedProfileSnapshot
   }
 }
@@ -90,7 +109,18 @@ export function setTeenPhoto(url: string): boolean {
   try {
     localStorage.setItem(PHOTO_KEY, url)
     cachedTeenPhoto = url
-    window.dispatchEvent(new Event(PHOTO_EVENT))
+    emitPhotoChange()
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function clearTeenPhoto(): boolean {
+  try {
+    localStorage.removeItem(PHOTO_KEY)
+    cachedTeenPhoto = null
+    emitPhotoChange()
     return true
   } catch {
     return false
@@ -135,8 +165,19 @@ export function setProfile(profile: Profile): boolean {
   try {
     const normalized = normalizeProfile(profile)
     localStorage.setItem(PROFILE_KEY, JSON.stringify(normalized))
-    cachedProfileSnapshot = normalized
-    window.dispatchEvent(new Event(PROFILE_EVENT))
+    cachedProfileSnapshot = freezeProfile(normalized)
+    emitProfileChange()
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function clearProfile(): boolean {
+  try {
+    localStorage.removeItem(PROFILE_KEY)
+    cachedProfileSnapshot = freezeProfile({ ...defaultProfile })
+    emitProfileChange()
     return true
   } catch {
     return false
@@ -147,7 +188,7 @@ export function isProfileComplete(profile: Profile): boolean {
   return profile.teenName.trim().length > 0
 }
 
-const defaultProfileSnapshot = (): Profile => ({ ...defaultProfile })
+const defaultProfileSnapshot = (): Profile => freezeProfile({ ...defaultProfile })
 
 function subscribeProfile(listener: () => void) {
   if (typeof window === "undefined") return () => {}

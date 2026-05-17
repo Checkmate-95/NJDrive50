@@ -99,7 +99,8 @@ const escapeCsv = (value: unknown) => {
   if (
     stringValue.includes(",") ||
     stringValue.includes('"') ||
-    stringValue.includes("\n")
+    stringValue.includes("\n") ||
+    stringValue.includes("\r")
   ) {
     return `"${stringValue.replace(/"/g, '""')}"`
   }
@@ -166,7 +167,7 @@ export default function DriveHistoryContent() {
   }
 
   function handleEditSaved(updated: DriveEntry) {
-    setDrives(prev => prev.map(d => (d.id === updated.id ? updated : d)))
+    setDrives((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
     setEditDrive(updated)
     handleCloseEdit()
   }
@@ -175,7 +176,7 @@ export default function DriveHistoryContent() {
     const confirmDelete = window.confirm("Delete this drive entry?")
     if (!confirmDelete) return
     deleteDriveEntry(id)
-    setDrives(prev => prev.filter(d => d.id !== id))
+    setDrives((prev) => prev.filter((d) => d.id !== id))
   }
 
   function handleExportLogs() {
@@ -201,8 +202,9 @@ export default function DriveHistoryContent() {
       "notes",
     ]
 
-    const rows = drives.map(d => {
-      const { dayHours, nightHours, dayRange, nightRange } = getDisplaySegments(d)
+    const rows = drives.map((d) => {
+      const { dayHours, nightHours, dayRange, nightRange } =
+        getDisplaySegments(d)
       const totalHours = safeNumber(d.totalDurationHours)
       const miles = safeNumber(d.miles)
 
@@ -226,8 +228,8 @@ export default function DriveHistoryContent() {
 
     const csv = [
       header.map(escapeCsv).join(","),
-      ...rows.map(row => row.map(escapeCsv).join(",")),
-    ].join("\n")
+      ...rows.map((row) => row.map(escapeCsv).join(",")),
+    ].join("\r\n")
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
@@ -241,35 +243,51 @@ export default function DriveHistoryContent() {
   }
 
   return (
-    <div className="flex w-full justify-center px-3 pt-4 pb-28 text-[#08194A] sm:px-4">
-      <section className="w-full max-w-md rounded-[24px] border border-white/30 bg-white/95 px-6 py-7 text-left shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md">
-        <h2 className="mb-4 text-xl font-semibold tracking-tight">
-          Drive History Logs
-        </h2>
+    <div className="flex w-full justify-center px-3 pb-28 pt-4 text-[#08194A] sm:px-4">
+      <section className="w-full max-w-3xl rounded-[28px] border border-white/30 bg-white/95 px-4 py-6 shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md sm:px-6 sm:py-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-[#08194A]/50">
+              Drive History
+            </p>
+            <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
+              Drive History Logs
+            </h2>
+            <p className="mt-2 text-sm text-[#08194A]/65 sm:text-base">
+              Review saved drives, lighting breakdowns, and verified night-hour
+              entries.
+            </p>
+          </div>
 
-        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-medium text-gray-500">
-          <span>Total Drives: {summary.total}</span>
-          {summary.verifiedCount > 0 && (
-            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
-              {summary.verifiedCount} Verified
+          <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-[#08194A]/60 sm:justify-end">
+            <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-1">
+              Total Drives: {summary.total}
             </span>
-          )}
-        </div>
-
-        <div className="mb-3 flex flex-wrap gap-3 text-sm font-medium text-gray-600">
-          <span>Day Only: {summary.dayOnly}</span>
-          <span>Night Only: {summary.nightOnly}</span>
-          <span>Mixed: {summary.mixed}</span>
+            <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-1">
+              Day Only: {summary.dayOnly}
+            </span>
+            <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-1">
+              Night Only: {summary.nightOnly}
+            </span>
+            <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-1">
+              Mixed: {summary.mixed}
+            </span>
+            {summary.verifiedCount > 0 && (
+              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                {summary.verifiedCount} Verified
+              </span>
+            )}
+          </div>
         </div>
 
         {drives.length === 0 && (
-          <div className="mt-6 rounded-xl bg-gray-100 p-4 text-center text-sm text-gray-600">
+          <div className="mt-6 rounded-2xl border border-dashed border-[#08194A]/12 bg-[#F7F9FC] p-5 text-center text-sm text-[#08194A]/60">
             No drives logged yet.
           </div>
         )}
 
-        <div className="space-y-3">
-          {drives.map(drive => {
+        <div className="mt-6 space-y-4">
+          {drives.map((drive) => {
             const start = new Date(drive.startTime).toLocaleString()
             const end = new Date(drive.endTime).toLocaleString()
             const totalHours = safeNumber(drive.totalDurationHours)
@@ -288,72 +306,79 @@ export default function DriveHistoryContent() {
             return (
               <div
                 key={drive.id}
-                className="rounded-lg bg-gray-100 px-4 py-3 transition-colors hover:bg-gray-200"
+                className="rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] px-4 py-4 shadow-sm transition-colors hover:bg-[#EEF3FA] sm:px-5"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-[#08194A]">
-                      {formatHours(totalHours)}
-                    </p>
-
-                    <p className="text-sm text-gray-600">
-                      {start} → {end}
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-500">
-                      {miles.toFixed(1)} miles
-                    </p>
-
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-semibold text-[#08194A]/75">
-                        Lighting: {lighting}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-base font-extrabold text-[#08194A] sm:text-lg">
+                        {formatHours(totalHours)}
                       </p>
+
+                      <span
+                        title={lighting}
+                        className={`inline-flex h-2.5 w-2.5 rounded-full ${
+                          lighting === "Night Drive"
+                            ? "bg-[#f9c80e]"
+                            : lighting === "Mixed Drive"
+                            ? "bg-[#0A1E5E]"
+                            : "bg-gray-400"
+                        }`}
+                      />
+
+                      <span className="text-xs font-semibold text-[#08194A]/72">
+                        {lighting}
+                      </span>
+
                       {isVerified ? <VerifiedBadge /> : <EstimatedBadge />}
                     </div>
 
-                    {dayHours > 0 && (
-                      <p className="mt-1 text-[11px] text-gray-500">
-                        <span className="font-semibold text-[#08194A]/80">
-                          Day:
-                        </span>{" "}
-                        {dayHours.toFixed(2)} hrs
-                        {dayRange ? ` (${dayRange})` : ""}
-                      </p>
-                    )}
+                    <p className="mt-2 text-sm text-[#08194A]/68 break-words">
+                      {start} → {end}
+                    </p>
 
-                    {nightHours > 0 && (
-                      <p className="mt-0.5 text-[11px] text-gray-500">
-                        <span className="font-semibold text-[#08194A]/80">
-                          Night:
-                        </span>{" "}
-                        {nightHours.toFixed(2)} hrs
-                        {nightRange ? ` (${nightRange})` : ""}
-                      </p>
-                    )}
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[#08194A]/58">
+                      <span>{miles.toFixed(1)} miles</span>
+                      {drive.weather ? <span>Weather: {drive.weather}</span> : null}
+                    </div>
 
-                    {drive.weather ? (
-                      <p className="mt-1 text-xs text-gray-500">
-                        Weather: {drive.weather}
-                      </p>
+                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {dayHours > 0 && (
+                        <div className="rounded-xl bg-white px-3 py-2 text-[11px] text-[#08194A]/65">
+                          <span className="font-semibold text-[#08194A]/82">
+                            Day:
+                          </span>{" "}
+                          {dayHours.toFixed(2)} hrs
+                          {dayRange ? ` (${dayRange})` : ""}
+                        </div>
+                      )}
+
+                      {nightHours > 0 && (
+                        <div className="rounded-xl bg-white px-3 py-2 text-[11px] text-[#08194A]/65">
+                          <span className="font-semibold text-[#08194A]/82">
+                            Night:
+                          </span>{" "}
+                          {nightHours.toFixed(2)} hrs
+                          {nightRange ? ` (${nightRange})` : ""}
+                        </div>
+                      )}
+                    </div>
+
+                    {drive.notes ? (
+                      <div className="mt-3 rounded-xl bg-white px-3 py-2 text-[11px] text-[#08194A]/65">
+                        <span className="font-semibold text-[#08194A]/82">
+                          Notes:
+                        </span>{" "}
+                        {drive.notes}
+                      </div>
                     ) : null}
                   </div>
 
-                  <div className="flex shrink-0 items-center space-x-3">
-                    <div
-                      title={lighting}
-                      className={`h-3 w-3 rounded-full ${
-                        lighting === "Night Drive"
-                          ? "bg-[#f9c80e]"
-                          : lighting === "Mixed Drive"
-                          ? "bg-[#0A1E5E]"
-                          : "bg-gray-400"
-                      }`}
-                    />
-
+                  <div className="flex flex-wrap items-center gap-2 sm:max-w-[220px] sm:justify-end">
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(drive)}
-                      className="rounded-md bg-[#08194A] px-3 py-1 text-xs font-semibold text-white transition hover:bg-[#f9c80e] hover:text-[#08194A]"
+                      className="min-h-[40px] rounded-lg bg-[#08194A] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#f9c80e] hover:text-[#08194A]"
                     >
                       Edit
                     </button>
@@ -361,7 +386,7 @@ export default function DriveHistoryContent() {
                     <button
                       type="button"
                       onClick={() => handleDelete(drive.id)}
-                      className="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-700"
+                      className="min-h-[40px] rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-700"
                     >
                       Delete
                     </button>
@@ -372,21 +397,23 @@ export default function DriveHistoryContent() {
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={handleExportLogs}
-          className="mt-6 w-full rounded-lg bg-[#08194A] py-3 text-base font-semibold text-white shadow-md transition-colors hover:bg-[#f9c80e] hover:text-[#08194A]"
-        >
-          Export Logs
-        </button>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={handleExportLogs}
+            className="min-h-[44px] w-full rounded-xl bg-[#08194A] px-4 py-3 text-base font-semibold text-white shadow-md transition-colors hover:bg-[#f9c80e] hover:text-[#08194A]"
+          >
+            Export Logs
+          </button>
 
-        <button
-          type="button"
-          onClick={() => goBack()}
-          className="mt-3 w-full rounded-lg bg-gray-200 py-2 text-sm font-semibold text-[#08194A] transition hover:bg-[#f9c80e]"
-        >
-          Back to Home
-        </button>
+          <button
+            type="button"
+            onClick={() => goBack()}
+            className="min-h-[44px] w-full rounded-xl bg-[#E9EDF5] px-4 py-3 text-sm font-semibold text-[#08194A] transition hover:bg-[#DCE4F2]"
+          >
+            Back to Home
+          </button>
+        </div>
       </section>
 
       {editDrive && (

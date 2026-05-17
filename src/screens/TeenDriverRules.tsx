@@ -7,56 +7,69 @@ export default function TeenDriverRules() {
   const { goBack } = useNav()
 
   return (
-    <div className="flex flex-col h-full bg-[#F7FAFF]">
-      <ScreenHeader
-        title="Teen Driver Rules"
-        onBack={() => goBack()}
-      />
+    <div className="min-h-screen bg-[#F7F9FC] text-[#08194A]">
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-3 pb-24 pt-4 sm:px-4 lg:px-6">
+        <div className="rounded-[28px] border border-white/30 bg-white/95 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md">
+          <ScreenHeader
+            title="Teen Driver Rules"
+            onBack={() => goBack()}
+          />
 
-      <div className="p-5 overflow-y-auto text-[#08194A] space-y-6">
-        <RuleCard title="Curfew" icon="⏰">
-          <Rule>No driving between <b>11:01 PM and 5:00 AM</b>.</Rule>
-        </RuleCard>
+          <div className="px-4 pb-6 pt-2 sm:px-6">
+            <p className="max-w-3xl text-sm leading-6 text-[#08194A]/65 sm:text-base">
+              A quick summary of common New Jersey teen driver restrictions.
+            </p>
 
-        <RuleCard title="Supervision" icon="👤">
-          <Rule>
-            Must have a supervising adult who is <b>21+</b> and has held a
-            license for <b>3+ years</b>.
-          </Rule>
-        </RuleCard>
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+              <RuleCard title="Curfew" icon="⏰">
+                <Rule>No driving between <b>11:01 PM and 5:00 AM</b>.</Rule>
+              </RuleCard>
 
-        <RuleCard title="Passengers" icon="🚗">
-          <Rule>
-            Only <b>1 passenger</b> allowed besides the supervising adult.
-          </Rule>
-          <Rule>Siblings do <b>not</b> count toward the passenger limit.</Rule>
-        </RuleCard>
+              <RuleCard title="Supervision" icon="👤">
+                <Rule>
+                  The supervising driver must be <b>at least 21</b>, have a valid
+                  <b> New Jersey license</b>, and have at least <b>3 years</b> of driving experience.
+                </Rule>
+              </RuleCard>
 
-        <RuleCard title="Seatbelts" icon="🛡️">
-          <Rule>All occupants must wear seatbelts at all times.</Rule>
-        </RuleCard>
+              <RuleCard title="Passengers" icon="🚗">
+                <Rule>
+                  <b>Parent(s), guardian(s), or dependent(s)</b> are allowed as passengers.
+                </Rule>
+                <Rule>
+                  Only <b>1 additional passenger</b> is allowed unless accompanied by a <b>parent or guardian</b>.
+                </Rule>
+              </RuleCard>
 
-        <RuleCard title="Night Hours Requirement" icon="🌙">
-          <Rule>
-            Night hours count <b>after sunset</b> and <b>before sunrise</b>.
-          </Rule>
-          <Rule>10 hours of night driving are required.</Rule>
-        </RuleCard>
+              <RuleCard title="Seatbelts" icon="🛡️">
+                <Rule>Seat belts must be worn at all times.</Rule>
+              </RuleCard>
 
-        <RuleCard title="Permit Requirements" icon="📄">
-          <Rule>Must complete <b>50 total hours</b> of supervised driving.</Rule>
-          <Rule>Must complete <b>10 night hours</b>.</Rule>
-          <Rule>Must hold permit for <b>6 months</b>.</Rule>
-        </RuleCard>
+              <RuleCard title="Driving Hours" icon="🌙">
+                <Rule>Must complete <b>50 hours</b> of supervised driving.</Rule>
+                <Rule>Must complete <b>10 hours during darkness</b>.</Rule>
+              </RuleCard>
 
-        <RuleCard title="Probationary License" icon="🔒">
-          <Rule>Same curfew, passenger, and seatbelt rules apply.</Rule>
-          <Rule>No handheld or hands‑free phone use while driving.</Rule>
-        </RuleCard>
+              <RuleCard title="Permit Period" icon="📄">
+                <Rule>Must hold the permit for <b>at least 6 months</b>.</Rule>
+              </RuleCard>
 
-        <p className="text-xs text-[#08194A]/50 text-center pt-6 border-t border-[#08194A]/10">
-          These rules reflect New Jersey MVC Graduated Driver License (GDL) requirements.
-        </p>
+              <RuleCard title="Wireless Devices" icon="📵">
+                <Rule>
+                  Cannot use a <b>cell phone</b>, whether <b>handheld or hands-free</b>, except in an emergency.
+                </Rule>
+              </RuleCard>
+
+              <RuleCard title="Probationary License" icon="🔒">
+                <Rule>Curfew, passenger, and seatbelt restrictions still apply.</Rule>
+              </RuleCard>
+            </div>
+
+            <p className="mt-6 border-t border-[#08194A]/10 pt-6 text-center text-xs text-[#08194A]/50">
+              This screen summarizes New Jersey Graduated Driver License requirements. Verify current details with NJ MVC.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -72,12 +85,13 @@ function RuleCard({
   children: ReactNode
 }) {
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#08194A]/10">
-      <h2 className="text-lg font-bold mb-2 flex items-center gap-2">
-        <span className="text-xl">{icon}</span> {title}
+    <section className="rounded-[24px] border border-[#08194A]/10 bg-[#F7F9FC] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:p-5">
+      <h2 className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-[#08194A]">
+        <span className="text-xl" aria-hidden="true">{icon}</span>
+        {title}
       </h2>
-      <div className="space-y-2 text-sm leading-relaxed">{children}</div>
-    </div>
+      <div className="mt-3 space-y-2 text-sm leading-6">{children}</div>
+    </section>
   )
 }
 

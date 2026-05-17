@@ -47,31 +47,31 @@ const sameCoord = (
   return a.lat === b.lat && a.lng === b.lng
 }
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
+
 async function getAccurateMileage(start: RouteCoord, end: RouteCoord) {
   try {
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
-    if (!apiKey) return null
+    if (!API_BASE_URL) return null
 
-   const res = await fetch("http://localhost:3001/api/computeRoutes", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    origin: {
-      location: { latLng: { latitude: start.lat, longitude: start.lng } },
-    },
-    destination: {
-      location: { latLng: { latitude: end.lat, longitude: end.lng } },
-    },
-    travelMode: "DRIVE",
-    routingPreference: "TRAFFIC_AWARE",
-    units: "IMPERIAL",
-  }),
-})
+    const res = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        origin: {
+          location: { latLng: { latitude: start.lat, longitude: start.lng } },
+        },
+        destination: {
+          location: { latLng: { latitude: end.lat, longitude: end.lng } },
+        },
+        travelMode: "DRIVE",
+        routingPreference: "TRAFFIC_AWARE",
+        units: "IMPERIAL",
+      }),
+    })
 
-if (!res.ok) return null
-
+    if (!res.ok) return null
 
     const data = await res.json()
     const meters = data?.routes?.[0]?.distanceMeters
@@ -269,12 +269,15 @@ function ActiveDriveContent({
   const [showStopConfirm, setShowStopConfirm] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
+  const [showWeatherHelp, setShowWeatherHelp] = useState(false)
 
   const timerRef = useRef<number | null>(null)
   const gpsRef = useRef<number | null>(null)
   const frozenSnapshotRef =
     useRef<Promise<PreviewDriveEntry | null> | null>(null)
   const isSavingRef = useRef(false)
+  const weatherHelpRef = useRef<HTMLDivElement | null>(null)
+  const wasRunningBeforeStopRef = useRef(false)
 
   const {
     session,
@@ -416,6 +419,33 @@ function ActiveDriveContent({
     }
   }, [clearAllLoops])
 
+  useEffect(() => {
+    if (!showWeatherHelp) return
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node
+      if (weatherHelpRef.current && !weatherHelpRef.current.contains(target)) {
+        setShowWeatherHelp(false)
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowWeatherHelp(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
+    document.addEventListener("touchstart", handlePointerDown)
+    document.addEventListener("keydown", handleEscape)
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+      document.removeEventListener("touchstart", handlePointerDown)
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [showWeatherHelp])
+
   const handlePress = async () => {
     if (isStopping || isPreviewing) return
 
@@ -456,6 +486,9 @@ function ActiveDriveContent({
 
   const handleStopRequest = () => {
     if (saveDisabled) return
+
+    wasRunningBeforeStopRef.current = session.isRunning
+
     if (session.isRunning) pauseDrive()
 
     frozenSnapshotRef.current = buildDriveSnapshot({ isPreview: false })
@@ -465,7 +498,10 @@ function ActiveDriveContent({
   const handleCancelStop = () => {
     frozenSnapshotRef.current = null
     setShowStopConfirm(false)
-    resumeDrive()
+
+    if (wasRunningBeforeStopRef.current) {
+      resumeDrive()
+    }
   }
 
   const handleSaveDrive = async () => {
@@ -504,6 +540,7 @@ function ActiveDriveContent({
       isSavingRef.current = false
       setIsStopping(false)
       frozenSnapshotRef.current = null
+      wasRunningBeforeStopRef.current = false
     }
   }
 
@@ -737,27 +774,45 @@ function ActiveDriveContent({
                 </div>
 
                 <div className="flex flex-col items-center sm:col-span-2">
-                  <div className="group relative flex items-center justify-center gap-1">
+                  <div
+                    ref={weatherHelpRef}
+                    className="relative flex items-center justify-center gap-1"
+                  >
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                       Weather Conditions
                     </p>
-                    <span className="ml-1 cursor-pointer text-[#0A1E5E]/40 hover:text-[#0A1E5E]/70">
-                      ⓘ
-                    </span>
 
-                    <div className="absolute left-1/2 top-full z-20 mt-2 hidden w-60 -translate-x-1/2 rounded-lg bg-white p-3 text-xs text-[#08194A] shadow-lg ring-1 ring-black/10 group-hover:block">
-                      <p className="font-semibold text-[#0A1E5E]">
-                        Optional Weather Tag
-                      </p>
-                      <p className="mt-1 leading-snug">
-                        This is optional and does not affect drive time, mileage, or
-                        day/night status. Choose a weather condition only if you want it
-                        included in the saved summary.
-                      </p>
-                      <p className="mt-1 italic text-[#0A1E5E]/70">
-                        If you don’t select anything, weather will simply be left blank.
-                      </p>
-                    </div>
+                    <button
+                      type="button"
+                      aria-label="Weather conditions help"
+                      aria-expanded={showWeatherHelp}
+                      onClick={() => setShowWeatherHelp((prev) => !prev)}
+                      className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-[#0A1E5E]/50 transition hover:bg-[#0A1E5E]/5 hover:text-[#0A1E5E]/80"
+                    >
+                      ⓘ
+                    </button>
+
+                    {showWeatherHelp && (
+                      <div
+                        role="dialog"
+                        aria-label="Weather help"
+                        className="absolute left-1/2 top-full z-20 mt-2 w-64 max-w-[80vw] -translate-x-1/2 rounded-lg bg-white p-3 text-left text-xs text-[#08194A] shadow-lg ring-1 ring-black/10"
+                      >
+                        <p className="font-semibold text-[#0A1E5E]">
+                          Optional Weather Tag
+                        </p>
+                        <p className="mt-1 leading-snug">
+                          This is optional and does not affect drive time,
+                          mileage, or day/night status. Choose a weather
+                          condition only if you want it included in the saved
+                          summary.
+                        </p>
+                        <p className="mt-1 italic text-[#0A1E5E]/70">
+                          If you don’t select anything, weather will simply be
+                          left blank.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -795,7 +850,7 @@ function ActiveDriveContent({
             )}
 
             <div className="mt-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
                 <button
                   type="button"
                   onClick={handlePress}
@@ -844,7 +899,7 @@ function ActiveDriveContent({
                     and lighting conditions.
                   </p>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="mt-4 grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
                     <button
                       type="button"
                       onClick={handleCancelStop}
@@ -897,6 +952,12 @@ function ActiveDriveContent({
             }
             .animate-pulse-slow {
               animation: pulse-slow 2.5s ease-in-out infinite;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .animate-pulse-slow {
+                animation: none;
+              }
             }
           `}
         </style>

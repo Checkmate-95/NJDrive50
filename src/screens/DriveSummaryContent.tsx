@@ -73,18 +73,30 @@ export default function DriveSummaryContent({
   const activeSession = useActiveDriveStore((s) => s.session)
   const hardReset = useActiveDriveStore((s) => s.hardReset)
   // [FIX-3] Use store's canonical elapsed-seconds selector — no duplicate impl
-  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds)
+const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds)
 
-  const [activeDurationSeconds, setActiveDurationSeconds] = useState(0)
-  const [teenImgFailed, setTeenImgFailed] = useState(false)
+const [activeDurationSeconds, setActiveDurationSeconds] = useState(0)
+const [teenImgFailed, setTeenImgFailed] = useState(false)
+const [showScoreHelp, setShowScoreHelp] = useState(false)
 
-  // [FIX-1] Sort by startTime — never trust insertion order
-  const lastDrive: DriveEntry | null = useMemo(() => {
-    if (drives.length === 0) return null
-    return [...drives].sort(
-      (a, b) => safeNumber(b.startTime) - safeNumber(a.startTime)
-    )[0]
-  }, [drives])
+const toTimestamp = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string") {
+    const parsed = Date.parse(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+  return 0
+}
+
+// [FIX-1] Sort by startTime — never trust insertion order
+const lastDrive: DriveEntry | null = useMemo(() => {
+  if (drives.length === 0) return null
+  return [...drives].sort(
+    (a, b) => toTimestamp(b.startTime) - toTimestamp(a.startTime)
+  )[0]
+}, [drives])
+
+
 
   const hasActiveDrive = !!activeSession?.isActive
   const hasLastDrive = !!lastDrive
@@ -284,6 +296,9 @@ useEffect(() => {
     navigate("summary", "dmv", setScreen)
   }
 
+  
+
+
   return (
     <div className="flex w-full justify-center px-3 pb-28 pt-4 text-[#08194A] sm:px-4">
       <section className="w-full max-w-[46rem] overflow-hidden rounded-[32px] border border-white/25 bg-white/95 shadow-[0_12px_34px_rgba(255,255,255,0.12)] backdrop-blur-md">
@@ -340,23 +355,40 @@ useEffect(() => {
             </div>
           </div>
 
-          <div className="mt-5 flex items-center justify-center gap-2 rounded-2xl border border-[#f9c80e]/30 bg-[#08194A] px-4 py-3 text-white shadow-sm">
-            <span
-              title={scoreExplanation}
-              className="relative flex h-6 w-6 cursor-help select-none items-center justify-center text-xl text-[#f9c80e]"
-            >
-              ⭐
-              <span className="absolute text-[10px] font-bold text-[#08194A]">
-                ?
-              </span>
-            </span>
-            <p className="text-base font-semibold text-[#f9c80e] sm:text-lg">
-              Drive Score: {score}
-            </p>
-          </div>
+          {/* DRIVE SCORE BLOCK — with accessible help toggle */}
+<div className="mt-5 rounded-2xl border border-[#f9c80e]/30 bg-[#08194A] px-4 py-3 text-white shadow-sm">
+  <div className="flex items-center justify-center gap-2">
+    <button
+      type="button"
+      aria-label="Drive score explanation"
+      aria-expanded={showScoreHelp}
+      aria-describedby={showScoreHelp ? "drive-score-help" : undefined}
+      onClick={() => setShowScoreHelp((prev) => !prev)}
+      className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xl text-[#f9c80e] transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#f9c80e]"
+    >
+      <span aria-hidden="true">⭐</span>
+      <span className="absolute text-[10px] font-bold text-[#08194A]">?</span>
+    </button>
+
+    <p className="text-base font-semibold text-[#f9c80e] sm:text-lg">
+      Drive Score: {score}
+    </p>
+  </div>
+
+  {showScoreHelp && (
+    <div
+      id="drive-score-help"
+      role="note"
+      className="mt-3 rounded-xl bg-white/10 px-3 py-2 text-sm leading-snug text-white/90"
+    >
+      {scoreExplanation}
+    </div>
+  )}
+</div>
+
 
           <div className="mt-5 rounded-[28px] border border-[#0A1E5E]/10 bg-[#F7F9FC] p-4 shadow-sm sm:p-5">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                   Total Hours

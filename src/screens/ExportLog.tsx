@@ -67,6 +67,12 @@ const downloadBlob = (blob: Blob, filename: string) => {
   }, 1000)
 }
 
+// Modern UTF‑8 → base64 encoder
+const toBase64Utf8 = (text: string) => {
+  const bytes = new Uint8Array(new TextEncoder().encode(text))
+  return btoa(String.fromCharCode(...bytes))
+}
+
 function StatusBanner({
   status,
   onDismiss,
@@ -142,7 +148,12 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
     return drives.map((d) => {
       const totalHours = safeNumber(d.totalDurationHours)
       const dayHours = safeNumber(d.dayDurationHours)
-      const nightHours = safeNumber(d.nightDurationHours)
+
+      const verifiedNightHours = safeNumber(d.verifiedNightDurationHours)
+      const estimatedNightHours = safeNumber(d.nightDurationHours)
+      const nightHours =
+        verifiedNightHours > 0 ? verifiedNightHours : estimatedNightHours
+
       const miles = safeNumber(d.miles)
 
       return {
@@ -298,7 +309,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         ].join(",")
       )
 
-      const csv = [header.join(","), ...csvRows].join("\n")
+      const csv = [header.join(","), ...csvRows].join("\r\n")
       const fileName = `NJDrive50_Log_${Date.now()}.csv`
       const isNative = Capacitor.isNativePlatform()
 
@@ -313,7 +324,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         return
       }
 
-      const base64Data = btoa(unescape(encodeURIComponent(csv)))
+      const base64Data = toBase64Utf8(csv)
 
       await Filesystem.writeFile({
         path: fileName,
@@ -380,7 +391,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 rounded-[28px] border border-[#08194A]/10 bg-[#F7F9FC] p-4 shadow-sm sm:grid-cols-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-3 rounded-[28px] border border-[#08194A]/10 bg-[#F7F9FC] p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4 sm:p-5">
           <div className="rounded-2xl border border-[#08194A]/10 bg-white p-4 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.16em] text-[#08194A]/55">
               Saved Drives
@@ -417,8 +428,8 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
             </p>
           </div>
 
-          <div className="col-span-2 rounded-2xl border border-[#08194A]/10 bg-white p-4 shadow-sm sm:col-span-4">
-            <div className="flex items-center justify-between gap-4">
+          <div className="rounded-2xl border border-[#08194A]/10 bg-white p-4 shadow-sm sm:col-span-2 lg:col-span-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[#08194A]/55">
                   Total Miles
@@ -431,7 +442,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
                 </p>
               </div>
 
-              <div className="text-right text-xs text-[#08194A]/60">
+              <div className="text-sm text-[#08194A]/60 sm:max-w-[22rem] sm:text-right">
                 Export includes timestamps, hour totals, miles, and lighting
                 classification.
               </div>
@@ -473,7 +484,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
                     </span>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-[#08194A]/70">
+                  <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[#08194A]/70 sm:grid-cols-3">
                     <div className="rounded-xl bg-white px-3 py-2">
                       Day: {formatHours(row.dayHours)}
                     </div>

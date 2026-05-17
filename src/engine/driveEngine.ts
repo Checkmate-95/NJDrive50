@@ -55,14 +55,12 @@ export type DriveCompliance = DriveSummary & {
 const REQUIRED_TOTAL = 50 * 60 * 60 * 1000
 const REQUIRED_NIGHT = 10 * 60 * 60 * 1000
 
-// fallback night window
-const ESTIMATED_NIGHT_START_HOUR = 19 // 7 PM
-const ESTIMATED_NIGHT_END_HOUR = 6   // 6 AM
+const ESTIMATED_NIGHT_START_HOUR = 19
+const ESTIMATED_NIGHT_END_HOUR = 6
 
-// NJ legal curfew
-const CURFEW_START_HOUR = 23 // 11 PM
+const CURFEW_START_HOUR = 23
 const CURFEW_START_MINUTE = 1
-const CURFEW_END_HOUR = 5    // 5 AM
+const CURFEW_END_HOUR = 5
 
 /* -------------------------------------------------------
    HELPERS
@@ -84,6 +82,11 @@ const isValidLocation = (loc?: DriveLocation): loc is DriveLocation =>
   loc.longitude >= -180 &&
   loc.longitude <= 180
 
+const sanitizeLocation = (loc?: DriveLocation): DriveLocation | undefined =>
+  isValidLocation(loc)
+    ? { latitude: loc.latitude, longitude: loc.longitude }
+    : undefined
+
 const startOfLocalDay = (ts: number) => {
   const d = new Date(ts)
   d.setHours(0, 0, 0, 0)
@@ -101,25 +104,38 @@ const getOverlapDuration = (
    CURFEW CHECK
 ------------------------------------------------------- */
 
-const isWithinCurfew = (date: Date): boolean => {
-  const h = date.getHours()
-  const m = date.getMinutes()
-
-  // 11:01 PM → midnight
-  if (h > CURFEW_START_HOUR) return true
-  if (h === CURFEW_START_HOUR && m >= CURFEW_START_MINUTE) return true
-
-  // midnight → 4:59 AM
-  if (h < CURFEW_END_HOUR) return true
-
-  return false
-}
-
 const countCurfewViolations = (start: number, end: number): number => {
-  const s = new Date(start)
-  const e = new Date(end)
+  if (end <= start) return 0
 
-  return (isWithinCurfew(s) ? 1 : 0) + (isWithinCurfew(e) ? 1 : 0)
+  const cursor = startOfLocalDay(start)
+  cursor.setDate(cursor.getDate() - 1)
+
+  const lastDay = startOfLocalDay(end)
+  let count = 0
+
+  while (cursor.getTime() <= lastDay.getTime()) {
+    const curfewStart = new Date(cursor)
+    curfewStart.setHours(CURFEW_START_HOUR, CURFEW_START_MINUTE, 0, 0)
+
+    const curfewEnd = new Date(cursor)
+    curfewEnd.setDate(curfewEnd.getDate() + 1)
+    curfewEnd.setHours(CURFEW_END_HOUR, 0, 0, 0)
+
+    const overlap = getOverlapDuration(
+      start,
+      end,
+      curfewStart.getTime(),
+      curfewEnd.getTime()
+    )
+
+    if (overlap > 0) {
+      count += 1
+    }
+
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  return count
 }
 
 /* -------------------------------------------------------
@@ -177,7 +193,11 @@ const calculateSolarNightDuration = (
     const sunsetMs = sunset?.getTime?.() ?? NaN
     const sunriseMs = sunrise?.getTime?.() ?? NaN
 
-    if (Number.isFinite(sunsetMs) && Number.isFinite(sunriseMs) && sunriseMs > sunsetMs) {
+    if (
+      Number.isFinite(sunsetMs) &&
+      Number.isFinite(sunriseMs) &&
+      sunriseMs > sunsetMs
+    ) {
       total += getOverlapDuration(start, end, sunsetMs, sunriseMs)
     }
 
@@ -198,9 +218,10 @@ const calculateNightBreakdown = (params: {
 }) => {
   const { start, end, location } = params
   const duration = end - start
+  const validLocation = sanitizeLocation(location)
 
-  if (isValidLocation(location)) {
-    const night = calculateSolarNightDuration(start, end, location)
+  if (validLocation) {
+    const night = calculateSolarNightDuration(start, end, validLocation)
     return {
       nightDuration: night,
       dayDuration: Math.max(duration - night, 0),
@@ -232,15 +253,18 @@ export const createDriveEntry = (params: {
   if (!isValidTimestamp(start) || !isValidTimestamp(end)) {
     throw new Error("Invalid drive timestamps")
   }
+
   if (end <= start) {
     throw new Error("Drive end must be greater than start")
   }
 
   const duration = end - start
+  const cleanLocation = sanitizeLocation(location)
+
   const { nightDuration, dayDuration, mode } = calculateNightBreakdown({
     start,
     end,
-    location,
+    location: cleanLocation,
   })
 
   return {
@@ -253,7 +277,7 @@ export const createDriveEntry = (params: {
     isNight: nightDuration > 0,
     notes: notes?.trim() || undefined,
     source,
-    location,
+    location: cleanLocation,
     nightCalcMode: mode,
   }
 }
@@ -306,7 +330,7 @@ export const getSummary = (driveLog: DriveEntry[]): DriveSummary => {
 }
 
 /* -------------------------------------------------------
-   COMPLIANCE (WITH CURFEW)
+   COMPLIANCE
 ------------------------------------------------------- */
 
 export const getCompliance = (driveLog: DriveEntry[]): DriveCompliance => {

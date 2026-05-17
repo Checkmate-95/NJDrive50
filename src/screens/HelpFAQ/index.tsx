@@ -1,7 +1,52 @@
 // src/screens/HelpFAQ/index.tsx
-
-import { useId, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useState } from "react"
+import type { ReactNode } from "react"
 import { useNav } from "../../state/navStore"
+
+type FAQItem = {
+  question: string
+  answer: string
+}
+
+type FAQSection = {
+  title: string
+  items: FAQItem[]
+}
+
+type HighlightedTextProps = {
+  text: string
+  query: string
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+function HighlightedText({ text, query }: HighlightedTextProps) {
+  const trimmed = query.trim()
+  if (!trimmed) return <>{text}</>
+
+  const regex = new RegExp(`(${escapeRegExp(trimmed)})`, "ig")
+  const parts = text.split(regex)
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        const isMatch = part.toLowerCase() === trimmed.toLowerCase()
+        return isMatch ? (
+          <mark
+            key={`${part}-${index}`}
+            className="rounded bg-[#FFF0B3] px-0.5 text-inherit"
+          >
+            {part}
+          </mark>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        )
+      })}
+    </>
+  )
+}
 
 export default function HelpFaq() {
   const { goBack } = useNav()
@@ -12,174 +57,249 @@ export default function HelpFaq() {
 
   const q = query.trim().toLowerCase()
 
-  const sections = useMemo(
+  const sections = useMemo<FAQSection[]>(
     () => [
       {
         title: "Getting Started",
-        children: (
-          <>
-            <FAQ
-              question="How do I log a drive?"
-              answer="Go to Home → Start New Drive. NJDrive50 automatically tracks time and conditions."
-            />
-            <FAQ
-              question="How many hours are required?"
-              answer="NJ requires 50 supervised hours, including 10 at night."
-            />
-            <FAQ
-              question="Can I edit a drive?"
-              answer="Yes — go to Driving Log → select a drive → Edit."
-            />
-            <FAQ
-              question="Can I delete a drive?"
-              answer="Yes — open the drive → scroll down → Delete Drive."
-            />
-            <FAQ
-              question="Does NJDrive50 work offline?"
-              answer="Yes — drives save locally and sync when online."
-            />
-          </>
-        ),
+        items: [
+          {
+            question: "How do I log a drive?",
+            answer:
+              "Go to Home → Start New Drive. NJDrive50 automatically tracks time and conditions.",
+          },
+          {
+            question: "How many hours are required?",
+            answer: "NJ requires 50 supervised hours, including 10 at night.",
+          },
+          {
+            question: "Can I edit a drive?",
+            answer: "Yes — go to Driving Log → select a drive → Edit.",
+          },
+          {
+            question: "Can I delete a drive?",
+            answer: "Yes — open the drive → scroll down → Delete Drive.",
+          },
+          {
+            question: "Does NJDrive50 work offline?",
+            answer: "Yes — drives save locally and sync when online.",
+          },
+        ],
       },
       {
         title: "Road Test Day",
-        children: (
-          <>
-            <FAQ
-              question="What documents do I need?"
-              answer="Permit, registration, insurance, and your completed NJDrive50 log."
-            />
-            <FAQ
-              question="What if the examiner says the car isn't safe?"
-              answer="NJDrive50 includes a pre-test checklist to help avoid this."
-            />
-            <FAQ
-              question="Can we use a rental car?"
-              answer="Only if the rental company allows it and the car meets MVC rules."
-            />
-            <FAQ
-              question="What time should we arrive?"
-              answer="MVC recommends arriving 15 minutes early."
-            />
-            <FAQ
-              question="What if we fail?"
-              answer="You can reschedule. NJDrive50 helps track remaining practice hours."
-            />
-          </>
-        ),
+        items: [
+          {
+            question: "What documents do I need?",
+            answer:
+              "Permit, registration, insurance, and your completed NJDrive50 log.",
+          },
+          {
+            question: "What if the examiner says the car isn't safe?",
+            answer:
+              "NJDrive50 includes a pre-test checklist to help avoid this.",
+          },
+          {
+            question: "Can we use a rental car?",
+            answer:
+              "Only if the rental company allows it and the car meets MVC rules.",
+          },
+          {
+            question: "What time should we arrive?",
+            answer: "MVC recommends arriving 15 minutes early.",
+          },
+          {
+            question: "What if we fail?",
+            answer:
+              "You can reschedule. NJDrive50 helps track remaining practice hours.",
+          },
+        ],
       },
       {
         title: "Troubleshooting",
-        children: (
-          <>
-            <FAQ
-              question="My hours aren't updating."
-              answer="Make sure each drive is saved. Restart the app if needed."
-            />
-            <FAQ
-              question="The timer didn't stop."
-              answer="You can manually adjust the end time in the Driving Log."
-            />
-            <FAQ
-              question="The app froze during a drive."
-              answer="Reopen the app — your drive is auto-saved every 10 seconds."
-            />
-            <FAQ
-              question="Night hours aren't counting."
-              answer="NJDrive50 uses sunset data — drives after sunset count automatically."
-            />
-            <FAQ
-              question="Weather didn't load."
-              answer="Weather requires a connection. You can manually edit conditions."
-            />
-          </>
-        ),
+        items: [
+          {
+            question: "My hours aren't updating.",
+            answer:
+              "Make sure each drive is saved. Restart the app if needed.",
+          },
+          {
+            question: "The timer didn't stop.",
+            answer:
+              "You can manually adjust the end time in the Driving Log.",
+          },
+          {
+            question: "The app froze during a drive.",
+            answer:
+              "Reopen the app — your drive is auto-saved every 10 seconds.",
+          },
+          {
+            question: "Night hours aren't counting.",
+            answer:
+              "NJDrive50 uses sunset data — drives after sunset count automatically.",
+          },
+          {
+            question: "Weather didn't load.",
+            answer:
+              "Weather requires a connection. You can manually edit conditions.",
+          },
+        ],
       },
       {
         title: "Parent Questions",
-        children: (
-          <>
-            <FAQ
-              question="Can multiple parents log drives?"
-              answer="Yes — NJDrive50 supports multi-supervisor logging."
-            />
-            <FAQ
-              question="Can I track both my kids?"
-              answer="Multi-teen support is coming soon."
-            />
-            <FAQ
-              question="How do I export the log?"
-              answer="Go to Settings → Export Log → Download PDF."
-            />
-            <FAQ
-              question="Is NJDrive50 accepted by MVC?"
-              answer="Yes — the log format matches MVC requirements."
-            />
-            <FAQ
-              question="Are we behind?"
-              answer="NJDrive50 shows progress bars so you always know where you stand."
-            />
-          </>
-        ),
+        items: [
+          {
+            question: "Can multiple parents log drives?",
+            answer:
+              "Yes — NJDrive50 supports multi-supervisor logging.",
+          },
+          {
+            question: "Can I track both my kids?",
+            answer: "Multi-teen support is coming soon.",
+          },
+          {
+            question: "How do I export the log?",
+            answer: "Go to Settings → Export Log → Download PDF.",
+          },
+          {
+            question: "Is NJDrive50 accepted by MVC?",
+            answer: "Yes — the log format matches MVC requirements.",
+          },
+          {
+            question: "Are we behind?",
+            answer:
+              "NJDrive50 shows progress bars so you always know where you stand.",
+          },
+        ],
       },
       {
         title: "Drive Tracking & Accuracy",
-        children: (
-          <>
-            <FAQ
-              question="How does NJDrive50 track time?"
-              answer="A precise internal timer runs even if the app is minimized."
-            />
-            <FAQ
-              question="Does it track location?"
-              answer="Only if you enable it — used for distance and route summaries."
-            />
-            <FAQ
-              question="Does it track speed?"
-              answer="No — NJDrive50 avoids collecting sensitive driving data."
-            />
-            <FAQ
-              question="How does it detect night hours?"
-              answer="Based on official sunset times for your location."
-            />
-            <FAQ
-              question="Can I split a drive?"
-              answer="Yes — edit the drive and adjust start/end times."
-            />
-          </>
-        ),
+        items: [
+          {
+            question: "How does NJDrive50 track time?",
+            answer:
+              "A precise internal timer runs even if the app is minimized.",
+          },
+          {
+            question: "Does it track location?",
+            answer:
+              "Only if you enable it — used for distance and route summaries.",
+          },
+          {
+            question: "Does it track speed?",
+            answer:
+              "No — NJDrive50 avoids collecting sensitive driving data.",
+          },
+          {
+            question: "How does it detect night hours?",
+            answer:
+              "Based on official sunset times for your location.",
+          },
+          {
+            question: "Can I split a drive?",
+            answer: "Yes — edit the drive and adjust start/end times.",
+          },
+        ],
       },
     ],
     []
   )
 
+  const filteredSections = useMemo(() => {
+    return sections
+      .map((section) => {
+        const titleMatches = section.title.toLowerCase().includes(q)
+
+        if (!q) {
+          return {
+            ...section,
+            titleMatches: false,
+            items: section.items.map((item) => ({
+              ...item,
+              matches: false,
+            })),
+          }
+        }
+
+        const items = section.items
+          .map((item) => {
+            const haystack = `${item.question} ${item.answer}`.toLowerCase()
+            return {
+              ...item,
+              matches: titleMatches || haystack.includes(q),
+            }
+          })
+          .filter((item) => titleMatches || item.matches)
+
+        if (titleMatches) {
+          return {
+            ...section,
+            titleMatches: true,
+            items: section.items.map((item) => ({
+              ...item,
+              matches: true,
+            })),
+          }
+        }
+
+        return {
+          ...section,
+          titleMatches: false,
+          items,
+        }
+      })
+      .filter((section) => section.items.length > 0)
+  }, [sections, q])
+
   async function handleAskAI() {
-    if (!aiQuestion.trim() || loading) return
+    const prompt = aiQuestion.trim()
+    if (!prompt || loading) return
 
     setLoading(true)
     setAiAnswer("")
 
     try {
       const base = import.meta.env.VITE_AI_SERVER_URL ?? "http://localhost:3001"
+
       const res = await fetch(`${base}/api/njdrive50-ai`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: aiQuestion, mode: "faq" }),
+        body: JSON.stringify({ prompt, mode: "faq" }),
       })
 
-      const data = await res.json()
-      setAiAnswer(data.output ?? "I couldn't find an answer, but I'm here to help.")
-    } catch {
-      setAiAnswer("Something went wrong. Please try again.")
+      let data: unknown = null
+      try {
+        data = await res.json()
+      } catch {
+        data = null
+      }
+
+      const output =
+        typeof data === "object" &&
+        data !== null &&
+        "output" in data &&
+        typeof (data as { output?: unknown }).output === "string"
+          ? (data as { output: string }).output
+          : null
+
+      if (!res.ok) {
+        throw new Error(output || "Something went wrong. Please try again.")
+      }
+
+      setAiAnswer(output || "I couldn't find an answer, but I'm here to help.")
+    } catch (error) {
+      setAiAnswer(
+        error instanceof Error && error.message
+          ? error.message
+          : "Something went wrong. Please try again."
+      )
     } finally {
       setLoading(false)
     }
   }
 
-  const visibleSectionCount = sections.filter((section) => {
-    const text = extractText(section.children).toLowerCase()
-    return !q || section.title.toLowerCase().includes(q) || text.includes(q)
-  }).length
+  function clearSearch() {
+    setQuery("")
+  }
 
   return (
     <div className="min-h-screen w-full bg-[#F7F9FC] text-[#08194A]">
@@ -210,7 +330,7 @@ export default function HelpFaq() {
 
             <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs font-medium text-[#08194A]/60">
               <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-1">
-                {visibleSectionCount} sections
+                {filteredSections.length} sections
               </span>
               {q ? (
                 <span className="rounded-full border border-[#f9c80e]/40 bg-[#FFF7DB] px-3 py-1 text-[#8A6500]">
@@ -220,30 +340,56 @@ export default function HelpFaq() {
             </div>
           </div>
 
-          <div className="mt-5">
-            <label htmlFor="help-search" className="sr-only">
-              Search help topics
-            </label>
-            <input
-              id="help-search"
-              type="text"
-              placeholder="Search help topics…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="min-h-[48px] w-full rounded-2xl border border-[#08194A]/10 bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:border-[#08194A]/20 focus:bg-white focus:ring-2 focus:ring-[#08194A]/8"
-            />
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <div className="flex-1">
+              <label htmlFor="help-search" className="sr-only">
+                Search help topics
+              </label>
+              <input
+                id="help-search"
+                type="text"
+                placeholder="Search help topics…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="min-h-[48px] w-full rounded-2xl border border-[#08194A]/10 bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:border-[#08194A]/20 focus:bg-white focus:ring-2 focus:ring-[#08194A]/8"
+              />
+            </div>
+
+            {q ? (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="min-h-[48px] rounded-2xl border border-[#08194A]/10 bg-white px-4 py-3 text-sm font-semibold text-[#08194A]/75 transition hover:bg-[#F7F9FC] hover:text-[#08194A]"
+              >
+                Clear search
+              </button>
+            ) : null}
           </div>
         </header>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="space-y-4">
-            {sections.map((section) => (
-              <FilteredCollapse key={section.title} title={section.title} query={q}>
-                {section.children}
+          <section className="space-y-4" aria-label="Help topics">
+            {filteredSections.map((section) => (
+              <FilteredCollapse
+                key={section.title}
+                title={section.title}
+                query={q}
+                autoOpen={Boolean(q && (section.titleMatches || section.items.some((item) => item.matches)))}
+              >
+                <div className="space-y-3">
+                  {section.items.map((item) => (
+                    <FAQ
+                      key={item.question}
+                      question={item.question}
+                      answer={item.answer}
+                      query={q}
+                    />
+                  ))}
+                </div>
               </FilteredCollapse>
             ))}
 
-            {visibleSectionCount === 0 && (
+            {filteredSections.length === 0 && (
               <div className="rounded-3xl border border-dashed border-[#08194A]/12 bg-white px-5 py-8 text-center shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
                 <p className="text-sm font-semibold text-[#08194A]">
                   No matching help topics found.
@@ -280,32 +426,36 @@ export default function HelpFaq() {
                   placeholder="Type your question…"
                   value={aiQuestion}
                   onChange={(e) => setAiQuestion(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !loading && aiQuestion.trim()) {
+                      e.preventDefault()
+                      handleAskAI()
+                    }
+                  }}
                   className="min-h-[48px] w-full rounded-2xl border border-[#08194A]/10 bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:border-[#08194A]/20 focus:bg-white focus:ring-2 focus:ring-[#08194A]/8"
                 />
               </div>
 
               <button
-  type="button"
-  className={`mt-3 min-h-[48px] w-full rounded-xl px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition ${
-    loading || !aiQuestion.trim()
-      ? "cursor-not-allowed bg-[#08194A] opacity-50"
-      : "bg-[#08194A] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
-  }`}
-  aria-disabled={loading || !aiQuestion.trim()}
-  onClick={() => {
-    if (loading || !aiQuestion.trim()) return
-    handleAskAI()
-  }}
->
-  {loading ? "Thinking…" : "Ask NJDrive50 AI"}
-</button>
+                type="button"
+                disabled={loading || !aiQuestion.trim()}
+                className={`mt-3 min-h-[48px] w-full rounded-xl px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition ${
+                  loading || !aiQuestion.trim()
+                    ? "cursor-not-allowed bg-[#08194A] opacity-50"
+                    : "bg-[#08194A] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
+                }`}
+                onClick={handleAskAI}
+              >
+                {loading ? "Thinking…" : "Ask NJDrive50 AI"}
+              </button>
 
-
-              {aiAnswer && (
-                <div className="mt-4 rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-4 text-sm leading-6 text-[#08194A] whitespace-pre-wrap">
-                  {aiAnswer}
-                </div>
-              )}
+              <div aria-live="polite" className="mt-4">
+                {aiAnswer ? (
+                  <div className="whitespace-pre-wrap rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-4 text-sm leading-6 text-[#08194A]">
+                    {aiAnswer}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </aside>
         </div>
@@ -317,14 +467,20 @@ export default function HelpFaq() {
 function FAQ({
   question,
   answer,
+  query,
 }: {
   question: string
   answer: string
+  query: string
 }) {
   return (
     <div className="rounded-2xl bg-[#F7F9FC] px-4 py-3">
-      <p className="text-sm font-bold text-[#08194A]">{question}</p>
-      <p className="mt-1 text-sm leading-6 text-[#08194A]/72">{answer}</p>
+      <p className="text-sm font-bold text-[#08194A]">
+        <HighlightedText text={question} query={query} />
+      </p>
+      <p className="mt-1 text-sm leading-6 text-[#08194A]/72">
+        <HighlightedText text={answer} query={query} />
+      </p>
     </div>
   )
 }
@@ -332,23 +488,23 @@ function FAQ({
 function FilteredCollapse({
   title,
   query,
+  autoOpen,
   children,
 }: {
   title: string
   query: string
-  children: React.ReactNode
+  autoOpen: boolean
+  children: ReactNode
 }) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
   const buttonId = useId()
 
-  const contentText = extractText(children).toLowerCase()
-  const matches =
-    !query ||
-    title.toLowerCase().includes(query) ||
-    contentText.includes(query)
-
-  if (!matches) return null
+  useEffect(() => {
+    if (query && autoOpen) {
+      setOpen(true)
+    }
+  }, [query, autoOpen])
 
   return (
     <section className="overflow-hidden rounded-[24px] border border-[#08194A]/10 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
@@ -362,7 +518,7 @@ function FilteredCollapse({
           className="flex min-h-[56px] w-full items-center justify-between gap-3 px-4 py-4 text-left sm:px-5"
         >
           <span className="text-base font-bold text-[#0A1E5E] sm:text-lg">
-            {title}
+            <HighlightedText text={title} query={query} />
           </span>
 
           <span
@@ -381,20 +537,9 @@ function FilteredCollapse({
           aria-labelledby={buttonId}
           className="border-t border-[#08194A]/8 px-4 pb-4 pt-3 sm:px-5 sm:pb-5"
         >
-          <div className="space-y-3">{children}</div>
+          {children}
         </div>
       )}
     </section>
   )
-}
-
-function extractText(node: React.ReactNode): string {
-  if (typeof node === "string") return node
-  if (typeof node === "number") return String(node)
-  if (Array.isArray(node)) return node.map(extractText).join(" ")
-  if (node !== null && typeof node === "object" && "props" in node) {
-    const el = node as { props?: { children?: React.ReactNode } }
-    return extractText(el.props?.children ?? "")
-  }
-  return ""
 }

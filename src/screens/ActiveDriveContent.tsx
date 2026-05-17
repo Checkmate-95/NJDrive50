@@ -271,7 +271,6 @@ function ActiveDriveContent({
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [showWeatherHelp, setShowWeatherHelp] = useState(false)
 
-  const timerRef = useRef<number | null>(null)
   const gpsRef = useRef<number | null>(null)
   const frozenSnapshotRef =
     useRef<Promise<PreviewDriveEntry | null> | null>(null)
@@ -288,16 +287,8 @@ function ActiveDriveContent({
     tick,
     setNightOverride,
     setWeather,
-    appendRoutePoint,
     getCurrentMode,
   } = useActiveDriveStore()
-
-  const clearTimerLoop = useCallback(() => {
-    if (timerRef.current !== null) {
-      window.clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-  }, [])
 
   const clearGpsLoop = useCallback(() => {
     if (gpsRef.current !== null) {
@@ -307,27 +298,33 @@ function ActiveDriveContent({
   }, [])
 
   const clearAllLoops = useCallback(() => {
-    clearTimerLoop()
     clearGpsLoop()
-  }, [clearTimerLoop, clearGpsLoop])
+  }, [clearGpsLoop])
 
-  const primeSessionCoord = useCallback(
-    (coord: RouteCoord) => {
-      useActiveDriveStore.setState((state) => {
-        const s = state.session
-        return {
-          session: {
-            ...s,
-            startCoord: s.startCoord ?? coord,
-            lastCoord: coord,
-          },
-        }
-      })
+  const primeSessionCoord = useCallback((coord: RouteCoord) => {
+    useActiveDriveStore.setState((state) => {
+      const s = state.session
 
-      appendRoutePoint(coord)
-    },
-    [appendRoutePoint]
-  )
+      const hasStart = !!s.startCoord
+      const sameAsLast =
+        !!s.lastCoord &&
+        s.lastCoord.lat === coord.lat &&
+        s.lastCoord.lng === coord.lng
+
+      return {
+        session: {
+          ...s,
+          startCoord: s.startCoord ?? coord,
+          lastCoord: coord,
+          routeTrail:
+            hasStart && sameAsLast
+              ? s.routeTrail
+              : [...s.routeTrail, coord].slice(-500),
+          lastUpdated: Date.now(),
+        },
+      }
+    })
+  }, [])
 
   const displayedMs = Math.max(
     0,
@@ -380,18 +377,6 @@ function ActiveDriveContent({
       cancelled = true
     }
   }, [session.isActive, primeSessionCoord, tick])
-
-  useEffect(() => {
-    clearTimerLoop()
-
-    if (!session.isActive || !session.isRunning) return
-
-    timerRef.current = window.setInterval(() => {
-      tick(undefined, Date.now())
-    }, 1000)
-
-    return clearTimerLoop
-  }, [session.isActive, session.isRunning, tick, clearTimerLoop])
 
   useEffect(() => {
     clearGpsLoop()

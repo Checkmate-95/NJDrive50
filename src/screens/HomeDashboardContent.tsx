@@ -8,8 +8,11 @@
 // [FIX-6] Miles card redesigned as informational stat — no bar, no false compliance framing
 // [FIX-7] Hour format uses shared toFixed(1) consistent with other panels pending shared util
 // [FIX-8] Timer hydration fix — paused timer now shows correct elapsed time on Home panel
+// [FIX-9] Location disclosure modal now appears before requesting permission
+// [FIX-10] Removed redundant “background permission” naming and duplicate permission requests
 
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
+import { Geolocation } from "@capacitor/geolocation"
 import type { Screen } from "../App"
 import { useDriveHistory } from "../state/driveStore"
 import { loadOnboardingData } from "../../core/ReminderEngine"
@@ -19,9 +22,6 @@ import { useActiveDriveStore } from "../state/activeDriveStore"
 type HomeDashboardContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
 }
-
-
-
 
 // ------------------------------
 // Helpers
@@ -38,7 +38,6 @@ function getLightingLabel(day: number, night: number): "Day" | "Night" | "Mixed"
   return "Day"
 }
 
-// Format elapsed time (ms → mm:ss)
 function formatElapsed(ms: number = 0) {
   const totalSeconds = Math.floor(ms / 1000)
   const minutes = Math.floor(totalSeconds / 60)
@@ -126,30 +125,30 @@ export default function HomeDashboardContent({
     ? new Date(lastDrive.endTime).toLocaleString()
     : "--"
 
-  const queryBackgroundPermission = async () => {
+  const queryLocationPermission = async () => {
     try {
-      const permissionsPlugin = (window as any)?.Capacitor?.Plugins?.Permissions
-      if (!permissionsPlugin?.query) return null
-
-      return await permissionsPlugin.query({
-        permissions: ["android.permission.ACCESS_BACKGROUND_LOCATION"],
-      })
-    } catch (error) {
-      console.error("Background permission query failed:", error)
+      const result = await Geolocation.checkPermissions()
+      return result.location
+    } catch (err) {
+      console.error("Location permission query failed:", err)
       return null
     }
   }
 
-  const requestBackgroundPermission = async () => {
+  const requestLocationPermission = async () => {
     try {
-      const permissionsPlugin = (window as any)?.Capacitor?.Plugins?.Permissions
-      if (!permissionsPlugin?.request) return null
+      const fg = await Geolocation.checkPermissions()
 
-      return await permissionsPlugin.request({
-        permissions: ["android.permission.ACCESS_BACKGROUND_LOCATION"],
-      })
-    } catch (error) {
-      console.error("Background permission request failed:", error)
+      if (fg.location !== "granted") {
+        const fgReq = await Geolocation.requestPermissions()
+        if (fgReq.location !== "granted") {
+          return null
+        }
+      }
+
+      return "granted"
+    } catch (err) {
+      console.error("Location permission request failed:", err)
       return null
     }
   }
@@ -171,9 +170,9 @@ export default function HomeDashboardContent({
       return
     }
 
-    const perm = await queryBackgroundPermission()
+    const perm = await queryLocationPermission()
 
-    if (perm?.state !== "granted") {
+    if (perm !== "granted") {
       setShowLocationDisclosure(true)
       return
     }
@@ -207,14 +206,13 @@ export default function HomeDashboardContent({
             </h2>
 
             <p className="mb-6 text-sm leading-6 text-slate-600">
-              NJDrive50 tracks your supervised driving sessions to create
-              accurate mileage logs. To keep tracking even when the screen is
-              off, the app needs permission to access your location in the
-              background.
+              NJDrive50 tracks your supervised driving sessions to create accurate
+              mileage logs. To keep tracking even when the screen is off, the app
+              needs permission to access your location while you’re driving.
               <br />
               <br />
-              Location is only used during active drives and never when a drive
-              is not running.
+              Location is only used during active drives and never when a drive is
+              not running.
             </p>
 
             <div className="flex justify-end gap-3">
@@ -230,13 +228,11 @@ export default function HomeDashboardContent({
                 type="button"
                 className="rounded-lg bg-blue-600 px-4 py-2 text-white"
                 onClick={async () => {
+                  const req = await requestLocationPermission()
+                  if (req !== "granted") return
+
                   setShowLocationDisclosure(false)
-
-                  const perm = await requestBackgroundPermission()
-
-                  if (perm?.state === "granted") {
-                    await beginDrive()
-                  }
+                  await beginDrive()
                 }}
               >
                 Allow & Continue

@@ -389,10 +389,10 @@ useEffect(() => {
         Total<br />Hours
       </p>
       <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+        <span className="text-[1.1rem] sm:text-[1.2rem] font-bold leading-none tabular-nums">
           {formatHours(totalHours).split(" ")[0]}
         </span>
-        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+        <span className="text-[0.8rem] sm:text-[0.9rem] font-semibold leading-none tabular-nums">
           {formatHours(totalHours).split(" ")[1]}
         </span>
       </p>
@@ -404,10 +404,10 @@ useEffect(() => {
         Day<br />Hours
       </p>
       <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+        <span className="text-[1.1rem] sm:text-[1.2rem] font-bold leading-none tabular-nums">
           {formatHours(dayHours).split(" ")[0]}
         </span>
-        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+        <span className="text-[0.8rem] sm:text-[0.9rem] font-semibold leading-none tabular-nums">
           {formatHours(dayHours).split(" ")[1]}
         </span>
       </p>
@@ -419,10 +419,10 @@ useEffect(() => {
         Night<br />Hours
       </p>
       <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+        <span className="text-[1.1rem] sm:text-[1.2rem] font-bold leading-none tabular-nums">
           {formatHours(nightHours).split(" ")[0]}
         </span>
-        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+        <span className="text-[0.8rem] sm:text-[0.9rem] font-semibold leading-none tabular-nums">
           {formatHours(nightHours).split(" ")[1]}
         </span>
       </p>
@@ -434,10 +434,10 @@ useEffect(() => {
         Night<br />Remain
       </p>
       <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+        <span className="text-[1.1rem] sm:text-[1.2rem] font-bold leading-none tabular-nums">
           {formatHours(remainingNightHours).split(" ")[0]}
         </span>
-        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+        <span className="text-[0.8rem] sm:text-[0.9rem] font-semibold leading-none tabular-nums">
           {formatHours(remainingNightHours).split(" ")[1]}
         </span>
       </p>
@@ -449,10 +449,10 @@ useEffect(() => {
         Total<br />Remain
       </p>
       <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+        <span className="text-[1.1rem] sm:text-[1.2rem] font-bold leading-none tabular-nums">
           {formatHours(remainingTotalHours).split(" ")[0]}
         </span>
-        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+        <span className="text-[0.8rem] sm:text-[0.9rem] font-semibold leading-none tabular-nums">
           {formatHours(remainingTotalHours).split(" ")[1]}
         </span>
       </p>
@@ -464,14 +464,14 @@ useEffect(() => {
         Last<br />Drive
       </p>
       <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+        <span className="text-[1.1rem] sm:text-[1.2rem] font-bold leading-none tabular-nums">
           {hasActiveDrive
             ? formatHours(activeDurationSeconds / 3600).split(" ")[0]
             : hasLastDrive
               ? formatHours(safeNumber(lastDrive?.totalDurationHours)).split(" ")[0]
               : "—"}
         </span>
-        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+        <span className="text-[0.8rem] sm:text-[0.9rem] font-semibold leading-none tabular-nums">
           {hasActiveDrive
             ? formatHours(activeDurationSeconds / 3600).split(" ")[1]
             : hasLastDrive
@@ -517,7 +517,7 @@ useEffect(() => {
         </div>
       </div>
     </div>
-  </div>
+    </div>
 
           {/* Total hours progress bar */}
           <div className="mt-5">

@@ -157,6 +157,15 @@ export default function LandingPage() {
           }
         `}</script>
 
+        {/* ⭐ Your logo goes right here ⭐ */}
+    <div className="w-full flex justify-center mt-8 mb-6">
+      <img
+        src="/njdrive50Logo5.png"
+        alt="NJDrive50 Logo"
+        className="w-40 h-auto"
+      />
+    </div>
+
         {/* FAQPage Schema */}
         <script type="application/ld+json">{`
           {

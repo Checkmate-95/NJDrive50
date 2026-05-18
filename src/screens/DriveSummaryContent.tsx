@@ -389,45 +389,45 @@ useEffect(() => {
 
           {/* Drive Summary Mini Panels */}
 <div className="mt-5 rounded-[28px] border border-[#0A1E5E]/10 bg-[#F7F9FC] p-4 shadow-sm sm:p-5">
-  {/* Use flex-wrap instead of grid for consistent side-by-side layout */}
-  <div className="flex flex-wrap justify-between gap-3">
-    {/* Each panel flexes evenly and wraps when space runs out */}
-    <div className="flex-1 min-w-[45%] flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+  <div className="grid grid-cols-2 gap-3">
+
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Total Hours</p>
       <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
         {formatHours(totalHours)}
       </p>
     </div>
 
-    <div className="flex-1 min-w-[45%] flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Day Hours</p>
       <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
         {formatHours(dayHours)}
       </p>
     </div>
 
-    <div className="flex-1 min-w-[45%] flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Night Hours</p>
       <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
         {formatHours(nightHours)}
       </p>
     </div>
 
-    <div className="flex-1 min-w-[45%] flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Night Remain</p>
       <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
         {formatHours(remainingNightHours)}
       </p>
     </div>
 
-    <div className="flex-1 min-w-[45%] flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Total Remain</p>
       <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
         {formatHours(remainingTotalHours)}
       </p>
     </div>
 
-    <div className="flex-1 min-w-[45%] flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+    {/* Last Drive panel — spans full width for extra info */}
+    <div className="col-span-2 flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm min-h-[80px]">
       <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Last Drive</p>
       <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
         {hasActiveDrive
@@ -447,9 +447,6 @@ useEffect(() => {
             : "No drive saved"}
       </p>
     </div>
-  
-
-
 
               {/* Miles — informational only, no compliance bar */}
               <div className="col-span-2 rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">

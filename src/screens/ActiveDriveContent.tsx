@@ -326,17 +326,31 @@ function ActiveDriveContent({
     })
   }, [])
 
-  const displayedMs = Math.max(
-    0,
-    safeNumber(session.dayMs) + safeNumber(session.nightMs)
-  )
-  const formattedElapsed = formatTime(displayedMs)
+  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds);
+const [displayedMs, setDisplayedMs] = useState(() => getElapsedSeconds() * 1000);
+
+useEffect(() => {
+  if (!session.isRunning) {
+    setDisplayedMs(session.dayMs + session.nightMs);
+    return;
+  }
+
+  const id = window.setInterval(() => {
+    setDisplayedMs(getElapsedSeconds() * 1000);
+  }, 500); // ✅ updates twice per second
+
+  return () => window.clearInterval(id);
+}, [session.isRunning, session.dayMs, session.nightMs, getElapsedSeconds]);
+
+const formattedElapsed = formatTime(displayedMs);
+
 
   const isRunning = session.isRunning
   const hasActiveDrive = session.isActive
   const saveDisabled = !hasActiveDrive || displayedMs < 10000 || isStopping
   const previewDisabled =
-    !hasActiveDrive || displayedMs <= 0 || isStopping || isPreviewing
+  !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing;
+
 
   const effectiveMode: DriveMode | null = hasActiveDrive
     ? getCurrentMode()
@@ -450,12 +464,14 @@ function ActiveDriveContent({
     try {
       if (!session.isActive) {
         const today = new Date()
-        const window = getSolarWindowForDate(coord.lat, coord.lng, today)
+        const solarWindow = getSolarWindowForDate(coord.lat, coord.lng, today);
+
 
         startDrive(Date.now(), coord, {
-          sunrise: window.sunrise ? window.sunrise.getTime() : 0,
-          sunset: window.sunset ? window.sunset.getTime() : 0,
-        })
+  sunrise: solarWindow.sunrise ? solarWindow.sunrise.getTime() : 0,
+  sunset: solarWindow.sunset ? solarWindow.sunset.getTime() : 0,
+});
+
       } else {
         primeSessionCoord(coord)
         resumeDrive()

@@ -388,8 +388,13 @@ useEffect(() => {
       <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
         Total<br />Hours
       </p>
-      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
-        {formatHours(totalHours)}
+      <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
+        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+          {formatHours(totalHours).split(" ")[0]}
+        </span>
+        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+          {formatHours(totalHours).split(" ")[1]}
+        </span>
       </p>
     </div>
 
@@ -398,8 +403,13 @@ useEffect(() => {
       <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
         Day<br />Hours
       </p>
-      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
-        {formatHours(dayHours)}
+      <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
+        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+          {formatHours(dayHours).split(" ")[0]}
+        </span>
+        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+          {formatHours(dayHours).split(" ")[1]}
+        </span>
       </p>
     </div>
 
@@ -408,8 +418,13 @@ useEffect(() => {
       <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
         Night<br />Hours
       </p>
-      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
-        {formatHours(nightHours)}
+      <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
+        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+          {formatHours(nightHours).split(" ")[0]}
+        </span>
+        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+          {formatHours(nightHours).split(" ")[1]}
+        </span>
       </p>
     </div>
 
@@ -418,8 +433,13 @@ useEffect(() => {
       <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
         Night<br />Remain
       </p>
-      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
-        {formatHours(remainingNightHours)}
+      <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
+        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+          {formatHours(remainingNightHours).split(" ")[0]}
+        </span>
+        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+          {formatHours(remainingNightHours).split(" ")[1]}
+        </span>
       </p>
     </div>
 
@@ -428,8 +448,13 @@ useEffect(() => {
       <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
         Total<br />Remain
       </p>
-      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
-        {formatHours(remainingTotalHours)}
+      <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
+        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+          {formatHours(remainingTotalHours).split(" ")[0]}
+        </span>
+        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+          {formatHours(remainingTotalHours).split(" ")[1]}
+        </span>
       </p>
     </div>
 
@@ -438,12 +463,21 @@ useEffect(() => {
       <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
         Last<br />Drive
       </p>
-      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
-        {hasActiveDrive
-          ? formatHours(activeDurationSeconds / 3600)
-          : hasLastDrive
-            ? formatHours(safeNumber(lastDrive?.totalDurationHours))
-            : "—"}
+      <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
+        <span className="text-[1.25rem] sm:text-[1.35rem] font-black leading-none tabular-nums">
+          {hasActiveDrive
+            ? formatHours(activeDurationSeconds / 3600).split(" ")[0]
+            : hasLastDrive
+              ? formatHours(safeNumber(lastDrive?.totalDurationHours)).split(" ")[0]
+              : "—"}
+        </span>
+        <span className="text-[0.9rem] sm:text-[1rem] font-bold leading-none tabular-nums">
+          {hasActiveDrive
+            ? formatHours(activeDurationSeconds / 3600).split(" ")[1]
+            : hasLastDrive
+              ? formatHours(safeNumber(lastDrive?.totalDurationHours)).split(" ")[1]
+              : ""}
+        </span>
       </p>
       <p className="mt-1 text-[10px] font-semibold text-[#0A1E5E]/65 truncate">
         {hasActiveDrive

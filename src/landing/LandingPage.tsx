@@ -99,6 +99,9 @@ export default function LandingPage() {
     },
   ]
 
+  // ── Replace this with your real Google Play / App Store URL when live ──
+  const APP_DOWNLOAD_URL = "#"
+
   return (
     <>
       <Helmet>
@@ -221,10 +224,12 @@ export default function LandingPage() {
         {/* ── Header ── */}
         <header className="sticky top-0 z-50 border-b border-white/10 bg-black/60 backdrop-blur">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#38BDF8]/15 shadow-lg ring-1 ring-[#38BDF8]/30">
-                <span className="text-base">🚗</span>
-              </div>
+            <div className="flex items-center gap-3">
+              <img
+                src="/njdrive50Logo5.png"
+                alt="NJDrive50 Logo"
+                className="h-9 w-9 rounded-xl object-contain"
+              />
               <div className="flex flex-col leading-tight">
                 <span className="text-sm font-semibold tracking-[0.18em] text-[#38BDF8]">
                   NJDRIVE50
@@ -248,7 +253,7 @@ export default function LandingPage() {
             </nav>
 
             <a
-              href="#get-app"
+              href={APP_DOWNLOAD_URL}
               className="rounded-xl bg-[#38BDF8] px-4 py-2 text-xs font-extrabold text-[#020617] transition hover:bg-[#0EA5E9]"
             >
               Get the App
@@ -267,13 +272,13 @@ export default function LandingPage() {
 
             <div className="relative mx-auto flex max-w-5xl flex-col gap-10 px-4 py-16 md:flex-row md:items-center md:py-24">
               <div className="max-w-xl">
-                
-                {/* ⭐ LOGO ADDED HERE ⭐ */}
+
+                {/* Logo — hero size */}
                 <div className="mb-8 flex">
                   <img
                     src="/njdrive50Logo5.png"
                     alt="NJDrive50 Logo"
-                    className="w-32 sm:w-40 h-auto drop-shadow-2xl"
+                    className="h-auto w-32 drop-shadow-2xl sm:w-40"
                   />
                 </div>
 
@@ -287,9 +292,7 @@ export default function LandingPage() {
 
                 <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
                   Track your teen&apos;s{" "}
-                  <span className="text-[#38BDF8]">
-                    New Jersey driving hours
-                  </span>{" "}
+                  <span className="text-[#38BDF8]">New Jersey driving hours</span>{" "}
                   with confidence.
                 </h1>
 
@@ -312,9 +315,7 @@ export default function LandingPage() {
                       key={label}
                       className="flex flex-col rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-center"
                     >
-                      <span className="text-lg font-extrabold text-[#38BDF8]">
-                        {value}
-                      </span>
+                      <span className="text-lg font-extrabold text-[#38BDF8]">{value}</span>
                       <span className="text-[10px] text-white/50">{label}</span>
                     </div>
                   ))}
@@ -323,7 +324,7 @@ export default function LandingPage() {
                 <div className="mt-7 flex flex-wrap items-center gap-3">
                   <a
                     id="get-app"
-                    href="#"
+                    href={APP_DOWNLOAD_URL}
                     className="rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
                   >
                     Get NJDrive50 — Free
@@ -337,8 +338,7 @@ export default function LandingPage() {
                 </div>
 
                 <p className="mt-3 text-[11px] text-white/40">
-                  Built for NJ learner permits issued on or after February 1,
-                  2025 · Free · Android
+                  Built for NJ learner permits issued on or after February 1, 2025 · Free · Android
                 </p>
               </div>
 
@@ -346,50 +346,33 @@ export default function LandingPage() {
               <div className="flex flex-1 justify-center">
                 <div className="relative h-[340px] w-[200px]">
                   <div className="absolute inset-0 rounded-[36px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_40px_100px_rgba(15,23,42,0.9)]">
-                    {/* Mock screen content */}
                     <div className="flex h-full flex-col gap-3 p-4 pt-8">
                       <div className="text-center">
                         <p className="text-[10px] text-white/40">Total Hours</p>
-                        <p className="text-3xl font-extrabold text-[#38BDF8]">
-                          32.5
-                        </p>
+                        <p className="text-3xl font-extrabold text-[#38BDF8]">32.5</p>
                         <p className="text-[10px] text-white/40">of 50 hours</p>
                       </div>
                       <div className="mx-auto h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                        <div
-                          className="h-full rounded-full bg-[#38BDF8]"
-                          style={{ width: "65%" }}
-                        />
+                        <div className="h-full rounded-full bg-[#38BDF8]" style={{ width: "65%" }} />
                       </div>
                       <div className="mt-1 grid grid-cols-2 gap-2">
                         {[
                           { label: "Day", value: "26.5h", color: "text-yellow-400" },
                           { label: "Night", value: "6.0h", color: "text-[#38BDF8]" },
                         ].map(({ label, value, color }) => (
-                          <div
-                            key={label}
-                            className="rounded-xl bg-white/5 p-2 text-center"
-                          >
-                            <p className={`text-sm font-bold ${color}`}>
-                              {value}
-                            </p>
+                          <div key={label} className="rounded-xl bg-white/5 p-2 text-center">
+                            <p className={`text-sm font-bold ${color}`}>{value}</p>
                             <p className="text-[9px] text-white/40">{label}</p>
                           </div>
                         ))}
                       </div>
                       <div className="mt-2 rounded-xl bg-white/5 p-2.5">
-                        <p className="text-[9px] text-white/50">
-                          Road test eligible in
-                        </p>
+                        <p className="text-[9px] text-white/50">Road test eligible in</p>
                         <p className="text-sm font-bold text-white">47 days</p>
                       </div>
                       <div className="rounded-xl bg-white/5 p-2.5">
-                        <p className="text-[9px] text-white/50">
-                          Night hours needed
-                        </p>
-                        <p className="text-sm font-bold text-yellow-400">
-                          4.0 hrs
-                        </p>
+                        <p className="text-[9px] text-white/50">Night hours needed</p>
+                        <p className="text-sm font-bold text-yellow-400">4.0 hrs</p>
                       </div>
                     </div>
                   </div>
@@ -424,8 +407,8 @@ export default function LandingPage() {
                   How NJDrive50 works
                 </h2>
                 <p className="mx-auto mt-3 max-w-lg text-sm text-white/60">
-                  From permit day to road test — here&apos;s how NJDrive50
-                  guides NJ families every step of the way.
+                  From permit day to road test — here&apos;s how NJDrive50 guides NJ families every
+                  step of the way.
                 </p>
               </div>
 
@@ -438,12 +421,8 @@ export default function LandingPage() {
                     <span className="mb-3 block text-3xl font-extrabold text-[#38BDF8]/25">
                       {step}
                     </span>
-                    <h3 className="mb-2 text-sm font-bold text-white">
-                      {title}
-                    </h3>
-                    <p className="text-xs leading-relaxed text-white/55">
-                      {description}
-                    </p>
+                    <h3 className="mb-2 text-sm font-bold text-white">{title}</h3>
+                    <p className="text-xs leading-relaxed text-white/55">{description}</p>
                   </div>
                 ))}
               </div>
@@ -461,8 +440,8 @@ export default function LandingPage() {
                   Everything you need to hit 50 hours
                 </h2>
                 <p className="mx-auto mt-3 max-w-lg text-sm text-white/60">
-                  NJDrive50 is the only driving log app built specifically for
-                  the New Jersey MVC supervised driving requirement.
+                  NJDrive50 is the only driving log app built specifically for the New Jersey MVC
+                  supervised driving requirement.
                 </p>
               </div>
 
@@ -473,12 +452,8 @@ export default function LandingPage() {
                     className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-[#38BDF8]/20 hover:bg-white/[0.05]"
                   >
                     <span className="mb-3 block text-2xl">{icon}</span>
-                    <h3 className="mb-1.5 text-sm font-bold text-white">
-                      {title}
-                    </h3>
-                    <p className="text-xs leading-relaxed text-white/55">
-                      {description}
-                    </p>
+                    <h3 className="mb-1.5 text-sm font-bold text-white">{title}</h3>
+                    <p className="text-xs leading-relaxed text-white/55">{description}</p>
                   </div>
                 ))}
               </div>
@@ -497,21 +472,16 @@ export default function LandingPage() {
                     New NJ Law — Effective February 1, 2025
                   </h2>
                   <p className="mt-2 text-sm leading-relaxed text-white/70">
-                    The NJ Motor Vehicle Commission now requires all permit
-                    holders under 21 (with permits issued on or after February
-                    1, 2025) to complete{" "}
-                    <strong className="text-white">
-                      50 hours of supervised driving
-                    </strong>
-                    , including{" "}
-                    <strong className="text-white">10 hours at night</strong>,
-                    before receiving a probationary license. A signed{" "}
+                    The NJ Motor Vehicle Commission now requires all permit holders under 21 (with
+                    permits issued on or after February 1, 2025) to complete{" "}
+                    <strong className="text-white">50 hours of supervised driving</strong>,
+                    including <strong className="text-white">10 hours at night</strong>, before
+                    receiving a probationary license. A signed{" "}
                     <strong className="text-white">
                       Certification of Supervised Driving (Form BA-CSD)
                     </strong>{" "}
-                    must be submitted to the NJ MVC. NJDrive50 is designed to
-                    make meeting this requirement simple, trackable, and
-                    stress-free.
+                    must be submitted to the NJ MVC. NJDrive50 is designed to make meeting this
+                    requirement simple, trackable, and stress-free.
                   </p>
                   <a
                     href="https://www.nj.gov/mvc/license/youngadult.htm"
@@ -537,8 +507,8 @@ export default function LandingPage() {
                   NJ permit &amp; driving FAQ
                 </h2>
                 <p className="mx-auto mt-3 max-w-md text-sm text-white/60">
-                  Answers to the most common questions about the NJ MVC 50-hour
-                  requirement and how NJDrive50 fits in.
+                  Answers to the most common questions about the NJ MVC 50-hour requirement and how
+                  NJDrive50 fits in.
                 </p>
               </div>
 
@@ -574,12 +544,12 @@ export default function LandingPage() {
                 <span className="text-[#38BDF8]">Hit 50 hours faster.</span>
               </h2>
               <p className="mx-auto mt-4 max-w-md text-sm text-white/60">
-                NJDrive50 is free, built for New Jersey, and designed to take
-                the stress out of the 50-hour permit requirement.
+                NJDrive50 is free, built for New Jersey, and designed to take the stress out of the
+                50-hour permit requirement.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-4">
                 <a
-                  href="#"
+                  href={APP_DOWNLOAD_URL}
                   className="rounded-xl bg-[#38BDF8] px-8 py-3.5 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
                 >
                   Download NJDrive50 — Free
@@ -597,29 +567,25 @@ export default function LandingPage() {
           <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#38BDF8]/15 text-sm ring-1 ring-[#38BDF8]/20">
-                  🚗
-                </div>
+                <img
+                  src="/njdrive50Logo5.png"
+                  alt="NJDrive50 Logo"
+                  className="h-7 w-7 rounded-lg object-contain"
+                />
                 <span className="text-sm font-bold tracking-[0.16em] text-[#38BDF8]">
                   NJDRIVE50
                 </span>
               </div>
               <p className="mt-2 max-w-[28ch] text-[11px] leading-relaxed text-white/40">
-                The free NJ teen driving hours tracker built for the NJ MVC
-                50-hour supervised driving requirement.
+                The free NJ teen driving hours tracker built for the NJ MVC 50-hour supervised
+                driving requirement.
               </p>
             </div>
 
             <div className="flex flex-col gap-1 text-xs text-white/40">
-              <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">
-                Legal
-              </p>
-              <a href="#privacy" className="hover:text-white/70">
-                Privacy Policy
-              </a>
-              <a href="#terms" className="hover:text-white/70">
-                Terms of Use
-              </a>
+              <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">Legal</p>
+              <a href="#privacy" className="hover:text-white/70">Privacy Policy</a>
+              <a href="#terms" className="hover:text-white/70">Terms of Use</a>
             </div>
 
             <div className="flex flex-col gap-1 text-xs text-white/40">
@@ -646,8 +612,8 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-white/5 px-4 py-4 text-center text-[11px] text-white/25">
-            © {new Date().getFullYear()} NJDrive50. All rights reserved. Not
-            affiliated with the New Jersey Motor Vehicle Commission.
+            © {new Date().getFullYear()} NJDrive50. All rights reserved. Not affiliated with the
+            New Jersey Motor Vehicle Commission.
           </div>
         </footer>
       </div>

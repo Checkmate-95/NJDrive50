@@ -157,15 +157,6 @@ export default function LandingPage() {
           }
         `}</script>
 
-        {/* ⭐ Your logo goes right here ⭐ */}
-    <div className="w-full flex justify-center mt-8 mb-6">
-      <img
-        src="/njdrive50Logo5.png"
-        alt="NJDrive50 Logo"
-        className="w-40 h-auto"
-      />
-    </div>
-
         {/* FAQPage Schema */}
         <script type="application/ld+json">{`
           {
@@ -276,6 +267,16 @@ export default function LandingPage() {
 
             <div className="relative mx-auto flex max-w-5xl flex-col gap-10 px-4 py-16 md:flex-row md:items-center md:py-24">
               <div className="max-w-xl">
+                
+                {/* ⭐ LOGO ADDED HERE ⭐ */}
+                <div className="mb-8 flex">
+                  <img
+                    src="/njdrive50Logo5.png"
+                    alt="NJDrive50 Logo"
+                    className="w-32 sm:w-40 h-auto drop-shadow-2xl"
+                  />
+                </div>
+
                 {/* Badge */}
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#38BDF8]" />

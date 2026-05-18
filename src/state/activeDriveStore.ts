@@ -505,16 +505,16 @@ getElapsedSeconds: () => {
   if (!s.isActive || s.startTime === null) return 0;
 
   const accumulated = s.dayMs + s.nightMs;
-
-  // ✅ Use lastTickAt as the stable baseline for smoother updates
   const baseline = s.lastTickAt ?? s.startTime;
+  const liveDelta = Math.max(0, now - baseline);
 
   if (s.isRunning) {
-    return Math.floor((accumulated + (now - baseline)) / 1000);
+    return Math.floor((accumulated + liveDelta) / 1000);
   }
 
   return Math.floor(accumulated / 1000);
 },
+
 
 
 getDayNightSeconds: () => {
@@ -546,15 +546,16 @@ _tickInterval: null as number | null,
 
 
 startGlobalTick: () => {
-  if (get()._tickInterval) return
+  if (get()._tickInterval) return;
   const id = window.setInterval(() => {
-    const s = get().session
+    const s = get().session;
     if (s.isActive && s.isRunning) {
-      get().tick(undefined, Date.now())
+      get().tick(undefined, Date.now());
     }
-  }, 1000)
-  set({ _tickInterval: id })
+  }, 500); // ✅ smoother half‑second tick
+  set({ _tickInterval: id });
 },
+
 
 stopGlobalTick: () => {
   const id = get()._tickInterval
@@ -566,13 +567,24 @@ stopGlobalTick: () => {
 
     }),
     {
-      name: STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
-      version: 4,
-      migrate: (persisted: unknown) => {
-        const raw = persisted as { session?: unknown } | null
-        return { session: normalizeSession(raw?.session) }
-      },
-    }
+  name: STORAGE_KEY,
+  storage: createJSONStorage(() => localStorage),
+  version: 4,
+  partialize: (state) => ({ session: state.session }), // ✅ only persist session
+  migrate: (persisted: unknown) => {
+    const raw = persisted as { session?: unknown } | null;
+    return { session: normalizeSession(raw?.session) };
+  },
+}
+
   )
 )
+
+// ✅ Restart global tick if app reloads mid-drive
+if (typeof window !== "undefined") {
+  const { session, startGlobalTick } = useActiveDriveStore.getState()
+  if (session.isActive && session.isRunning) {
+    startGlobalTick()
+  }
+}
+

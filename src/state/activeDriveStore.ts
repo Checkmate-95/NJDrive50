@@ -499,24 +499,23 @@ clearRoute: () => {
 },
 
 getElapsedSeconds: () => {
-  const { session: s } = get()
-  const now = Date.now()
+  const { session: s } = get();
+  const now = Date.now();
 
-  if (!s.isActive || s.startTime === null) return 0
+  if (!s.isActive || s.startTime === null) return 0;
 
-  const accumulated = s.dayMs + s.nightMs
+  const accumulated = s.dayMs + s.nightMs;
 
-  // Use lastModeChangeAt as the stable baseline
-  const baseline =
-    s.lastModeChangeAt ??
-    s.startTime
+  // ✅ Use lastTickAt as the stable baseline for smoother updates
+  const baseline = s.lastTickAt ?? s.startTime;
 
   if (s.isRunning) {
-    return Math.floor((accumulated + (now - baseline)) / 1000)
+    return Math.floor((accumulated + (now - baseline)) / 1000);
   }
 
-  return Math.floor(accumulated / 1000)
+  return Math.floor(accumulated / 1000);
 },
+
 
 getDayNightSeconds: () => {
   const { session: s } = get()

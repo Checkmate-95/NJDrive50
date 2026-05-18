@@ -337,9 +337,10 @@ useEffect(() => {
   }
 
   const id = window.setInterval(() => {
-    // pull directly from store each tick
-    setDisplayedMs(useActiveDriveStore.getState().getElapsedSeconds() * 1000);
-  }, 500);
+  console.log("Timer tick:", useActiveDriveStore.getState().getElapsedSeconds());
+  setDisplayedMs(useActiveDriveStore.getState().getElapsedSeconds() * 1000);
+}, 500);
+
 
   return () => window.clearInterval(id);
 }, [session.isRunning, session.dayMs, session.nightMs]);

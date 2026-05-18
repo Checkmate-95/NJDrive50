@@ -326,8 +326,9 @@ function ActiveDriveContent({
     })
   }, [])
 
-  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds);
-const [displayedMs, setDisplayedMs] = useState(() => getElapsedSeconds() * 1000);
+ // ✅ subscribe to the live value instead of the function
+const elapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds());
+const [displayedMs, setDisplayedMs] = useState(elapsedSeconds * 1000);
 
 useEffect(() => {
   if (!session.isRunning) {
@@ -336,13 +337,15 @@ useEffect(() => {
   }
 
   const id = window.setInterval(() => {
-    setDisplayedMs(getElapsedSeconds() * 1000);
-  }, 500); // ✅ updates twice per second
+    // pull directly from store each tick
+    setDisplayedMs(useActiveDriveStore.getState().getElapsedSeconds() * 1000);
+  }, 500);
 
   return () => window.clearInterval(id);
-}, [session.isRunning, session.dayMs, session.nightMs, getElapsedSeconds]);
+}, [session.isRunning, session.dayMs, session.nightMs]);
 
 const formattedElapsed = formatTime(displayedMs);
+
 
 
   const isRunning = session.isRunning

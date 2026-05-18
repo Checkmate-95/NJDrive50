@@ -387,75 +387,70 @@ useEffect(() => {
 </div>
 
 
-          <div className="mt-5 rounded-[28px] border border-[#0A1E5E]/10 bg-[#F7F9FC] p-4 shadow-sm sm:p-5">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                  Total Hours
-                </p>
-                <p className="mt-2 text-xl font-black leading-tight text-[#08194A] sm:text-2xl">
-                  {formatHours(totalHours)}
-                </p>
-              </div>
+          {/* Drive Summary Mini Panels */}
+<div className="mt-5 rounded-[28px] border border-[#0A1E5E]/10 bg-[#F7F9FC] p-4 shadow-sm sm:p-5">
+  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3">
+    {/* Total Hours */}
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Total Hours</p>
+      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
+        {formatHours(totalHours)}
+      </p>
+    </div>
 
-              <div className="rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                  Day Hours
-                </p>
-                <p className="mt-2 text-xl font-black leading-tight text-[#08194A] sm:text-2xl">
-                  {formatHours(dayHours)}
-                </p>
-              </div>
+    {/* Day Hours */}
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Day Hours</p>
+      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
+        {formatHours(dayHours)}
+      </p>
+    </div>
 
-              <div className="rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                  Night Hours
-                </p>
-                <p className="mt-2 text-xl font-black leading-tight text-[#08194A] sm:text-2xl">
-                  {formatHours(nightHours)}
-                </p>
-              </div>
+    {/* Night Hours */}
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Night Hours</p>
+      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
+        {formatHours(nightHours)}
+      </p>
+    </div>
 
-              <div className="rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                  Night Remaining
-                </p>
-                <p className="mt-2 text-xl font-black leading-tight text-[#08194A] sm:text-2xl">
-                  {formatHours(remainingNightHours)}
-                </p>
-              </div>
+    {/* Night Remain */}
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Night Remain</p>
+      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
+        {formatHours(remainingNightHours)}
+      </p>
+    </div>
 
-              <div className="rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                  Total Remaining
-                </p>
-                <p className="mt-2 text-xl font-black leading-tight text-[#08194A] sm:text-2xl">
-                  {formatHours(remainingTotalHours)}
-                </p>
-              </div>
+    {/* Total Remain */}
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Total Remain</p>
+      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
+        {formatHours(remainingTotalHours)}
+      </p>
+    </div>
 
-              <div className="rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">
-  <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-    Last Drive
-  </p>
-  <p className="mt-2 text-xl font-black leading-tight text-[#08194A] sm:text-2xl">
-    {hasActiveDrive
-      ? formatHours(activeDurationSeconds / 3600) // live timer from store
-      : hasLastDrive
-        ? formatHours(safeNumber(lastDrive?.totalDurationHours)) // saved drive
-        : "—"}
-  </p>
-  <p className="mt-1 text-xs font-semibold text-[#0A1E5E]/65 sm:text-sm">
-    {hasActiveDrive
-      ? getLightingLabel(
-          safeNumber(activeSession?.dayMs) / 3600000,
-          safeNumber(activeSession?.nightMs) / 3600000
-        )
-      : hasLastDrive
-        ? lastDriveTimeOfDay
-        : "No drive saved"}
-  </p>
-</div>
+    {/* Last Drive */}
+    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm h-[120px] sm:h-[140px]">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-[#0A1E5E]/55">Last Drive</p>
+      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl">
+        {hasActiveDrive
+          ? formatHours(activeDurationSeconds / 3600)
+          : hasLastDrive
+            ? formatHours(safeNumber(lastDrive?.totalDurationHours))
+            : "—"}
+      </p>
+      <p className="mt-1 text-xs font-semibold text-[#0A1E5E]/65 sm:text-sm">
+        {hasActiveDrive
+          ? getLightingLabel(
+              safeNumber(activeSession?.dayMs) / 3600000,
+              safeNumber(activeSession?.nightMs) / 3600000
+            )
+          : hasLastDrive
+            ? lastDriveTimeOfDay
+            : "No drive saved"}
+      </p>
+    </div>
 
 
               {/* Miles — informational only, no compliance bar */}

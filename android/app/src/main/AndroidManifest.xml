@@ -1,32 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.njdrive50.app">
 
-    <!-- ========================= -->
-    <!--     REQUIRED PERMISSIONS  -->
-    <!-- ========================= -->
-
+    <!-- ===== PERMISSIONS ===== -->
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- Location permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-
-    <!-- Background location (Android 10+) -->
-    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-
-    <!-- Foreground service permissions (Android 14+) -->
+    <!-- ✅ REMOVED: ACCESS_BACKGROUND_LOCATION — not needed, eliminates Play Store rejection -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Optional GPS hardware -->
-    <uses-feature
-        android:name="android.hardware.location.gps"
-        android:required="false" />
-
-    <!-- ========================= -->
-    <!--       APPLICATION TAG     -->
-    <!-- ========================= -->
-
+    <!-- ===== APPLICATION ===== -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -35,20 +20,22 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- Main Capacitor activity -->
         <activity
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
-            android:name=".MainActivity"
-            android:label="@string/title_activity_main"
-            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:name="com.getcapacitor.BridgeActivity"
+            android:exported="true"
             android:launchMode="singleTask"
-            android:exported="true">
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- Correct FileProvider -->
+
+
+        <!-- FileProvider for downloads and exports -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -59,8 +46,5 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- NO foreground service block needed for Capacitor 8 -->
-
     </application>
-
 </manifest>

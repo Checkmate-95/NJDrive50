@@ -16,11 +16,7 @@ function safeNumber(val: unknown): number {
   return Number.isFinite(num) ? num : 0
 }
 
-function getLightingLabel(day: number, night: number): "Day" | "Night" | "Mixed" {
-  if (night > 0 && day > 0) return "Mixed"
-  if (night > 0) return "Night"
-  return "Day"
-}
+// ✅ getLightingLabel removed — logic lives in lastDriveMode useMemo
 
 function formatElapsed(ms: number = 0) {
   const totalSeconds = Math.floor(ms / 1000)
@@ -32,154 +28,172 @@ function formatElapsed(ms: number = 0) {
 export default function HomeDashboardContent({
   setScreen,
 }: HomeDashboardContentProps) {
-  const [startingDrive, setStartingDrive] = useState(false)
-  const [showLocationDisclosure, setShowLocationDisclosure] = useState(false)
+  const [startingDrive, setStartingDrive] = useState(false);
+  const [showLocationDisclosure, setShowLocationDisclosure] = useState(false);
 
-  const drives = useDriveHistory() || []
-
-  const activeSession = useActiveDriveStore((s) => s.session)
-  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds)
-
-  const hasActiveDrive = Boolean(activeSession?.isActive)
+  const drives = useDriveHistory() || [];
+  const activeSession = useActiveDriveStore((s) => s.session);
+  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds);
+  const hasActiveDrive = Boolean(activeSession?.isActive);
 
   const [activeDurationSeconds, setActiveDurationSeconds] = useState(() =>
     getElapsedSeconds()
-  )
+  );
 
   useEffect(() => {
-    setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds())
-
-    if (!hasActiveDrive) return
+    setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds());
+    if (!hasActiveDrive) return;
 
     const interval = window.setInterval(() => {
-      setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds())
-    }, 1000)
+      setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds());
+    }, 1000);
 
-    return () => window.clearInterval(interval)
-  }, [hasActiveDrive, activeSession?.isRunning, getElapsedSeconds])
+    return () => window.clearInterval(interval);
+  }, [hasActiveDrive, activeSession?.isRunning, getElapsedSeconds]);
 
-  const onboarding = useMemo(() => loadOnboardingData(), [])
-  const teenName = onboarding.teenName?.trim() || "Teen Driver"
+  const onboarding = useMemo(() => loadOnboardingData(), []);
 
-  const totalRequired = 50
-  const nightRequired = 10
+  const totalRequired = 50;
+  const nightRequired = 10;
 
   const totalHours = useMemo(
-    () =>
-      drives.reduce((sum, d) => sum + safeNumber(d.totalDurationHours), 0),
+    () => drives.reduce((sum, d) => sum + safeNumber(d.totalDurationHours), 0),
     [drives]
-  )
+  );
 
   const nightHours = useMemo(
     () =>
       drives.reduce((sum, d) => {
-        const verified = safeNumber(d.verifiedNightDurationHours)
-        const estimated = safeNumber(d.nightDurationHours)
-        return sum + (verified > 0 ? verified : estimated)
+        const verified = safeNumber(d.verifiedNightDurationHours);
+        const estimated = safeNumber(d.nightDurationHours);
+        return sum + (verified > 0 ? verified : estimated);
       }, 0),
     [drives]
-  )
+  );
 
   const totalMiles = useMemo(
     () => drives.reduce((sum, d) => sum + safeNumber(d.miles), 0),
     [drives]
-  )
+  );
 
-  const totalPercent = Math.min((totalHours / totalRequired) * 100, 100)
-  const nightPercent = Math.min((nightHours / nightRequired) * 100, 100)
-  const totalRemaining = Math.max(totalRequired - totalHours, 0)
-  const nightRemaining = Math.max(nightRequired - nightHours, 0)
+  const totalPercent = Math.min((totalHours / totalRequired) * 100, 100);
+  const nightPercent = Math.min((nightHours / nightRequired) * 100, 100);
+  const totalRemaining = Math.max(totalRequired - totalHours, 0);
+  const nightRemaining = Math.max(nightRequired - nightHours, 0);
 
   const lastDrive = useMemo(() => {
-    if (!drives.length) return null
-
+    if (!drives.length) return null;
     return [...drives].sort(
-      (a, b) =>
-        new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-    )[0]
-  }, [drives])
+      (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
+    )[0];
+  }, [drives]);
 
-  const lastDriveDuration = lastDrive
-    ? `${safeNumber(lastDrive.totalDurationHours).toFixed(1)} hrs`
-    : "0.0 hrs"
+  // ── Derived: last drive display values ──────────────────────────
+  const lastDriveDuration = useMemo(() => {
+    if (!lastDrive) return "";
+    const hours = safeNumber(lastDrive.totalDurationHours);
+    const totalMins = Math.round(hours * 60);
+    const h = Math.floor(totalMins / 60);
+    const m = totalMins % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }, [lastDrive]);
 
-  const lastDriveMode = lastDrive
-    ? getLightingLabel(
-        safeNumber(lastDrive.dayDurationHours),
-        safeNumber(lastDrive.nightDurationHours)
-      )
-    : "Day"
+  const lastDriveMode = useMemo(() => {
+    if (!lastDrive) return "";
+    const night =
+      safeNumber(lastDrive.verifiedNightDurationHours) ||
+      safeNumber(lastDrive.nightDurationHours);
+    const total = safeNumber(lastDrive.totalDurationHours);
+    if (total === 0) return "Day";
+    const nightRatio = night / total;
+    if (nightRatio >= 0.5) return "Night";
+    if (nightRatio > 0) return "Mixed";
+    return "Day";
+  }, [lastDrive]);
 
-  const lastDriveStart = lastDrive
-    ? new Date(lastDrive.startTime).toLocaleString()
-    : "--"
+  const lastDriveStart = useMemo(() => {
+    if (!lastDrive) return "";
+    return new Date(lastDrive.startTime).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [lastDrive]);
 
-  const lastDriveEnd = lastDrive
-    ? new Date(lastDrive.endTime).toLocaleString()
-    : "--"
+  const lastDriveEnd = useMemo(() => {
+    if (!lastDrive) return "";
+    return new Date(lastDrive.endTime).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [lastDrive]);
 
-  const queryLocationPermission = async () => {
-    try {
-      const result = await Geolocation.checkPermissions()
-      return result.location
-    } catch (err) {
-      console.error("Location permission query failed:", err)
-      return null
-    }
-  }
-
-  const requestLocationPermission = async () => {
-    try {
-      const result = await Geolocation.requestPermissions()
-      return result.location
-    } catch (err) {
-      console.error("Location permission request failed:", err)
-      return null
-    }
-  }
-
-  const beginDrive = async () => {
-    setStartingDrive(true)
-    try {
-      navigate("home", "startDrive", setScreen)
-    } finally {
-      setStartingDrive(false)
-    }
-  }
-
-  const handleStartDrive = async () => {
-    if (startingDrive) return
-
-    if (hasActiveDrive) {
-      setScreen("active")
-      return
-    }
-
-    const perm = await queryLocationPermission()
-
-    if (perm !== "granted") {
-      setShowLocationDisclosure(true)
-      return
-    }
-
-    await beginDrive()
-  }
-
-  const driveActionLabel = hasActiveDrive
-    ? activeSession?.isRunning
-      ? "Return to Active Drive"
-      : "Resume Paused Drive"
-    : startingDrive
-      ? "Starting..."
-      : `Start New Drive${teenName ? ` for ${teenName}` : ""}`
-
+  // ── Derived: drive action button labels ─────────────────────────
   const driveActionState = hasActiveDrive
     ? activeSession?.isRunning
       ? "ACTIVE"
       : "PAUSED"
-    : startingDrive
-      ? "STARTING"
-      : "READY"
+    : "READY";
+
+  const driveActionLabel = startingDrive
+    ? "Starting..."
+    : hasActiveDrive
+    ? activeSession?.isRunning
+      ? "Return to Active Drive"
+      : "Resume Paused Drive"
+    : "Start a New Drive";
+
+  // ── Location permission helpers ──────────────────────────────────
+  const queryLocationPermission = async () => {
+    try {
+      const result = await Geolocation.checkPermissions();
+      return result.location;
+    } catch (err) {
+      console.error("Location permission query failed:", err);
+      return null;
+    }
+  };
+
+  const beginDrive = async () => {
+    setStartingDrive(true);
+    try {
+      navigate("home", "startDrive", setScreen);
+    } finally {
+      setStartingDrive(false);
+    }
+  };
+
+  const handleStartDrive = async () => {
+    if (startingDrive) return;
+
+    if (hasActiveDrive) {
+      setScreen("active");
+      return;
+    }
+
+    const perm = await queryLocationPermission();
+    if (perm !== "granted") {
+      setShowLocationDisclosure(true);
+      return;
+    }
+
+    await beginDrive();
+  };
+
+  const handleAllowAndContinue = async () => {
+    try {
+      const perm = await Geolocation.requestPermissions({ permissions: ["location"] });
+      if (perm.location === "granted") {
+        setShowLocationDisclosure(false);
+        await beginDrive();
+      } else {
+        console.warn("Location permission denied");
+        setShowLocationDisclosure(false);
+      }
+    } catch (err) {
+      console.error("Location permission error:", err);
+      setShowLocationDisclosure(false);
+    }
+  };
 
   return (
     <>
@@ -196,13 +210,12 @@ export default function HomeDashboardContent({
             </h2>
 
             <p className="mb-6 text-sm leading-6 text-slate-600">
-              NJDrive50 tracks your supervised driving sessions to create accurate
-              mileage logs. To keep tracking even when the screen is off, the app
-              needs location permission while you’re driving.
+              NJDrive50 tracks your supervised driving sessions to create accurate mileage logs.
+              To keep tracking even when the screen is off, the app needs location permission
+              while you're driving.
               <br />
               <br />
-              Location is only used during active drives and never when a drive is
-              not running.
+              Location is only used during active drives and never when a drive is not running.
             </p>
 
             <div className="flex justify-end gap-3">
@@ -217,13 +230,7 @@ export default function HomeDashboardContent({
               <button
                 type="button"
                 className="rounded-lg bg-blue-600 px-4 py-2 text-white"
-                onClick={async () => {
-                  const req = await requestLocationPermission()
-                  if (req !== "granted") return
-
-                  setShowLocationDisclosure(false)
-                  await beginDrive()
-                }}
+                onClick={handleAllowAndContinue}
               >
                 Allow & Continue
               </button>
@@ -335,9 +342,7 @@ export default function HomeDashboardContent({
 
                 <p className="flex items-end text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
                   {totalMiles.toFixed(1)}
-                  <span className="ml-1 text-lg font-semibold text-[#0A1E5E]/65">
-                    mi
-                  </span>
+                  <span className="ml-1 text-lg font-semibold text-[#0A1E5E]/65">mi</span>
                 </p>
 
                 <div className="inline-flex h-[26px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70">
@@ -407,7 +412,7 @@ export default function HomeDashboardContent({
                   </p>
                   <h3 className="mt-1 text-lg font-bold sm:text-xl">
                     {hasActiveDrive
-                      ? "Continue your current drive"
+                      ? `Continue ${onboarding.teenName?.trim() || "Teen"}'s current drive`
                       : "Start a new drive"}
                   </h3>
                   <p className="mt-1 max-w-[34rem] text-sm leading-relaxed text-white/72">
@@ -441,5 +446,5 @@ export default function HomeDashboardContent({
         </section>
       </div>
     </>
-  )
+  );
 }

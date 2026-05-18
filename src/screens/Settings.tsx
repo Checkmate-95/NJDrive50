@@ -87,11 +87,12 @@ export default function Settings() {
             >
               <div className="space-y-3">
                 <button
-                  onClick={() => setScreen("manageProfile")}
-                  className="min-h-[48px] w-full rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-4 py-3 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
-                >
-                  Manage Profile
-                </button>
+  onClick={() => setScreen("manageProfile")}
+  className="min-h-[48px] w-full rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-4 py-3 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
+>
+  Manage Profile
+</button>
+
 
                 <button
                   type="button"

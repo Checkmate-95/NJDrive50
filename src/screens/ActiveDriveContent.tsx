@@ -326,26 +326,31 @@ function ActiveDriveContent({
     })
   }, [])
 
- // ✅ subscribe to the live value instead of the function
-const elapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds());
-const [displayedMs, setDisplayedMs] = useState(elapsedSeconds * 1000);
+ // ✅ REPLACE with this:
+const [displayedMs, setDisplayedMs] = useState(() => {
+  const s = useActiveDriveStore.getState().session
+  return s.dayMs + s.nightMs
+})
 
 useEffect(() => {
-  if (!session.isRunning) {
-    setDisplayedMs(session.dayMs + session.nightMs);
-    return;
-  }
-
+  // Always run a local interval — reads directly from store state each tick
   const id = window.setInterval(() => {
-  console.log("Timer tick:", useActiveDriveStore.getState().getElapsedSeconds());
-  setDisplayedMs(useActiveDriveStore.getState().getElapsedSeconds() * 1000);
-}, 500);
+  const s = useActiveDriveStore.getState().session
+  if (!s.isActive) return
 
+  if (s.isRunning && s.lastTickAt !== null) {
+    const accumulated = s.dayMs + s.nightMs
+    const liveDelta = Math.max(0, Date.now() - s.lastTickAt)
+    setDisplayedMs(accumulated + liveDelta)
+  } else {
+    setDisplayedMs(s.dayMs + s.nightMs)
+  }
+}, 500)
 
-  return () => window.clearInterval(id);
-}, [session.isRunning, session.dayMs, session.nightMs]);
+  return () => window.clearInterval(id)
+}, []) // ✅ empty deps — this interval runs for the lifetime of the component
 
-const formattedElapsed = formatTime(displayedMs);
+const formattedElapsed = formatTime(displayedMs)
 
 
 

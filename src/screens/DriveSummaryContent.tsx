@@ -382,52 +382,63 @@ useEffect(() => {
 
         {/* Drive Summary Mini Panels */}
 <div className="mt-5 rounded-[28px] border border-[#0A1E5E]/10 bg-[#F7F9FC] p-4 shadow-sm sm:p-5">
-  {/* ✅ Use responsive grid: 2 columns on mobile, 3 on larger screens */}
   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
     {/* Total Hours */}
-    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px]">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 truncate">Total Hours</p>
-      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px] text-center">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
+        Total<br />Hours
+      </p>
+      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
         {formatHours(totalHours)}
       </p>
     </div>
 
     {/* Day Hours */}
-    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px]">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 truncate">Day Hours</p>
-      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px] text-center">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
+        Day<br />Hours
+      </p>
+      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
         {formatHours(dayHours)}
       </p>
     </div>
 
     {/* Night Hours */}
-    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px]">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 truncate">Night Hours</p>
-      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px] text-center">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
+        Night<br />Hours
+      </p>
+      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
         {formatHours(nightHours)}
       </p>
     </div>
 
     {/* Night Remain */}
-    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px]">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 truncate">Night Remain</p>
-      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px] text-center">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
+        Night<br />Remain
+      </p>
+      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
         {formatHours(remainingNightHours)}
       </p>
     </div>
 
     {/* Total Remain */}
-    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px]">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 truncate">Total Remain</p>
-      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px] text-center">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
+        Total<br />Remain
+      </p>
+      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
         {formatHours(remainingTotalHours)}
       </p>
     </div>
 
     {/* Last Drive */}
-    <div className="flex flex-col justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px]">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 truncate">Last Drive</p>
-      <p className="mt-1 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px] text-center">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
+        Last<br />Drive
+      </p>
+      <p className="mt-2 text-lg font-black leading-tight text-[#08194A] sm:text-xl tabular-nums">
         {hasActiveDrive
           ? formatHours(activeDurationSeconds / 3600)
           : hasLastDrive
@@ -448,10 +459,10 @@ useEffect(() => {
 
     {/* Miles — spans full width */}
     <div className="col-span-2 sm:col-span-3 rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-            Total Miles
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55 leading-tight">
+            Total<br />Miles
             <span className="ml-1.5 rounded-full border border-[#0A1E5E]/10 bg-[#F4F6FA] px-1.5 py-0.5 text-[9px] font-bold tracking-[0.1em] text-[#0A1E5E]/45">
               INFO
             </span>
@@ -462,7 +473,9 @@ useEffect(() => {
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">Last Drive Miles</p>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55 leading-tight">
+            Last<br />Drive<br />Miles
+          </p>
           <p className="mt-2 text-xl font-black leading-none tracking-tight text-[#08194A] sm:text-2xl tabular-nums">
             {lastDriveMiles}
             <span className="ml-1 text-sm font-bold text-[#0A1E5E]/65">mi</span>
@@ -470,7 +483,7 @@ useEffect(() => {
         </div>
       </div>
     </div>
-    </div>
+  </div>
 
           {/* Total hours progress bar */}
           <div className="mt-5">

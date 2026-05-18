@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react"
+import { useState } from "react"
 import Cropper, { type Area } from "react-easy-crop"
 
 type PhotoCropModalProps = {
-  file: File
+  imageSrc: string
   onCancel: () => void
   onSave: (croppedDataUrl: string) => void
 }
@@ -49,7 +49,7 @@ async function getCroppedImageDataUrl(
 }
 
 export default function PhotoCropModal({
-  file,
+  imageSrc,
   onCancel,
   onSave,
 }: PhotoCropModalProps) {
@@ -58,21 +58,13 @@ export default function PhotoCropModal({
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null)
   const [saving, setSaving] = useState(false)
 
-  const imageUrl = useMemo(() => URL.createObjectURL(file), [file])
-
-  useEffect(() => {
-    return () => {
-      URL.revokeObjectURL(imageUrl)
-    }
-  }, [imageUrl])
-
   const handleSave = async () => {
     if (!croppedAreaPixels || saving) return
 
     try {
       setSaving(true)
       const croppedDataUrl = await getCroppedImageDataUrl(
-        imageUrl,
+        imageSrc,
         croppedAreaPixels,
         512
       )
@@ -123,7 +115,7 @@ export default function PhotoCropModal({
 
           <div className="relative mt-5 h-72 w-full overflow-hidden rounded-[24px] bg-[#08194A]">
             <Cropper
-              image={imageUrl}
+              image={imageSrc}
               crop={crop}
               zoom={zoom}
               aspect={1}

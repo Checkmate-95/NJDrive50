@@ -138,7 +138,7 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   const globalTeenPhoto = useTeenPhoto()
   const teenPhoto = globalTeenPhoto ?? saved.teenPhoto ?? null
 
-  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null)
 
   const [address, setAddress] = useState(saved.address ?? "")
   const [permitNumber, setPermitNumber] = useState(saved.permitNumber ?? "")
@@ -289,18 +289,25 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   }, [])
 
   const handleTeenPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const file = e.target.files?.[0]
+  if (!file) return
 
-    setCropFile(file)
-    e.target.value = ""
+  const reader = new FileReader()
+  reader.onloadend = () => {
+    const result = reader.result
+    if (typeof result === "string") {
+      setCropImageSrc(result)
+    }
   }
+  reader.readAsDataURL(file)
+  e.target.value = ""
+}
 
   const handleTeenPhotoCropSave = (croppedDataUrl: string) => {
-    setGlobalTeenPhoto(croppedDataUrl)
-    persistOnboarding({ teenPhoto: croppedDataUrl })
-    setCropFile(null)
-  }
+  setGlobalTeenPhoto(croppedDataUrl)
+  persistOnboarding({ teenPhoto: croppedDataUrl })
+  setCropImageSrc(null)
+}
 
   const handleRemoveTeenPhoto = () => {
     setGlobalTeenPhoto("")
@@ -354,13 +361,13 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
       className="min-h-[100dvh] w-full overflow-y-auto px-3 pb-40 pt-4 text-white sm:px-4"
       style={{ WebkitOverflowScrolling: "touch" }}
     >
-      {cropFile && (
-        <PhotoCropModal
-          file={cropFile}
-          onCancel={() => setCropFile(null)}
-          onSave={handleTeenPhotoCropSave}
-        />
-      )}
+      {cropImageSrc && (
+  <PhotoCropModal
+    imageSrc={cropImageSrc}
+    onCancel={() => setCropImageSrc(null)}
+    onSave={handleTeenPhotoCropSave}
+  />
+)}
 
       <section className="relative mx-auto w-full min-w-0 max-w-[42rem] overflow-hidden rounded-[28px] border border-white/15 bg-[#F8FAFD] shadow-[0_20px_55px_rgba(0,0,0,0.18)]">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#f9c80e] via-white/80 to-[#0A1E5E]" />

@@ -1,9 +1,16 @@
 // src/screens/DMVBundle.tsx
+// Cross-platform PDF download:
+//   Android/iOS → Capacitor Filesystem + Share (native share sheet)
+//   Desktop/browser → jsPDF doc.save() blob download
+
 import { getDriveHistory, type DriveEntry } from "../state/driveStore"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { loadOnboardingData } from "../../core/ReminderEngine"
 import { useNav } from "../state/navStore"
+import { Capacitor } from "@capacitor/core"
+import { Filesystem, Directory } from "@capacitor/filesystem"
+import { Share } from "@capacitor/share"
 
 type BundleCardProps = {
   title: string
@@ -28,10 +35,10 @@ function safeNumber(value: unknown): number {
 
 function clean(text: string) {
   return text
-    .replace(/[‐‑‒–—]/g, "-")
-    .replace(/[""]/g, '"')
-    .replace(/['']/g, "'")
-    .replace(/…/g, "...")
+    .replace(/[\u2010\u2011\u2012\u2013\u2014]/g, "-")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/\u2026/g, "...")
     .replace(/\u00A0/g, " ")
 }
 
@@ -49,6 +56,48 @@ function getLightingLabel(dayHours: number, nightHours: number) {
 function toBase64Utf8(text: string) {
   const bytes = new Uint8Array(new TextEncoder().encode(text))
   return btoa(String.fromCharCode(...bytes))
+}
+
+// ─── Cross-platform PDF save ─────────────────────────────────────────────────
+// Android/iOS: writes blob to Cache dir then opens native share sheet
+// Desktop/browser: standard jsPDF doc.save() download
+async function savePDF(doc: jsPDF, filename: string): Promise<void> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const base64 = doc.output("datauristring").split(",")[1]
+
+      await Filesystem.writeFile({
+        path: filename,
+        data: base64,
+        directory: Directory.Cache,
+      })
+
+      const { uri } = await Filesystem.getUri({
+        path: filename,
+        directory: Directory.Cache,
+      })
+
+      await Share.share({
+        title: filename,
+        url: uri,
+        dialogTitle: "Save or share your PDF",
+      })
+    } catch (err) {
+      console.error("Native PDF save failed, falling back to blob URL:", err)
+      // Fallback: open as blob URL inside the WebView
+      const blob = doc.output("blob")
+      const url = URL.createObjectURL(blob)
+      window.open(url, "_blank")
+    }
+  } else {
+    // Desktop / browser
+    doc.save(filename)
+  }
+}
+
+// ─── Open external URL ───────────────────────────────────────────────────────
+function openExternal(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer")
 }
 
 function BundleCard({
@@ -124,10 +173,6 @@ export default function DMVBundle() {
     parentEmail: parentEmail || "",
   }
 
-  const openExternal = (url: string) => {
-    window.open(url, "_blank", "noopener,noreferrer")
-  }
-
   const addDocHeader = (doc: jsPDF, title: string, subtitle?: string) => {
     doc.setFont("helvetica", "bold")
     doc.setFontSize(18)
@@ -145,7 +190,9 @@ export default function DMVBundle() {
     return 26
   }
 
-  const generateDrivingLogPDF = () => {
+  // ─── PDF generators (all async for Android/iOS native support) ───────────
+
+  const generateDrivingLogPDF = async () => {
     const doc = new jsPDF()
 
     let y = addDocHeader(
@@ -167,7 +214,6 @@ export default function DMVBundle() {
       const safeEnd = d?.endTime ? new Date(d.endTime).toLocaleString() : ""
       const safeTotalHours = safeNumber(d?.totalDurationHours)
       const safeDayHours = safeNumber(d?.dayDurationHours)
-
       const verifiedNight = safeNumber(d?.verifiedNightDurationHours)
       const estimatedNight = safeNumber(d?.nightDurationHours)
       const safeNightHours = verifiedNight > 0 ? verifiedNight : estimatedNight
@@ -201,10 +247,10 @@ export default function DMVBundle() {
       Math.min(lastY + 12, 280)
     )
 
-    doc.save("NJDrive50_Driving_Log.pdf")
+    await savePDF(doc, "NJDrive50_Driving_Log.pdf")
   }
 
-  const generateParentSummarySheet = () => {
+  const generateParentSummarySheet = async () => {
     const doc = new jsPDF()
 
     let y = addDocHeader(
@@ -233,10 +279,10 @@ export default function DMVBundle() {
     doc.text("Signature: ____________________________", 14, y + 88)
     doc.text("Date: ____________________", 14, y + 98)
 
-    doc.save("Parent_Guardian_Summary_NJDrive50.pdf")
+    await savePDF(doc, "Parent_Guardian_Summary_NJDrive50.pdf")
   }
 
-  const generateRoadTestChecklist = () => {
+  const generateRoadTestChecklist = async () => {
     const doc = new jsPDF()
     const left = 14
     const indent = 20
@@ -262,7 +308,6 @@ export default function DMVBundle() {
       doc.setFontSize(12)
       doc.text(clean(title), left, y)
       y += 8
-
       doc.setFont("helvetica", "normal")
       doc.setFontSize(11)
       items.forEach((item) => {
@@ -316,10 +361,10 @@ export default function DMVBundle() {
     )
     doc.text(footer, left, y)
 
-    doc.save("Road_Test_Checklist_NJDrive50.pdf")
+    await savePDF(doc, "Road_Test_Checklist_NJDrive50.pdf")
   }
 
-  const generateMVCWhatToBring = () => {
+  const generateMVCWhatToBring = async () => {
     const doc = new jsPDF()
     const left = 14
     let y = 20
@@ -373,10 +418,10 @@ export default function DMVBundle() {
     y += 8
     doc.text(`- First driver license: ${OFFICIAL_FIRST_LICENSE_URL}`, 20, y)
 
-    doc.save("MVC_What_To_Bring_NJDrive50.pdf")
+    await savePDF(doc, "MVC_What_To_Bring_NJDrive50.pdf")
   }
 
-  const generateSixPointID = () => {
+  const generateSixPointID = async () => {
     const doc = new jsPDF()
     const left = 14
     const indent = 20
@@ -402,7 +447,6 @@ export default function DMVBundle() {
       doc.setFontSize(12)
       doc.text(clean(title), left, y)
       y += 8
-
       doc.setFont("helvetica", "normal")
       doc.setFontSize(11)
       items.forEach((item) => {
@@ -459,26 +503,30 @@ export default function DMVBundle() {
     )
     doc.text(footer, left, y)
 
-    doc.save("6_Point_ID_Checklist_NJDrive50.pdf")
+    await savePDF(doc, "6_Point_ID_Checklist_NJDrive50.pdf")
   }
+
+  // ─── Combo generators ────────────────────────────────────────────────────
 
   const downloadOfficialBACSD = () => openExternal(OFFICIAL_BACSD_URL)
   const openSixPointGuide = () => openExternal(OFFICIAL_6_POINT_URL)
   const openRealIdSelector = () => openExternal(OFFICIAL_REAL_ID_URL)
   const openFirstLicenseGuide = () => openExternal(OFFICIAL_FIRST_LICENSE_URL)
 
-  const generatePermitPacket = () => {
-    generateMVCWhatToBring()
-    generateSixPointID()
-    generateRoadTestChecklist()
+  const generatePermitPacket = async () => {
+    await generateMVCWhatToBring()
+    await generateSixPointID()
+    await generateRoadTestChecklist()
   }
 
-  const generateFullBundle = () => {
-    generateDrivingLogPDF()
-    generateParentSummarySheet()
-    generatePermitPacket()
+  const generateFullBundle = async () => {
+    await generateDrivingLogPDF()
+    await generateParentSummarySheet()
+    await generatePermitPacket()
     downloadOfficialBACSD()
   }
+
+  // ─── Share link ──────────────────────────────────────────────────────────
 
   const generateShareLink = async () => {
     const payload = {
@@ -492,17 +540,30 @@ export default function DMVBundle() {
       const encoded = toBase64Utf8(JSON.stringify(payload))
       const url = `${window.location.origin}/share#${encoded}`
 
-      try {
-        await navigator.clipboard.writeText(url)
-        alert("Share link copied to clipboard!")
-      } catch {
-        window.prompt("Copy this share link:", url)
+      if (Capacitor.isNativePlatform()) {
+        // Android/iOS: use native share sheet
+        await Share.share({
+          title: "NJDrive50 Records",
+          text: "Here are my supervised driving records from NJDrive50.",
+          url,
+          dialogTitle: "Share your records",
+        })
+      } else {
+        // Desktop/browser: copy to clipboard
+        try {
+          await navigator.clipboard.writeText(url)
+          alert("Share link copied to clipboard!")
+        } catch {
+          window.prompt("Copy this share link:", url)
+        }
       }
     } catch (err) {
       console.error("Failed to generate share link", err)
       alert("Unable to generate share link.")
     }
   }
+
+  // ─── UI ──────────────────────────────────────────────────────────────────
 
   const solidBlueButton =
     "inline-flex items-center rounded-xl bg-[#08194A] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
@@ -518,6 +579,8 @@ export default function DMVBundle() {
   return (
     <main className="min-h-screen bg-[#F7F9FC] px-4 py-6 text-[#08194A] sm:px-6">
       <div className="mx-auto w-full max-w-4xl space-y-6">
+
+        {/* ── Header ── */}
         <header className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
@@ -553,6 +616,7 @@ export default function DMVBundle() {
           </div>
         </header>
 
+        {/* ── Stats ── */}
         <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-[#08194A]/10 bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.05)]">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#08194A]/50">
@@ -603,6 +667,7 @@ export default function DMVBundle() {
           </div>
         </section>
 
+        {/* ── Official Forms ── */}
         <section className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -647,6 +712,7 @@ export default function DMVBundle() {
           </div>
         </section>
 
+        {/* ── Paperwork Center ── */}
         <section className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -703,7 +769,7 @@ export default function DMVBundle() {
             <div className="lg:col-span-3">
               <BundleCard
                 title="Share Records with Instructor or Reviewer"
-                description="Generate a read-only share link you can send to an instructor or approved reviewer."
+                description="Generate a read-only share link you can send to an instructor or approved reviewer. On mobile, opens the native share sheet."
                 actionLabel="Copy Share Link"
                 onClick={generateShareLink}
               />
@@ -711,6 +777,7 @@ export default function DMVBundle() {
           </div>
         </section>
 
+        {/* ── Next Steps ── */}
         <section className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <h2 className="text-2xl font-extrabold tracking-tight text-[#08194A]">
             Next steps
@@ -763,6 +830,7 @@ export default function DMVBundle() {
             )}
           </div>
         </section>
+
       </div>
     </main>
   )

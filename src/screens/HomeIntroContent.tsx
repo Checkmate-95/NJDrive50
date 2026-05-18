@@ -17,7 +17,7 @@ export default function HomeIntroContent({
         </div>
 
         <h1 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">
-          Stay on track for every step to the license
+          Track every practice drive with confidence
         </h1>
 
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[#08194A]/68 sm:text-base">
@@ -34,15 +34,32 @@ export default function HomeIntroContent({
           <ul className="mt-3 space-y-2 text-sm leading-6 text-[#08194A]/72">
             <li className="flex items-start gap-2">
               <span className="font-bold text-[#f9c80e]">•</span>
-              See progress toward total and night-hour requirements
+              Track total, day, and night driving hours in one place
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold text-[#f9c80e]">•</span>
-              Keep every drive organized in one clean record
+              Keep a clean, organized record ready for certification
             </li>
             <li className="flex items-start gap-2">
               <span className="font-bold text-[#f9c80e]">•</span>
-              Feel prepared when it&apos;s time to certify hours and test
+              Avoid last-minute surprises before the road test
+            </li>
+          </ul>
+        </div>
+
+        <div className="mt-5 rounded-3xl border border-[#08194A]/10 bg-[#F7F9FC] p-4 sm:p-5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/48">
+            More included
+          </p>
+
+          <ul className="mt-3 space-y-2 text-sm leading-6 text-[#08194A]/72">
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-[#f9c80e]">•</span>
+              Visual milestones that help teens stay motivated
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="font-bold text-[#f9c80e]">•</span>
+              A built-in New Jersey practice test in the same app
             </li>
           </ul>
         </div>

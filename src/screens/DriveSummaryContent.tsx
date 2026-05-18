@@ -459,37 +459,28 @@ useEffect(() => {
     </div>
 
     {/* Last Drive */}
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px] text-center">
-      <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
-        Last<br />Drive
-      </p>
-      <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-        <span className="text-[1.1rem] sm:text-[1.2rem] font-bold leading-none tabular-nums">
-          {hasActiveDrive
-            ? formatHours(activeDurationSeconds / 3600).split(" ")[0]
-            : hasLastDrive
-              ? formatHours(safeNumber(lastDrive?.totalDurationHours)).split(" ")[0]
-              : "—"}
-        </span>
-        <span className="text-[0.8rem] sm:text-[0.9rem] font-semibold leading-none tabular-nums">
-          {hasActiveDrive
-            ? formatHours(activeDurationSeconds / 3600).split(" ")[1]
-            : hasLastDrive
-              ? formatHours(safeNumber(lastDrive?.totalDurationHours)).split(" ")[1]
-              : ""}
-        </span>
-      </p>
-      <p className="mt-1 text-[10px] font-semibold text-[#0A1E5E]/65 truncate">
-        {hasActiveDrive
-          ? getLightingLabel(
-              safeNumber(activeSession?.dayMs) / 3600000,
-              safeNumber(activeSession?.nightMs) / 3600000
-            )
-          : hasLastDrive
-            ? lastDriveTimeOfDay
-            : "No drive saved"}
-      </p>
-    </div>
+<div className="flex flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 shadow-sm min-h-[110px] text-center">
+  <p className="text-[10px] uppercase tracking-[0.12em] text-[#0A1E5E]/55 leading-tight">
+    Last<br />Drive
+  </p>
+  <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
+    <span className="text-[1.1rem] sm:text-[1.2rem] font-bold leading-none tabular-nums">
+      {hasActiveDrive
+        ? formatHours(activeDurationSeconds / 3600).split(" ")[0]
+        : hasLastDrive
+          ? formatHours(safeNumber(lastDrive?.totalDurationHours)).split(" ")[0]
+          : "—"}
+    </span>
+    <span className="text-[0.8rem] sm:text-[0.9rem] font-semibold leading-none tabular-nums">
+      {hasActiveDrive
+        ? formatHours(activeDurationSeconds / 3600).split(" ")[1]
+        : hasLastDrive
+          ? formatHours(safeNumber(lastDrive?.totalDurationHours)).split(" ")[1]
+          : ""}
+    </span>
+  </p>
+</div>
+
 
     {/* Miles — spans full width */}
     <div className="col-span-2 sm:col-span-3 rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm">

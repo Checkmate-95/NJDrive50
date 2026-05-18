@@ -1,14 +1,17 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App'
+import { HelmetProvider } from 'react-helmet-async'
+import LandingPage from './landing/LandingPage'
 import './index.css'
 import '../animations.css'
 
-localStorage.clear();
-sessionStorage.clear();
+localStorage.clear()
+sessionStorage.clear()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <HelmetProvider>
+      <LandingPage />
+    </HelmetProvider>
   </StrictMode>,
 )

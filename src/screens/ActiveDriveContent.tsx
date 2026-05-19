@@ -207,59 +207,66 @@ async function buildDriveSnapshot(
   }
 
   const baseTrail = Array.isArray(fresh.routeTrail) ? fresh.routeTrail : []
-  const lastTrailCoord =
-    baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
+const lastTrailCoord =
+  baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
 
-  const finalTrail =
-    currentEndCoord && !sameCoord(lastTrailCoord, currentEndCoord)
-      ? [...baseTrail, currentEndCoord]
-      : baseTrail
+const finalTrail =
+  currentEndCoord && !sameCoord(lastTrailCoord, currentEndCoord)
+    ? [...baseTrail, currentEndCoord]
+    : baseTrail
 
-  const startDate = new Date(savedStartTime)
-  const endDate = new Date(snapshotTime)
+const startDate = new Date(savedStartTime)
+const endDate = new Date(snapshotTime)
 
-  let verifiedNightDurationHours = 0
-  let nightCalcMode: NightCalcMode | undefined = "estimated"
+let dayHours = normalizedTotalMs / 3600000   // fallback
+let nightHours = 0
+let nightCalcMode: NightCalcMode | undefined = "estimated"
 
-  const onboarding = loadOnboardingData()
-  const { homeLat, homeLng } = onboarding
+const onboarding = loadOnboardingData()
+const { homeLat, homeLng } = onboarding
 
-  if (
-    typeof homeLat === "number" &&
-    Number.isFinite(homeLat) &&
-    typeof homeLng === "number" &&
-    Number.isFinite(homeLng)
-  ) {
-    const solarWindow = getSolarWindowForDate(homeLat, homeLng, startDate)
-    const { nightHours } = computeDayNightSplit(startDate, endDate, solarWindow)
+if (
+  typeof homeLat === "number" &&
+  Number.isFinite(homeLat) &&
+  typeof homeLng === "number" &&
+  Number.isFinite(homeLng)
+) {
+  const solarWindow = getSolarWindowForDate(homeLat, homeLng, startDate)
+  const split = computeDayNightSplit(startDate, endDate, solarWindow)
 
-    verifiedNightDurationHours = nightHours
-    nightCalcMode = "verified" as NightCalcMode
-  }
-
-  return {
-    id: crypto.randomUUID(),
-    startTime: new Date(savedStartTime).toISOString(),
-    endTime: new Date(snapshotTime).toISOString(),
-
-    totalDurationHours: normalizedTotalMs / 3600000,
-    dayDurationHours: finalDayMs / 3600000,
-    nightDurationHours: finalNightMs / 3600000,
-    verifiedNightDurationHours,
-    nightCalcMode,
-    source: "timer",
-
-    miles: safeNumber(accurateMiles),
-    milesSource,
-    weather: fresh.weather,
-    routeCoords: finalTrail,
-
-    startLatitude: fresh.startCoord?.lat ?? null,
-    startLongitude: fresh.startCoord?.lng ?? null,
-
-    isPreview: opts?.isPreview ?? false,
-  }
+  dayHours = split.dayHours
+  nightHours = split.nightHours
+  nightCalcMode = "verified"
 }
+
+return {
+  id: crypto.randomUUID(),
+  startTime: new Date(savedStartTime).toISOString(),
+  endTime: new Date(snapshotTime).toISOString(),
+
+  totalDurationHours: normalizedTotalMs / 3600000,
+
+  // Solar‑verified split
+  dayDurationHours: dayHours,
+  nightDurationHours: nightHours,
+
+  verifiedNightDurationHours: nightHours,
+  nightCalcMode,
+
+  source: "timer",
+
+  miles: safeNumber(accurateMiles),
+  milesSource,
+  weather: fresh.weather,
+  routeCoords: finalTrail,
+
+  startLatitude: fresh.startCoord?.lat ?? null,
+  startLongitude: fresh.startCoord?.lng ?? null,
+
+  isPreview: opts?.isPreview ?? false,
+}
+
+
 
 function ActiveDriveContent({
   setScreen,

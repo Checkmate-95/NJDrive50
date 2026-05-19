@@ -88,7 +88,8 @@ export type RouteCoord = {
 }
 
 export type MilesSource = "routes-api" | "gps-accumulated"
-export type NightCalcMode = "estimated" | "solar" | "manual"
+export type NightCalcMode = "estimated" | "solar" | "manual" | "verified"
+
 export type DriveSource = "timer" | "manual"
 
 export type DriveEntry = {

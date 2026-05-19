@@ -265,6 +265,8 @@ return {
 
   isPreview: opts?.isPreview ?? false,
 }
+}
+
 
 
 
@@ -982,5 +984,7 @@ const formattedElapsed = formatTime(displayedMs)
     </div>
   )
 }
+
+
 
 export default ActiveDriveContent

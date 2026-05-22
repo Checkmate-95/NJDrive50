@@ -1,14 +1,3 @@
-// src/components/FloatingAIButton.tsx
-// TRUST-CORRECTED VERSION
-// [FIX-1]  Migrated to useNav() — setScreen and active props removed entirely.
-//          Component reads screen and setScreen directly from navStore so
-//          AppShell no longer needs to thread these props down to it.
-// [FIX-2]  setScreen typed correctly as navStore action — old
-//          React.Dispatch<React.SetStateAction<Screen>> type removed
-// [FIX-3]  Hover state managed with useState — inline style mutation via
-//          onMouseEnter/onMouseLeave replaced with a hovered flag so React
-//          owns all style state and the virtual DOM is never bypassed
-
 import { useState } from "react"
 import { useNav } from "../state/navStore"
 
@@ -17,14 +6,17 @@ type FloatingAIButtonProps = {
 }
 
 export default function FloatingAIButton({ className = "" }: FloatingAIButtonProps) {
-  const { screen, setScreen } = useNav()
+  // ✅ Only grab what you actually use
+  const { screen } = useNav()
   const [hovered, setHovered] = useState(false)
 
   if (screen === "aiHelper") return null
 
   return (
     <button
-      onClick={() => setScreen("aiHelper")}
+      onClick={() => {
+        window.location.hash = "#faq"  // ✅ scrolls to FAQ/Q&A section
+      }}
       className={className}
       aria-label="Open AI Helper"
       onMouseEnter={() => setHovered(true)}

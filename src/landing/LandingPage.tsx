@@ -1,4 +1,6 @@
 import { Helmet } from "react-helmet-async"
+import FloatingAIButton from "../components/FloatingAIButton"
+
 
 export default function LandingPage() {
   const faqs = [
@@ -271,7 +273,8 @@ export default function LandingPage() {
               aria-label="Download NJDrive50 free app"
               className="rounded-xl bg-[#38BDF8] px-4 py-2 text-xs font-extrabold text-[#020617] transition hover:bg-[#0EA5E9]"
             >
-              Download Free App
+              Start 7‑Day Free Trial
+
             </a>
           </div>
         </header>
@@ -330,7 +333,7 @@ export default function LandingPage() {
                     href={APP_DOWNLOAD_URL}
                     className="rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
                   >
-                    Start Tracking Hours Free
+                    Get NJDrive50
                   </a>
                   <a
                     href="#how-it-works"
@@ -341,8 +344,7 @@ export default function LandingPage() {
                 </div>
 
                 <p className="mt-3 text-[11px] text-white/40">
-                  Free NJ driving log app for parents and teens · Android · Built for New Jersey
-                  learner permits issued on or after February 1, 2025
+                  NJDrive50 · Android · $4.99 per month after 7‑day free trial or $39.99 per year for New Jersey families
                 </p>
               </div>
 
@@ -385,18 +387,19 @@ export default function LandingPage() {
           </section>
 
           <section className="border-b border-white/10 bg-white/[0.02]">
-            <div className="mx-auto max-w-5xl px-4 py-5">
-              <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[11px] font-semibold tracking-[0.14em] text-white/40">
-                <span>✓ NJ MVC 50-HOUR COMPLIANT</span>
-                <span className="hidden sm:block">·</span>
-                <span>✓ FORM BA-CSD READY</span>
-                <span className="hidden sm:block">·</span>
-                <span>✓ TRACK NIGHT DRIVING HOURS NJ</span>
-                <span className="hidden sm:block">·</span>
-                <span>✓ 100% FREE</span>
-              </div>
-            </div>
-          </section>
+  <div className="mx-auto max-w-5xl px-4 py-5">
+    <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[11px] font-semibold tracking-[0.14em] text-white/40">
+      <span>✓ NJ MVC 50‑HOUR COMPLIANT</span>
+      <span className="hidden sm:block">·</span>
+      <span>✓ FORM BA‑CSD READY</span>
+      <span className="hidden sm:block">·</span>
+      <span>✓ TRACK NIGHT DRIVING HOURS NJ</span>
+    </div>
+  </div>
+</section>
+
+
+
 
           <section id="how-it-works" className="border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-16 sm:py-20">
@@ -589,36 +592,43 @@ export default function LandingPage() {
           </section>
 
           <section className="border-b border-white/10">
-            <div className="mx-auto max-w-5xl px-4 py-20 text-center">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
-                Get Started
-              </p>
-              <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
-                Ready to track supervised driving hours in NJ?
-              </h2>
-              <p className="mx-auto mt-4 max-w-md text-sm text-white/60">
-                Download NJDrive50 to track driving hours, monitor night driving progress, and stay
-                ready for the NJ road test and NJMVC Form BA-CSD.
-              </p>
-              <div className="mt-8 flex flex-wrap justify-center gap-4">
-                <a
-                  href={APP_DOWNLOAD_URL}
-                  className="rounded-xl bg-[#38BDF8] px-8 py-3.5 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
-                >
-                  Download NJDrive50 Free
-                </a>
-                <a
-                  href="#faq"
-                  className="rounded-xl border border-white/20 px-8 py-3.5 text-sm font-semibold text-white/80 transition hover:bg-white/5"
-                >
-                  Check NJ permit FAQs
-                </a>
-              </div>
-              <p className="mt-4 text-[11px] text-white/35">
-                Free download · Android · Built for New Jersey parents and teen drivers
-              </p>
-            </div>
-          </section>
+  <div className="mx-auto max-w-5xl px-4 py-20 text-center">
+    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+      Get Started
+    </p>
+    <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
+      Ready to track supervised driving hours in NJ?
+    </h2>
+    <p className="mx-auto mt-4 max-w-md text-sm text-white/60">
+      Download NJDrive50 to track driving hours, monitor night driving progress, and stay
+      ready for the NJ road test and NJMVC Form BA-CSD.
+    </p>
+
+    <div className="mt-8 flex flex-wrap justify-center gap-4">
+      <a
+        href={APP_DOWNLOAD_URL}
+        className="rounded-xl bg-[#38BDF8] px-8 py-3.5 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
+      >
+        Start 7‑Day Free Trial
+      </a>
+      <a
+        href="#faq"
+        className="rounded-xl border border-white/20 px-8 py-3.5 text-sm font-semibold text-white/80 transition hover:bg-white/5"
+      >
+        Check NJ permit FAQs
+      </a>
+    </div>
+
+    {/* ✅ Pricing line */}
+    <p className="text-[11px] text-white/50 mt-3">
+      7‑day free trial · Cancel anytime · $4.99 per month or $39.99 per year after trial
+    </p>
+  </div>
+</section>
+
+{/* ✅ NJDrive50 Landing Page AI Button */}
+<FloatingAIButton className="fixed bottom-6 right-6 z-50" />
+
         </main>
 
         <footer className="border-t border-white/10 bg-black/40">

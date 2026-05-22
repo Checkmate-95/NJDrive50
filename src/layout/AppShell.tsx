@@ -1,18 +1,7 @@
-// src/layout/AppShell.tsx
-// TRUST-CORRECTED VERSION
-// [FIX-1]  React default import removed — project uses React 17+ JSX transform
-//          (react-jsx), the manual import is unused and raises TS6133
-// [FIX-2]  setScreen typed as (s: Screen | ((prev: Screen) => Screen)) => void
-//          instead of React.Dispatch<React.SetStateAction<Screen>> — matches
-//          the setScreenCompat wrapper in App.tsx accurately
-// [FIX-3]  FloatingAIButton call site updated — setScreen and active props
-//          removed now that FloatingAIButton uses useNav() internally
-
 import type { PropsWithChildren } from "react"
 import type { Screen } from "../App"
 import FloatingAIButton from "../components/FloatingAIButton"
 
-// [FIX-2] Accurate prop type — matches setScreenCompat signature in App.tsx
 type AppShellProps = PropsWithChildren<{
   setScreen: (s: Screen | ((prev: Screen) => Screen)) => void
   active: Screen
@@ -23,7 +12,11 @@ export default function AppShell({
   setScreen,
   active,
 }: AppShellProps) {
-  const navHidden = active === "onboarding"
+  const chromeHidden =
+    active === "landing" ||
+    active === "pricing" ||
+    active === "intro" ||
+    active === "onboarding"
 
   const itemClasses = (screen: Screen) =>
     [
@@ -33,11 +26,23 @@ export default function AppShell({
       active === screen ? "text-[#f9c80e]" : "text-white/88 hover:text-[#f9c80e]",
     ].join(" ")
 
+  if (chromeHidden) {
+    return (
+      <div className="relative min-h-dvh w-full overflow-x-hidden bg-[#08194A]">
+        {children}
+
+        <div className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 sm:right-6">
+          <div className="pointer-events-auto">
+            <FloatingAIButton />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="relative flex min-h-dvh w-full flex-col overflow-hidden bg-[#08194A]">
-
-      {/* Header */}
-      <header className="w-full shrink-0 bg-[#08194A] px-4 pt-5 pb-3 sm:pt-6 sm:pb-4">
+      <header className="w-full shrink-0 bg-[#08194A] px-4 pb-3 pt-5 sm:pb-4 sm:pt-6">
         <div className="mx-auto flex w-full max-w-[42rem] justify-center">
           <img
             src="/NJDrive50.png"
@@ -47,89 +52,74 @@ export default function AppShell({
         </div>
       </header>
 
-      {/* Main content */}
       <main className="flex min-w-0 flex-1 justify-center px-3 pb-4 sm:px-4">
-        <section className="w-full max-w-[42rem] min-w-0 overflow-y-auto">
+        <section className="min-w-0 w-full max-w-[42rem] overflow-y-auto">
           {children}
         </section>
       </main>
 
-      {/* Bottom navigation */}
-      {!navHidden && (
-        <nav className="sticky bottom-0 z-20 w-full shrink-0 border-t border-white/10 bg-[#08194A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#08194A]/88">
-          <div className="mx-auto w-full max-w-[42rem] px-2 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-3 sm:pt-3">
-            <div className="grid grid-cols-5 gap-1 sm:gap-2">
+      <nav className="sticky bottom-0 z-20 w-full shrink-0 border-t border-white/10 bg-[#08194A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#08194A]/88">
+        <div className="mx-auto w-full max-w-[42rem] px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-3 sm:pt-3">
+          <div className="grid grid-cols-5 gap-1 sm:gap-2">
+            <button
+              type="button"
+              className={itemClasses("home")}
+              onClick={() => setScreen("home")}
+              aria-current={active === "home" ? "page" : undefined}
+            >
+              <span className="block truncate">Home</span>
+            </button>
 
-              <button
-                type="button"
-                className={itemClasses("home")}
-                onClick={() => setScreen("home")}
-                aria-current={active === "home" ? "page" : undefined}
-              >
-                <span className="block truncate">Home</span>
-              </button>
+            <button
+              type="button"
+              className={itemClasses("driveHistory")}
+              onClick={() => setScreen("driveHistory")}
+              aria-current={active === "driveHistory" ? "page" : undefined}
+            >
+              <span className="block sm:hidden">Driving</span>
+              <span className="block sm:hidden">Log</span>
+              <span className="hidden sm:block">Driving Log</span>
+            </button>
 
-              <button
-  type="button"
-  className={itemClasses("driveHistory")}
-  onClick={() => setScreen("driveHistory")}
-  aria-current={active === "driveHistory" ? "page" : undefined}
-              >
-                <span className="block sm:hidden">Driving</span>
-                <span className="block sm:hidden">Log</span>
-                <span className="hidden sm:block">Driving Log</span>
-              </button>
+            <button
+              type="button"
+              className={itemClasses("practiceTest")}
+              onClick={() => setScreen("practiceTest")}
+              aria-current={active === "practiceTest" ? "page" : undefined}
+            >
+              <span className="block sm:hidden">Practice</span>
+              <span className="block sm:hidden">Test</span>
+              <span className="hidden sm:block">Practice Test</span>
+            </button>
 
-              <button
-                type="button"
-                className={itemClasses("practiceTest")}
-                onClick={() => setScreen("practiceTest")}
-                aria-current={active === "practiceTest" ? "page" : undefined}
-              >
-                <span className="block sm:hidden">Practice</span>
-                <span className="block sm:hidden">Test</span>
-                <span className="hidden sm:block">Practice Test</span>
-              </button>
+            <button
+              type="button"
+              className={itemClasses("settings")}
+              onClick={() => setScreen("settings")}
+              aria-current={active === "settings" ? "page" : undefined}
+            >
+              <span className="block truncate">Settings</span>
+            </button>
 
-              <button
-                type="button"
-                className={itemClasses("settings")}
-                onClick={() => setScreen("settings")}
-                aria-current={active === "settings" ? "page" : undefined}
-              >
-                <span className="block truncate">Settings</span>
-              </button>
-
-              <button
-                type="button"
-                className={itemClasses("helpFaq")}
-                onClick={() => setScreen("helpFaq")}
-                aria-current={active === "helpFaq" ? "page" : undefined}
-              >
-                <span className="block sm:hidden">Help</span>
-                <span className="block sm:hidden">FAQ</span>
-                <span className="hidden sm:block">Help FAQ</span>
-              </button>
-
-            </div>
+            <button
+              type="button"
+              className={itemClasses("helpFaq")}
+              onClick={() => setScreen("helpFaq")}
+              aria-current={active === "helpFaq" ? "page" : undefined}
+            >
+              <span className="block sm:hidden">Help</span>
+              <span className="block sm:hidden">FAQ</span>
+              <span className="hidden sm:block">Help FAQ</span>
+            </button>
           </div>
-        </nav>
-      )}
+        </div>
+      </nav>
 
-      {/* [FIX-3] FloatingAIButton — fully self-contained via useNav() now.
-          No setScreen or active props needed. */}
-      <div
-        className={`pointer-events-none fixed right-4 z-30 sm:right-6 ${
-          navHidden
-            ? "bottom-[max(1rem,env(safe-area-inset-bottom))]"
-            : "bottom-[calc(6.5rem+env(safe-area-inset-bottom))] sm:bottom-[calc(7.25rem+env(safe-area-inset-bottom))]"
-        }`}
-      >
+      <div className="pointer-events-none fixed right-4 z-30 sm:right-6 bottom-[calc(6.5rem+env(safe-area-inset-bottom))] sm:bottom-[calc(7.25rem+env(safe-area-inset-bottom))]">
         <div className="pointer-events-auto">
           <FloatingAIButton />
         </div>
       </div>
-
     </div>
   )
 }

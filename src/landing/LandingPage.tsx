@@ -1,247 +1,252 @@
 import { Helmet } from "react-helmet-async"
 
-
-
 export default function LandingPage() {
   const faqs = [
     {
-      question: "How many supervised driving hours are required for a NJ learner permit?",
+      question: "How many supervised driving hours are required in NJ?",
       answer:
-        "As of February 1, 2025, New Jersey requires all permit holders under 21 to complete a minimum of 50 hours of supervised driving — including at least 10 hours at night — before they can apply for a probationary driver license.",
+        "New Jersey requires permit holders under 21 with permits issued on or after February 1, 2025 to complete at least 50 hours of supervised driving, including 10 hours of night driving, before they can receive a probationary driver license.",
+    },
+    {
+      question: "How many night driving hours are required in NJ?",
+      answer:
+        "New Jersey requires at least 10 hours of night driving as part of the 50-hour supervised driving requirement for permit holders under 21 who received a permit on or after February 1, 2025.",
     },
     {
       question: "Who can supervise a teen driver in New Jersey?",
       answer:
-        "A parent, guardian, or any licensed driver over the age of 21 who has held their NJ driver's license for at least three years. A certified driving school instructor also qualifies.",
+        "A parent, guardian, or supervising driver who is at least 21 years old and has held a New Jersey driver license for at least three years may supervise practice driving. A licensed driving school instructor also qualifies under NJ permit rules.",
     },
     {
       question: "Do I have to submit my driving log to the NJ MVC?",
       answer:
-        "No. The NJ MVC does not require you to submit your driving log. However, you must submit a signed Certification of Supervised Driving (NJMVC Form BA-CSD) when applying for your probationary license. NJDrive50 helps you keep an accurate log so that certification is easy to complete.",
+        "No. The NJ MVC does not require you to submit your practice driving log. However, you must bring a signed Certification of Supervised Driving (NJMVC Form BA-CSD) when applying for your probationary license. NJDrive50 helps you keep an accurate New Jersey 50-hour driving log so that certification is easier to complete.",
     },
     {
       question: "How long is a New Jersey learner permit valid?",
       answer:
-        "A New Jersey learner's permit (special learner's permit or examination permit) is valid for 2 years from the issue date. You must also wait at least 6 months after your permit issue date before you can take your road test.",
+        "A New Jersey learner's permit is generally valid for 2 years from the issue date. Drivers under 21 must also wait at least 6 months from permit issuance before taking the NJ road test and applying for a probationary license.",
+    },
+    {
+      question: "How do I track driving hours in NJ?",
+      answer:
+        "The easiest way to track driving hours in NJ is to log each supervised drive by date, time, duration, and whether the drive happened during the day or at night. NJDrive50 automatically tracks total supervised driving hours, night driving hours, and permit milestones in one place.",
     },
     {
       question: "Does NJDrive50 work on Android?",
       answer:
-        "Yes. NJDrive50 is built for Android and is designed specifically for NJ families tracking supervised driving hours toward the NJ MVC 50-hour requirement.",
+        "Yes. NJDrive50 is built for Android and designed specifically for New Jersey families who need a NJ driving log app to track supervised driving hours, permit milestones, and road test readiness.",
     },
     {
       question: "Is NJDrive50 free?",
-      answer: "Yes. NJDrive50 is completely free for all New Jersey families.",
+      answer: "Yes. NJDrive50 is completely free for New Jersey families.",
     },
   ]
 
   const features = [
     {
       icon: "🕐",
-      title: "Day & Night Hour Tracking",
+      title: "Track day and night driving hours",
       description:
-        "Automatically separates your daytime and nighttime hours so you always know exactly how many of the required 10 night hours remain.",
+        "Automatically separate daytime and night driving hours so you always know how many of the required 50 total hours and 10 night hours are left.",
     },
     {
       icon: "📍",
-      title: "GPS Drive Logging",
+      title: "Log every NJ practice drive",
       description:
-        "Log each supervised drive with GPS route data, start/end time, and distance so your records are always accurate and dispute-proof.",
+        "Save each supervised drive with GPS route data, start and end times, duration, and distance to keep your New Jersey driving log organized.",
     },
     {
       icon: "📋",
-      title: "Permit Countdown Timer",
+      title: "See permit and road test dates",
       description:
-        "NJDrive50 tracks your permit issue date and shows a live countdown to your permit expiration and your 6-month road test eligibility date.",
+        "Track your permit issue date, road test eligibility date, and permit expiration so you can stay on top of New Jersey learner permit deadlines.",
     },
     {
       icon: "🔔",
-      title: "Smart Reminders",
+      title: "Get reminders before you fall behind",
       description:
-        "Get reminders to log drives, alerts when you're close to your permit expiration, and milestone notifications when you hit key hour checkpoints.",
+        "Receive reminders to log drives, alerts before permit expiration, and milestone nudges so your family stays on pace for the NJ road test.",
     },
     {
       icon: "🏆",
-      title: "Milestone Badges",
+      title: "Keep teens motivated to finish 50 hours",
       description:
-        "Celebrate progress with gamified milestone badges at 10, 25, 40, and 50 hours — keeping teens motivated throughout the permit period.",
+        "Celebrate progress at 10, 25, 40, and 50 hours with simple milestones that make the NJ supervised driving process easier to stick with.",
     },
     {
       icon: "📄",
-      title: "BA-CSD Ready Summary",
+      title: "Stay ready for NJMVC Form BA-CSD",
       description:
-        "Generate a clean summary of all logged drives to make filling out the NJ MVC Certification of Supervised Driving (Form BA-CSD) fast and accurate.",
+        "Generate a clean supervised driving summary to make the Certification of Supervised Driving faster and less stressful to complete.",
     },
   ]
 
   const steps = [
     {
       step: "01",
-      title: "Create your teen's profile",
+      title: "Create your teen driver's profile",
       description:
-        "Enter the teen driver's name, birthday, permit issue date, and permit number. NJDrive50 immediately calculates your road test eligibility date and permit expiration.",
+        "Enter the teen driver's name, birthday, permit issue date, and permit number. NJDrive50 instantly calculates the 6-month waiting period, road test eligibility date, and permit expiration.",
     },
     {
       step: "02",
-      title: "Log every supervised drive",
+      title: "Log each supervised drive",
       description:
-        "After each practice session, log the drive with GPS tracking, duration, time of day, and which parent or guardian supervised. Day and night hours are tracked separately.",
+        "After every practice session, record the drive with GPS tracking, duration, time of day, and supervising adult. Day and night driving hours are tracked separately.",
     },
     {
       step: "03",
-      title: "Monitor progress toward 50 hours",
+      title: "Watch progress toward 50 hours",
       description:
-        "Your dashboard shows a live breakdown of total hours, night hours remaining, days until road test eligibility, and milestone progress — all in one place.",
+        "See total supervised driving hours, night hours remaining, days until road test eligibility, and milestone progress in one clear dashboard.",
     },
     {
       step: "04",
-      title: "Prepare for the road test",
+      title: "Prepare for the NJ road test",
       description:
-        "When you've hit 50 hours (10 at night), NJDrive50 generates a clean drive summary to help complete NJMVC Form BA-CSD. Then book your road test with confidence.",
+        "Once you reach 50 hours, including 10 hours at night, NJDrive50 helps you prepare a clean summary for NJMVC Form BA-CSD so you can move toward a probationary license with confidence.",
     },
   ]
 
-  // ── Replace this with your real Google Play / App Store URL when live ──
   const APP_DOWNLOAD_URL = "#"
+  const PAGE_URL = "https://njdrive50.com"
+  const OG_IMAGE_URL = "https://njdrive50.com/og-image.png"
+
+  const metaTitle =
+    "NJDrive50 | New Jersey 50-Hour Driving Log App for NJ Supervised Driving Hours"
+  const metaDescription =
+    "NJDrive50 is a free New Jersey driving log app for parents and teens. Track 50 supervised driving hours, 10 night driving hours, permit milestones, and NJMVC Form BA-CSD progress."
+
+  const softwareAppSchema = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": `${PAGE_URL}#softwareapp`,
+    name: "NJDrive50",
+    url: PAGE_URL,
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "Android",
+    description:
+      "NJDrive50 is a free NJ driving log app for New Jersey families to track supervised driving hours, night driving hours, permit dates, and progress toward the NJ MVC 50-hour requirement.",
+    image: OG_IMAGE_URL,
+    screenshot: OG_IMAGE_URL,
+    installUrl: APP_DOWNLOAD_URL !== "#" ? APP_DOWNLOAD_URL : PAGE_URL,
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: APP_DOWNLOAD_URL !== "#" ? APP_DOWNLOAD_URL : PAGE_URL,
+    },
+    areaServed: {
+      "@type": "State",
+      name: "New Jersey",
+    },
+    audience: {
+      "@type": "PeopleAudience",
+      audienceType: "New Jersey parents and teen drivers",
+    },
+    publisher: {
+      "@type": "Organization",
+      "@id": `${PAGE_URL}#organization`,
+      name: "NJDrive50",
+      url: PAGE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${PAGE_URL}/njdrive50Logo6.png`,
+      },
+    },
+  }
+
+  const faqPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": `${PAGE_URL}#faq`,
+    mainEntity: faqs.map(({ question, answer }) => ({
+      "@type": "Question",
+      name: question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: answer,
+      },
+    })),
+  }
+
+  const webPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${PAGE_URL}#webpage`,
+    url: PAGE_URL,
+    name: metaTitle,
+    description: metaDescription,
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": `${PAGE_URL}#website`,
+      name: "NJDrive50",
+      url: PAGE_URL,
+    },
+    about: {
+      "@id": `${PAGE_URL}#softwareapp`,
+    },
+    primaryImageOfPage: {
+      "@type": "ImageObject",
+      url: OG_IMAGE_URL,
+    },
+  }
 
   return (
     <>
       <Helmet>
-        <title>NJDrive50 — NJ Teen Driver Hours Tracker & Permit Log App</title>
+        <html lang="en" />
+        <title>{metaTitle}</title>
+        <meta name="description" content={metaDescription} />
         <meta
-          name="description"
-          content="Track your teen's 50 supervised driving hours for the New Jersey learner permit. NJDrive50 logs drives, counts permit milestones, and sends reminders — built specifically for NJ families."
+          name="keywords"
+          content="NJDrive50, New Jersey 50-hour driving log, NJ supervised driving hours, NJ teen driving requirements, NJ driving log app, track driving hours NJ, NJ MVC driving log, night driving hours NJ, parent teen driving app NJ, NJ road test requirements, New Jersey learner's permit rules, NJ practice driving log, how to track driving hours in NJ, NJ GDL requirements, NJ teen driver checklist, BA-CSD form, NJ permit rules, NJ probationary license"
         />
+        <meta name="robots" content="index, follow, max-image-preview:large" />
+        <meta name="author" content="NJDrive50" />
 
-        {/* Open Graph */}
-        <meta property="og:title" content="NJDrive50 — NJ Teen Driver Hours Tracker" />
-        <meta
-          property="og:description"
-          content="Log and monitor supervised driving hours for the NJ learner permit. Built specifically for New Jersey teens and parents."
-        />
-        <meta property="og:image" content="https://njdrive50.com/og-image.png" />
-        <meta property="og:url" content="https://njdrive50.com" />
+        <link rel="canonical" href={PAGE_URL} />
+
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="NJDrive50" />
+        <meta property="og:url" content={PAGE_URL} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
+        <meta property="og:image" content={OG_IMAGE_URL} />
+        <meta property="og:image:alt" content="NJDrive50 New Jersey driving log app" />
+        <meta property="og:locale" content="en_US" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
 
-        {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="NJDrive50 — NJ Teen Driver Hours Tracker" />
-        <meta
-          name="twitter:description"
-          content="Track supervised driving hours for the New Jersey learner permit."
-        />
-        <meta name="twitter:image" content="https://njdrive50.com/og-image.png" />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={OG_IMAGE_URL} />
+        <meta name="twitter:image:alt" content="NJDrive50 New Jersey driving log app" />
 
-        <link rel="canonical" href="https://njdrive50.com" />
-
-        {/* SoftwareApplication Schema */}
-        <script type="application/ld+json">{`
-          {
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            "name": "NJDrive50",
-            "operatingSystem": "Android, iOS",
-            "applicationCategory": "UtilitiesApplication",
-            "description": "NJDrive50 helps New Jersey teens and parents track supervised driving hours for the NJ learner permit, log individual drives with GPS, and monitor progress toward the 50-hour requirement.",
-            "image": "https://njdrive50.com/og-image.png",
-            "url": "https://njdrive50.com",
-            "offers": {
-              "@type": "Offer",
-              "price": "0",
-              "priceCurrency": "USD"
-            },
-            "author": {
-              "@type": "Person",
-              "name": "David",
-              "address": {
-                "@type": "PostalAddress",
-                "addressRegion": "NJ",
-                "addressCountry": "US"
-              }
-            }
-          }
-        `}</script>
-
-       
-
-        {/* FAQPage Schema */}
-        <script type="application/ld+json">{`
-          {
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            "mainEntity": [
-              {
-                "@type": "Question",
-                "name": "How many supervised driving hours are required for a NJ learner permit?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "As of February 1, 2025, New Jersey requires all permit holders under 21 to complete a minimum of 50 hours of supervised driving — including at least 10 hours at night — before they can apply for a probationary driver license."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "Who can supervise a teen driver in New Jersey?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "A parent, guardian, or any licensed driver over the age of 21 who has held their NJ driver's license for at least three years. A certified driving school instructor also qualifies."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "Do I have to submit my driving log to the NJ MVC?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "No. The NJ MVC does not require you to submit your driving log. However, you must submit a signed Certification of Supervised Driving (NJMVC Form BA-CSD) when applying for your probationary license."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "How long is a New Jersey learner permit valid?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "A New Jersey learner's permit is valid for 2 years from the issue date. You must also wait at least 6 months after your permit issue date before you can take your road test."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "Does NJDrive50 work on Android?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "Yes. NJDrive50 is built for Android and is designed specifically for NJ families tracking supervised driving hours toward the NJ MVC 50-hour requirement."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "Is NJDrive50 free?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "Yes. NJDrive50 is completely free for all New Jersey families."
-                }
-              }
-            ]
-          }
-        `}</script>
+        <script type="application/ld+json">{JSON.stringify(softwareAppSchema)}</script>
+        <script type="application/ld+json">{JSON.stringify(faqPageSchema)}</script>
+        <script type="application/ld+json">{JSON.stringify(webPageSchema)}</script>
       </Helmet>
 
       <div className="min-h-screen bg-[#020617] text-white">
-
-        {/* ── Header ── */}
         <header className="sticky top-0 z-50 border-b border-white/10 bg-black/60 backdrop-blur">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-3 py-3">
             <div className="flex items-center gap-3">
               <img
-  src="/njdrive50Logo6.png"
-  alt="NJDrive50 Logo"
-  className="h-7 w-auto object-contain"
-/>
-
+                src="/njdrive50Logo6.png"
+                alt="NJDrive50 Logo"
+                className="h-20 w-auto object-contain"
+              />
 
               <div className="flex flex-col leading-tight">
                 <span className="text-sm font-semibold tracking-[0.18em] text-[#38BDF8]">
                   NJDRIVE50
                 </span>
                 <span className="text-[11px] font-medium text-white/60">
-                  NJ Teen Driving Log
+                  New Jersey Teen Driving Log App
                 </span>
               </div>
             </div>
@@ -253,6 +258,9 @@ export default function LandingPage() {
               <a href="#features" className="transition hover:text-white">
                 Features
               </a>
+              <a href="#nj-requirements" className="transition hover:text-white">
+                NJ requirements
+              </a>
               <a href="#faq" className="transition hover:text-white">
                 FAQ
               </a>
@@ -260,28 +268,22 @@ export default function LandingPage() {
 
             <a
               href={APP_DOWNLOAD_URL}
+              aria-label="Download NJDrive50 free app"
               className="rounded-xl bg-[#38BDF8] px-4 py-2 text-xs font-extrabold text-[#020617] transition hover:bg-[#0EA5E9]"
             >
-              Get the App
+              Download Free App
             </a>
           </div>
         </header>
 
         <main>
-
-          {/* ── Hero ── */}
           <section className="relative overflow-hidden border-b border-white/10">
-            {/* Background glow */}
             <div className="pointer-events-none absolute inset-0 -top-32 flex justify-center">
               <div className="h-[500px] w-[700px] rounded-full bg-[#38BDF8]/5 blur-[120px]" />
             </div>
 
             <div className="relative mx-auto flex max-w-5xl flex-col gap-10 px-4 py-16 md:flex-row md:items-center md:py-24">
               <div className="max-w-xl">
-
-                
-
-                {/* Badge */}
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#38BDF8]" />
                   <span className="text-[11px] font-bold tracking-[0.18em] text-[#38BDF8]">
@@ -290,25 +292,27 @@ export default function LandingPage() {
                 </div>
 
                 <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
-                  Track your teen&apos;s{" "}
-                  <span className="text-[#38BDF8]">New Jersey driving hours</span>{" "}
-                  with confidence.
+                  How to track your teen&apos;s{" "}
+                  <span className="text-[#38BDF8]">New Jersey 50-hour driving log</span>
                 </h1>
 
                 <p className="mt-5 text-sm leading-relaxed text-white/70 sm:text-base">
-                  NJDrive50 is built for New Jersey families navigating the new
-                  50-hour supervised driving requirement. Log practice drives,
-                  split day and night hours, track your road test eligibility
-                  date, and generate your NJ MVC Form BA-CSD summary — all in
-                  one free app.
+                  NJDrive50 is the free NJ driving log app built for New Jersey families. Track NJ
+                  supervised driving hours, separate day and night driving hours, monitor permit
+                  milestones, and stay ready for NJMVC Form BA-CSD.
                 </p>
 
-                {/* Stats bar */}
+                <p className="mt-4 text-sm leading-relaxed text-white/70 sm:text-base">
+                  If you need a simple way to track driving hours in NJ, NJDrive50 keeps everything
+                  in one place so parents and teens can stay organized from permit day to the NJ
+                  road test.
+                </p>
+
                 <div className="mt-6 flex flex-wrap gap-4">
                   {[
-                    { value: "50", label: "Total hours required" },
+                    { value: "50", label: "Hours required in NJ" },
                     { value: "10", label: "Night hours required" },
-                    { value: "6 mo", label: "Minimum permit hold" },
+                    { value: "6 mo", label: "Wait before road test" },
                   ].map(({ value, label }) => (
                     <div
                       key={label}
@@ -326,7 +330,7 @@ export default function LandingPage() {
                     href={APP_DOWNLOAD_URL}
                     className="rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
                   >
-                    Get NJDrive50 — Free
+                    Start Tracking Hours Free
                   </a>
                   <a
                     href="#how-it-works"
@@ -337,11 +341,11 @@ export default function LandingPage() {
                 </div>
 
                 <p className="mt-3 text-[11px] text-white/40">
-                  Built for NJ learner permits issued on or after February 1, 2025 · Free · Android
+                  Free NJ driving log app for parents and teens · Android · Built for New Jersey
+                  learner permits issued on or after February 1, 2025
                 </p>
               </div>
 
-              {/* Phone mockup */}
               <div className="flex flex-1 justify-center">
                 <div className="relative h-[340px] w-[200px]">
                   <div className="absolute inset-0 rounded-[36px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_40px_100px_rgba(15,23,42,0.9)]">
@@ -380,7 +384,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── Trust bar ── */}
           <section className="border-b border-white/10 bg-white/[0.02]">
             <div className="mx-auto max-w-5xl px-4 py-5">
               <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[11px] font-semibold tracking-[0.14em] text-white/40">
@@ -388,26 +391,25 @@ export default function LandingPage() {
                 <span className="hidden sm:block">·</span>
                 <span>✓ FORM BA-CSD READY</span>
                 <span className="hidden sm:block">·</span>
-                <span>✓ DAY + NIGHT TRACKING</span>
+                <span>✓ TRACK NIGHT DRIVING HOURS NJ</span>
                 <span className="hidden sm:block">·</span>
                 <span>✓ 100% FREE</span>
               </div>
             </div>
           </section>
 
-          {/* ── How It Works ── */}
           <section id="how-it-works" className="border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-16 sm:py-20">
               <div className="mb-10 text-center">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
-                  The Process
+                  How It Works
                 </p>
                 <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  How NJDrive50 works
+                  How do you track driving hours in NJ?
                 </h2>
                 <p className="mx-auto mt-3 max-w-lg text-sm text-white/60">
-                  From permit day to road test — here&apos;s how NJDrive50 guides NJ families every
-                  step of the way.
+                  NJDrive50 helps parents and teens log practice driving, track night hours, and
+                  stay ready for the NJ road test.
                 </p>
               </div>
 
@@ -428,19 +430,18 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── Features ── */}
           <section id="features" className="border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-16 sm:py-20">
               <div className="mb-10 text-center">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
-                  Built for NJ Families
+                  Features
                 </p>
                 <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  Everything you need to hit 50 hours
+                  What should a NJ driving log app track?
                 </h2>
                 <p className="mx-auto mt-3 max-w-lg text-sm text-white/60">
-                  NJDrive50 is the only driving log app built specifically for the New Jersey MVC
-                  supervised driving requirement.
+                  A good New Jersey driving log app should track supervised driving hours, night
+                  driving hours, permit dates, and BA-CSD readiness without extra work.
                 </p>
               </div>
 
@@ -450,7 +451,9 @@ export default function LandingPage() {
                     key={title}
                     className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-[#38BDF8]/20 hover:bg-white/[0.05]"
                   >
-                    <span className="mb-3 block text-2xl">{icon}</span>
+                    <span className="mb-3 block text-2xl" aria-hidden="true">
+                      {icon}
+                    </span>
                     <h3 className="mb-1.5 text-sm font-bold text-white">{title}</h3>
                     <p className="text-xs leading-relaxed text-white/55">{description}</p>
                   </div>
@@ -459,8 +462,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── NJ Law Callout ── */}
-          <section className="border-b border-white/10 bg-[#38BDF8]/5">
+          <section id="nj-requirements" className="border-b border-white/10 bg-[#38BDF8]/5">
             <div className="mx-auto max-w-5xl px-4 py-12">
               <div className="flex flex-col gap-6 rounded-2xl border border-[#38BDF8]/20 bg-[#38BDF8]/5 p-6 sm:flex-row sm:items-start">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#38BDF8]/15 text-xl">
@@ -468,20 +470,40 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <h2 className="text-base font-extrabold text-[#38BDF8]">
-                    New NJ Law — Effective February 1, 2025
+                    What are the NJ teen driving requirements?
                   </h2>
                   <p className="mt-2 text-sm leading-relaxed text-white/70">
-                    The NJ Motor Vehicle Commission now requires all permit holders under 21 (with
-                    permits issued on or after February 1, 2025) to complete{" "}
+                    Starting February 1, 2025, New Jersey requires permit holders under 21 with
+                    permits issued on or after that date to complete{" "}
                     <strong className="text-white">50 hours of supervised driving</strong>,
                     including <strong className="text-white">10 hours at night</strong>, before
-                    receiving a probationary license. A signed{" "}
+                    they can receive a probationary license.
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-white/70">
+                    Drivers must also wait at least <strong className="text-white">6 months</strong>{" "}
+                    from permit issuance before taking the NJ road test, and they must bring a
+                    signed{" "}
                     <strong className="text-white">
                       Certification of Supervised Driving (Form BA-CSD)
                     </strong>{" "}
-                    must be submitted to the NJ MVC. NJDrive50 is designed to make meeting this
-                    requirement simple, trackable, and stress-free.
+                    when applying for licensure.
                   </p>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                      <h3 className="text-sm font-bold text-white">What NJDrive50 tracks</h3>
+                      <p className="mt-2 text-xs leading-relaxed text-white/60">
+                        Total supervised driving hours, night driving hours, permit issue date,
+                        permit expiration, road test eligibility, and BA-CSD preparation.
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                      <h3 className="text-sm font-bold text-white">What you need for the NJ MVC</h3>
+                      <p className="mt-2 text-xs leading-relaxed text-white/60">
+                        A completed 50-hour practice period, 10 hours during darkness, a signed
+                        BA-CSD form, and completion of the waiting period before road testing.
+                      </p>
+                    </div>
+                  </div>
                   <a
                     href="https://www.nj.gov/mvc/license/youngadult.htm"
                     target="_blank"
@@ -495,19 +517,53 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── FAQ ── */}
+          <section className="border-b border-white/10">
+            <div className="mx-auto max-w-5xl px-4 py-16 sm:py-20">
+              <div className="mb-10 text-center">
+                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+                  Checklist
+                </p>
+                <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+                  What do you need before the NJ road test?
+                </h2>
+                <p className="mx-auto mt-3 max-w-lg text-sm text-white/60">
+                  Use this quick NJ teen driver checklist to stay on track with learner permit rules
+                  and probationary license requirements.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {[
+                  "Hold a valid New Jersey special learner's permit or examination permit.",
+                  "Complete at least 50 hours of supervised driving practice.",
+                  "Log at least 10 night driving hours in NJ.",
+                  "Wait at least 6 months from the permit issue date before road testing.",
+                  "Prepare your signed NJMVC Form BA-CSD.",
+                  "Review NJ road test requirements before your appointment.",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white/70"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
           <section id="faq" className="border-b border-white/10">
             <div className="mx-auto max-w-3xl px-4 py-16 sm:py-20">
               <div className="mb-10 text-center">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
-                  Common Questions
+                  FAQ
                 </p>
                 <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  NJ permit &amp; driving FAQ
+                  Common NJ permit and driving log questions
                 </h2>
                 <p className="mx-auto mt-3 max-w-md text-sm text-white/60">
-                  Answers to the most common questions about the NJ MVC 50-hour requirement and how
-                  NJDrive50 fits in.
+                  Quick answers about NJ supervised driving hours, night driving, BA-CSD, permit
+                  rules, and road test readiness.
                 </p>
               </div>
 
@@ -532,59 +588,66 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── CTA ── */}
           <section className="border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-20 text-center">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
-                Start Today
+                Get Started
               </p>
               <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
-                Start logging drives.{" "}
-                <span className="text-[#38BDF8]">Hit 50 hours faster.</span>
+                Ready to track supervised driving hours in NJ?
               </h2>
               <p className="mx-auto mt-4 max-w-md text-sm text-white/60">
-                NJDrive50 is free, built for New Jersey, and designed to take the stress out of the
-                50-hour permit requirement.
+                Download NJDrive50 to track driving hours, monitor night driving progress, and stay
+                ready for the NJ road test and NJMVC Form BA-CSD.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-4">
                 <a
                   href={APP_DOWNLOAD_URL}
                   className="rounded-xl bg-[#38BDF8] px-8 py-3.5 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
                 >
-                  Download NJDrive50 — Free
+                  Download NJDrive50 Free
+                </a>
+                <a
+                  href="#faq"
+                  className="rounded-xl border border-white/20 px-8 py-3.5 text-sm font-semibold text-white/80 transition hover:bg-white/5"
+                >
+                  Check NJ permit FAQs
                 </a>
               </div>
               <p className="mt-4 text-[11px] text-white/35">
-                Android · Designed for NJ MVC learner permit holders
+                Free download · Android · Built for New Jersey parents and teen drivers
               </p>
             </div>
           </section>
         </main>
 
-        {/* ── Footer ── */}
         <footer className="border-t border-white/10 bg-black/40">
           <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-8 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <img
-                  src="//njdrive50Logo6.png"
+                  src="/njdrive50Logo6.png"
                   alt="NJDrive50 Logo"
-                  className="h-7 w-7 rounded-lg object-contain"
+                  className="h-10 w-auto object-contain"
                 />
                 <span className="text-sm font-bold tracking-[0.16em] text-[#38BDF8]">
                   NJDRIVE50
                 </span>
               </div>
-              <p className="mt-2 max-w-[28ch] text-[11px] leading-relaxed text-white/40">
-                The free NJ teen driving hours tracker built for the NJ MVC 50-hour supervised
-                driving requirement.
+              <p className="mt-2 max-w-[32ch] text-[11px] leading-relaxed text-white/40">
+                The free New Jersey 50-hour driving log app built for parents and teens tracking NJ
+                supervised driving hours, night driving hours, and BA-CSD readiness.
               </p>
             </div>
 
             <div className="flex flex-col gap-1 text-xs text-white/40">
               <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">Legal</p>
-              <a href="#privacy" className="hover:text-white/70">Privacy Policy</a>
-              <a href="#terms" className="hover:text-white/70">Terms of Use</a>
+              <a href="#privacy" className="hover:text-white/70">
+                Privacy Policy
+              </a>
+              <a href="#terms" className="hover:text-white/70">
+                Terms of Use
+              </a>
             </div>
 
             <div className="flex flex-col gap-1 text-xs text-white/40">
@@ -606,6 +669,14 @@ export default function LandingPage() {
                 className="hover:text-white/70"
               >
                 NJ MVC Road Test Info
+              </a>
+              <a
+                href="https://nj.gov/mvc/pdf/license/BA-CSD.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white/70"
+              >
+                NJMVC Form BA-CSD
               </a>
             </div>
           </div>

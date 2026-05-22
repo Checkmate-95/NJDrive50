@@ -92,6 +92,9 @@ export default function App() {
   let cancelled = false
 
   const load = async () => {
+    // ⭐ Prevent redirect before Zustand finishes hydrating
+    if (!useNav.persist.hasHydrated()) return
+
     const result = await Preferences.get({ key: "onboardingData" })
     if (cancelled) return
 
@@ -131,6 +134,7 @@ export default function App() {
     cancelled = true
   }
 }, [setScreen])
+
 
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current

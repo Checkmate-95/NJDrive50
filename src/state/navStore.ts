@@ -24,6 +24,7 @@ type NavState = {
 
 function isScreen(value: unknown): value is Screen {
   return (
+    value === "landing" ||
     value === "intro" ||
     value === "onboarding" ||
     value === "home" ||

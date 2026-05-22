@@ -1,8 +1,10 @@
 import { Helmet } from "react-helmet-async"
 import FloatingAIButton from "../components/FloatingAIButton"
-
+import { useNav } from "../state/navStore"
 
 export default function LandingPage() {
+  const { setScreen } = useNav()
+
   const faqs = [
     {
       question: "How many supervised driving hours are required in NJ?",
@@ -41,7 +43,8 @@ export default function LandingPage() {
     },
     {
       question: "Is NJDrive50 free?",
-      answer: "Yes. NJDrive50 is completely free for New Jersey families.",
+      answer:
+        "NJDrive50 includes a 7-day free trial, then costs $4.99 per month or $39.99 per year for New Jersey families.",
     },
   ]
 
@@ -111,14 +114,14 @@ export default function LandingPage() {
     },
   ]
 
-  const APP_DOWNLOAD_URL = "#"
   const PAGE_URL = "https://njdrive50.com"
   const OG_IMAGE_URL = "https://njdrive50.com/og-image.png"
+  const PRICING_PAGE_PATH = "/pricing"
 
   const metaTitle =
     "NJDrive50 | New Jersey 50-Hour Driving Log App for NJ Supervised Driving Hours"
   const metaDescription =
-    "NJDrive50 is a free New Jersey driving log app for parents and teens. Track 50 supervised driving hours, 10 night driving hours, permit milestones, and NJMVC Form BA-CSD progress."
+    "NJDrive50 is a New Jersey driving log app for parents and teens. Track 50 supervised driving hours, 10 night driving hours, permit milestones, and NJMVC Form BA-CSD progress with a 7-day free trial."
 
   const softwareAppSchema = {
     "@context": "https://schema.org",
@@ -129,16 +132,22 @@ export default function LandingPage() {
     applicationCategory: "UtilitiesApplication",
     operatingSystem: "Android",
     description:
-      "NJDrive50 is a free NJ driving log app for New Jersey families to track supervised driving hours, night driving hours, permit dates, and progress toward the NJ MVC 50-hour requirement.",
+      "NJDrive50 is an NJ driving log app for New Jersey families to track supervised driving hours, night driving hours, permit dates, and progress toward the NJ MVC 50-hour requirement.",
     image: OG_IMAGE_URL,
     screenshot: OG_IMAGE_URL,
-    installUrl: APP_DOWNLOAD_URL !== "#" ? APP_DOWNLOAD_URL : PAGE_URL,
+    installUrl: `${PAGE_URL}${PRICING_PAGE_PATH}`,
     offers: {
       "@type": "Offer",
-      price: "0",
+      price: "4.99",
       priceCurrency: "USD",
       availability: "https://schema.org/InStock",
-      url: APP_DOWNLOAD_URL !== "#" ? APP_DOWNLOAD_URL : PAGE_URL,
+      url: `${PAGE_URL}${PRICING_PAGE_PATH}`,
+      category: "Subscription",
+      eligibleTransactionVolume: {
+        "@type": "PriceSpecification",
+        price: "4.99",
+        priceCurrency: "USD",
+      },
     },
     areaServed: {
       "@type": "State",
@@ -268,14 +277,14 @@ export default function LandingPage() {
               </a>
             </nav>
 
-            <a
-              href={APP_DOWNLOAD_URL}
-              aria-label="Download NJDrive50 free app"
+            <button
+              type="button"
+              onClick={() => setScreen("pricing")}
+              aria-label="View NJDrive50 pricing and start free trial"
               className="rounded-xl bg-[#38BDF8] px-4 py-2 text-xs font-extrabold text-[#020617] transition hover:bg-[#0EA5E9]"
             >
-              Start 7‑Day Free Trial
-
-            </a>
+              Start 7-Day Free Trial
+            </button>
           </div>
         </header>
 
@@ -300,7 +309,7 @@ export default function LandingPage() {
                 </h1>
 
                 <p className="mt-5 text-sm leading-relaxed text-white/70 sm:text-base">
-                  NJDrive50 is the free NJ driving log app built for New Jersey families. Track NJ
+                  NJDrive50 is the NJ driving log app built for New Jersey families. Track NJ
                   supervised driving hours, separate day and night driving hours, monitor permit
                   milestones, and stay ready for NJMVC Form BA-CSD.
                 </p>
@@ -328,13 +337,14 @@ export default function LandingPage() {
                 </div>
 
                 <div className="mt-7 flex flex-wrap items-center gap-3">
-                  <a
+                  <button
                     id="get-app"
-                    href={APP_DOWNLOAD_URL}
+                    type="button"
+                    onClick={() => setScreen("pricing")}
                     className="rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
                   >
-                    Get NJDrive50
-                  </a>
+                    Start 7-Day Free Trial
+                  </button>
                   <a
                     href="#how-it-works"
                     className="rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/5"
@@ -344,7 +354,8 @@ export default function LandingPage() {
                 </div>
 
                 <p className="mt-3 text-[11px] text-white/40">
-                  NJDrive50 · Android · $4.99 per month after 7‑day free trial or $39.99 per year for New Jersey families
+                  7-day free trial · Cancel anytime for monthly plans · $4.99 per month or $39.99
+                  per year · Cancel annual renewal before the next billing date
                 </p>
               </div>
 
@@ -387,19 +398,16 @@ export default function LandingPage() {
           </section>
 
           <section className="border-b border-white/10 bg-white/[0.02]">
-  <div className="mx-auto max-w-5xl px-4 py-5">
-    <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[11px] font-semibold tracking-[0.14em] text-white/40">
-      <span>✓ NJ MVC 50‑HOUR COMPLIANT</span>
-      <span className="hidden sm:block">·</span>
-      <span>✓ FORM BA‑CSD READY</span>
-      <span className="hidden sm:block">·</span>
-      <span>✓ TRACK NIGHT DRIVING HOURS NJ</span>
-    </div>
-  </div>
-</section>
-
-
-
+            <div className="mx-auto max-w-5xl px-4 py-5">
+              <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-[11px] font-semibold tracking-[0.14em] text-white/40">
+                <span>✓ NJ MVC 50-HOUR COMPLIANT</span>
+                <span className="hidden sm:block">·</span>
+                <span>✓ FORM BA-CSD READY</span>
+                <span className="hidden sm:block">·</span>
+                <span>✓ TRACK NIGHT DRIVING HOURS NJ</span>
+              </div>
+            </div>
+          </section>
 
           <section id="how-it-works" className="border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-16 sm:py-20">
@@ -566,7 +574,7 @@ export default function LandingPage() {
                 </h2>
                 <p className="mx-auto mt-3 max-w-md text-sm text-white/60">
                   Quick answers about NJ supervised driving hours, night driving, BA-CSD, permit
-                  rules, and road test readiness.
+                  rules, road test readiness, and pricing.
                 </p>
               </div>
 
@@ -592,43 +600,42 @@ export default function LandingPage() {
           </section>
 
           <section className="border-b border-white/10">
-  <div className="mx-auto max-w-5xl px-4 py-20 text-center">
-    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
-      Get Started
-    </p>
-    <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
-      Ready to track supervised driving hours in NJ?
-    </h2>
-    <p className="mx-auto mt-4 max-w-md text-sm text-white/60">
-      Download NJDrive50 to track driving hours, monitor night driving progress, and stay
-      ready for the NJ road test and NJMVC Form BA-CSD.
-    </p>
+            <div className="mx-auto max-w-5xl px-4 py-20 text-center">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+                Get Started
+              </p>
+              <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
+                Ready to track supervised driving hours in NJ?
+              </h2>
+              <p className="mx-auto mt-4 max-w-md text-sm text-white/60">
+                Start your 7-day free trial of NJDrive50 to track driving hours, monitor night
+                driving progress, and stay ready for the NJ road test and NJMVC Form BA-CSD.
+              </p>
 
-    <div className="mt-8 flex flex-wrap justify-center gap-4">
-      <a
-        href={APP_DOWNLOAD_URL}
-        className="rounded-xl bg-[#38BDF8] px-8 py-3.5 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
-      >
-        Start 7‑Day Free Trial
-      </a>
-      <a
-        href="#faq"
-        className="rounded-xl border border-white/20 px-8 py-3.5 text-sm font-semibold text-white/80 transition hover:bg-white/5"
-      >
-        Check NJ permit FAQs
-      </a>
-    </div>
+              <div className="mt-8 flex flex-wrap justify-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setScreen("pricing")}
+                  className="rounded-xl bg-[#38BDF8] px-8 py-3.5 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9]"
+                >
+                  Start 7-Day Free Trial
+                </button>
+                <a
+                  href="#faq"
+                  className="rounded-xl border border-white/20 px-8 py-3.5 text-sm font-semibold text-white/80 transition hover:bg-white/5"
+                >
+                  Check NJ permit FAQs
+                </a>
+              </div>
 
-    {/* ✅ Pricing line */}
-    <p className="text-[11px] text-white/50 mt-3">
-      7‑day free trial · Cancel anytime · $4.99 per month or $39.99 per year after trial
-    </p>
-  </div>
-</section>
+              <p className="mt-3 text-[11px] text-white/50">
+                7-day free trial · Cancel anytime for monthly plans · $4.99 per month or $39.99
+                per year after trial · Annual plans can be canceled before renewal
+              </p>
+            </div>
+          </section>
 
-{/* ✅ NJDrive50 Landing Page AI Button */}
-<FloatingAIButton className="fixed bottom-6 right-6 z-50" />
-
+          <FloatingAIButton className="fixed bottom-6 right-6 z-50" />
         </main>
 
         <footer className="border-t border-white/10 bg-black/40">
@@ -645,7 +652,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <p className="mt-2 max-w-[32ch] text-[11px] leading-relaxed text-white/40">
-                The free New Jersey 50-hour driving log app built for parents and teens tracking NJ
+                The New Jersey 50-hour driving log app built for parents and teens tracking NJ
                 supervised driving hours, night driving hours, and BA-CSD readiness.
               </p>
             </div>

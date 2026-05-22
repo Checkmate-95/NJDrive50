@@ -1,17 +1,20 @@
-import { useNavigate } from "react-router-dom"
 import { useState } from "react"
+import { useNav } from "../state/navStore"
 
 type FloatingAIButtonProps = {
   className?: string
 }
 
 export default function FloatingAIButton({ className = "" }: FloatingAIButtonProps) {
-  const navigate = useNavigate()
+  const { screen, setScreen } = useNav()
   const [hovered, setHovered] = useState(false)
+
+  // Hide bubble when AI helper is open
+  if (screen === "aiHelper") return null
 
   return (
     <button
-      onClick={() => navigate("/ask")}  // ✅ takes user to the AI Q&A screen
+      onClick={() => setScreen("aiHelper")}  // ✅ switches to your AI Q&A screen inside NJDrive50
       className={className}
       aria-label="Open AI Helper"
       onMouseEnter={() => setHovered(true)}

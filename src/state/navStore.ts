@@ -45,10 +45,10 @@ function isScreen(value: unknown): value is Screen {
     value === "restartOnboarding" ||
     value === "dataCleared" ||
     value === "practiceTest" ||
-    value === "manageProfile"
+    value === "manageProfile" ||
+    value === "pricing"
   )
 }
-
 
 function normalizeScreen(value: unknown, fallback: Screen = "home"): Screen {
   return isScreen(value) ? value : fallback

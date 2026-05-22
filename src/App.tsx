@@ -26,7 +26,7 @@ const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
 const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPage"))
 const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
-
+const PricingPage = lazy(() => import("./screens/PricingPage"))
 
 import {
   loadReminderPreferences,
@@ -61,6 +61,7 @@ export type Screen =
   | "restartOnboarding"
   | "dataCleared"
   | "practiceTest"
+  | "pricing"
 
 function ScreenLoader() {
   return (
@@ -77,7 +78,6 @@ export default function App() {
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const prevStackLengthRef = useRef(stack.length)
 
-  // Initialize reminders only if onboarding exists
   useEffect(() => {
     const data = loadOnboardingData()
     if (!data?.teenName) return
@@ -86,7 +86,6 @@ export default function App() {
     initializeReminders(prefs)
   }, [])
 
-  // ⭐ Load onboarding data from Capacitor Preferences ⭐
   useEffect(() => {
     const load = async () => {
       const result = await Preferences.get({ key: "onboardingData" })
@@ -94,7 +93,6 @@ export default function App() {
       if (result.value) {
         const data = JSON.parse(result.value)
 
-        // If onboarding is complete → go home
         if (data.teenName) {
           if (screen === "intro" || screen === "onboarding") {
             setScreen("home")
@@ -103,16 +101,14 @@ export default function App() {
         }
       }
 
-      // No saved data → go to intro
       if (screen !== "intro" && screen !== "onboarding") {
         setScreen("intro")
       }
     }
 
     load()
-  }, []) // runs once on startup
+  }, [])
 
-  // Scroll reset logic
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current
     prevStackLengthRef.current = stack.length
@@ -133,10 +129,13 @@ export default function App() {
     switch (screen) {
       case "intro":
         return <HomeIntro setScreen={setScreenCompat} />
+
       case "onboarding":
         return <Onboarding setScreen={setScreenCompat} />
+
       case "home":
         return <HomeDashboard setScreen={setScreenCompat} />
+
       case "active":
         return (
           <ActiveDrive
@@ -144,44 +143,64 @@ export default function App() {
             setCurrentDrive={setCurrentDrive}
           />
         )
+
       case "summary":
         return <DriveSummary setScreen={setScreenCompat} />
+
       case "driveHistory":
         return <DriveHistoryContent />
+
       case "export":
         return <ExportLog setScreen={setScreenCompat} />
+
       case "settings":
         return <Settings />
+
       case "teenDriverRules":
         return <TeenDriverRules />
+
       case "manageProfile":
-  // Redirect Manage Profile to Onboarding
-  return <Onboarding setScreen={setScreenCompat} />
+        return <Onboarding setScreen={setScreenCompat} />
 
       case "reminderSettings":
         return <ReminderSettings />
+
       case "reminderLog":
         return <ReminderLog />
+
       case "milestones":
         return <MilestonesContent />
+
       case "dmv":
         return <DMVBundle />
+
       case "dmvPrep":
         return <DMVAppointmentPrep />
+
       case "share":
         return <ShareLogView />
+
       case "todaysDrive":
         return <TodaysDrive drive={currentDrive} />
+
       case "helpFaq":
         return <HelpFaq />
+
       case "aiHelper":
         return <AIHelperScreen />
+
       case "practiceTest":
         return <PublicPracticeTestPage />
+
       case "restartOnboarding":
         return <RestartOnboarding />
+
       case "dataCleared":
         return <DataCleared />
+
+      case "pricing":
+        return <PricingPage />
+
       default: {
         if (import.meta.env.DEV) {
           return (
@@ -193,7 +212,7 @@ export default function App() {
                 Add a case for this screen in App.tsx renderScreen().
               </p>
               <button
-                className="px-4 py-2 bg-[#08194A] text-white rounded-xl"
+                className="rounded-xl bg-[#08194A] px-4 py-2 text-white"
                 onClick={() => setScreen("home")}
               >
                 Go Home
@@ -201,6 +220,7 @@ export default function App() {
             </div>
           )
         }
+
         setScreen("home")
         return null
       }

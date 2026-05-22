@@ -1,27 +1,26 @@
+import { useNavigate } from "react-router-dom"
 import { useState } from "react"
-import { useNav } from "../state/navStore"
+
 
 type FloatingAIButtonProps = {
   className?: string
 }
 
 export default function FloatingAIButton({ className = "" }: FloatingAIButtonProps) {
-  // ✅ Only grab what you actually use
-  const { screen } = useNav()
+  const navigate = useNavigate()
   const [hovered, setHovered] = useState(false)
-
-  if (screen === "aiHelper") return null
 
   return (
     <button
-      onClick={() => {
-        window.location.hash = "#faq"  // ✅ scrolls to FAQ/Q&A section
-      }}
+      onClick={() => navigate("/ask")}  // ✅ opens your Ask Gemini Q&A page
       className={className}
       aria-label="Open AI Helper"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
+        position: "fixed",
+        bottom: 24,
+        right: 24,
         width: 64,
         height: 64,
         borderRadius: "50%",
@@ -33,6 +32,7 @@ export default function FloatingAIButton({ className = "" }: FloatingAIButtonPro
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        zIndex: 9999,
         transition: "transform 0.2s ease, box-shadow 0.2s ease",
         transform: hovered ? "scale(1.08)" : "scale(1)",
         boxShadow: hovered

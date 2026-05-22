@@ -101,12 +101,12 @@ export default function App() {
         const data = JSON.parse(result.value)
 
         if (data?.teenName) {
-          if (currentScreen === "intro" || currentScreen === "onboarding") {
+           if (currentScreen === "intro" || currentScreen === "onboarding") {
             setScreen("home")
-          }
-          return
+           }
+        // do NOT return here — let pricing be valid
         }
-      }
+       }
 
       if (
         currentScreen !== "landing" &&

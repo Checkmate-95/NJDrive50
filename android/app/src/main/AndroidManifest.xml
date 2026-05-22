@@ -6,7 +6,6 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- ✅ REMOVED: ACCESS_BACKGROUND_LOCATION — not needed, eliminates Play Store rejection -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -19,6 +18,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <!-- Android 14+ requirement for location foreground service usage -->
+        <meta-data
+            android:name="android.app.PROPERTY_FOREGROUND_SERVICE_LOCATION"
+            android:value="true" />
 
         <!-- Main Capacitor activity -->
         <activity
@@ -33,8 +37,6 @@
             </intent-filter>
         </activity>
 
-
-
         <!-- FileProvider for downloads and exports -->
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -48,3 +50,4 @@
 
     </application>
 </manifest>
+

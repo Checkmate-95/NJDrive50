@@ -80,6 +80,15 @@ export default function App() {
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const prevStackLengthRef = useRef(stack.length)
 
+  // ⭐ Ensure landing page shows first if Zustand hasn't hydrated yet
+  useEffect(() => {
+    const nav = useNav.getState()
+    if (nav.screen === "home" || !nav.screen) {
+      nav.setScreen("landing")
+    }
+  }, [])
+
+  // ⭐ Initialize reminders only if onboarding exists
   useEffect(() => {
     const data = loadOnboardingData()
     if (!data?.teenName) return
@@ -88,54 +97,53 @@ export default function App() {
     initializeReminders(prefs)
   }, [])
 
+  // ⭐ Navigation guard for onboarding and intro flow
   useEffect(() => {
-  let cancelled = false
+    let cancelled = false
 
-  const load = async () => {
-    // ⭐ Prevent redirect before Zustand finishes hydrating
-    if (!useNav.persist.hasHydrated()) return
+    const load = async () => {
+      // Prevent redirect before Zustand finishes hydrating
+      if (!useNav.persist.hasHydrated()) return
 
-    const result = await Preferences.get({ key: "onboardingData" })
-    if (cancelled) return
+      const result = await Preferences.get({ key: "onboardingData" })
+      if (cancelled) return
 
-    const currentScreen = useNav.getState().screen
+      const currentScreen = useNav.getState().screen
+      let hasOnboardingData = false
 
-    let hasOnboardingData = false
+      if (result.value) {
+        try {
+          const data = JSON.parse(result.value)
+          hasOnboardingData = !!data?.teenName
+        } catch {
+          hasOnboardingData = false
+        }
+      }
 
-    if (result.value) {
-      try {
-        const data = JSON.parse(result.value)
-        hasOnboardingData = !!data?.teenName
-      } catch {
-        hasOnboardingData = false
+      if (hasOnboardingData) {
+        if (currentScreen === "intro" || currentScreen === "onboarding") {
+          setScreen("home")
+        }
+        return
+      }
+
+      if (
+        currentScreen !== "landing" &&
+        currentScreen !== "pricing" &&
+        currentScreen !== "intro" &&
+        currentScreen !== "onboarding"
+      ) {
+        setScreen("intro")
       }
     }
 
-    if (hasOnboardingData) {
-      if (currentScreen === "intro" || currentScreen === "onboarding") {
-        setScreen("home")
-      }
-      return
+    load()
+    return () => {
+      cancelled = true
     }
+  }, [setScreen])
 
-    if (
-      currentScreen !== "landing" &&
-      currentScreen !== "pricing" &&
-      currentScreen !== "intro" &&
-      currentScreen !== "onboarding"
-    ) {
-      setScreen("intro")
-    }
-  }
-
-  load()
-
-  return () => {
-    cancelled = true
-  }
-}, [setScreen])
-
-
+  // ⭐ Scroll reset on navigation
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current
     prevStackLengthRef.current = stack.length
@@ -156,81 +164,52 @@ export default function App() {
     switch (screen) {
       case "landing":
         return <LandingPage />
-
       case "intro":
         return <HomeIntro setScreen={setScreenCompat} />
-
       case "onboarding":
         return <Onboarding setScreen={setScreenCompat} />
-
       case "home":
         return <HomeDashboard setScreen={setScreenCompat} />
-
       case "active":
-        return (
-          <ActiveDrive
-            setScreen={setScreenCompat}
-            setCurrentDrive={setCurrentDrive}
-          />
-        )
-
+        return <ActiveDrive setScreen={setScreenCompat} setCurrentDrive={setCurrentDrive} />
       case "summary":
         return <DriveSummary setScreen={setScreenCompat} />
-
       case "driveHistory":
         return <DriveHistoryContent />
-
       case "export":
         return <ExportLog setScreen={setScreenCompat} />
-
       case "settings":
         return <Settings />
-
       case "teenDriverRules":
         return <TeenDriverRules />
-
       case "manageProfile":
         return <Onboarding setScreen={setScreenCompat} />
-
       case "reminderSettings":
         return <ReminderSettings />
-
       case "reminderLog":
         return <ReminderLog />
-
       case "milestones":
         return <MilestonesContent />
-
       case "dmv":
         return <DMVBundle />
-
       case "dmvPrep":
         return <DMVAppointmentPrep />
-
       case "share":
         return <ShareLogView />
-
       case "todaysDrive":
         return <TodaysDrive drive={currentDrive} />
-
       case "helpFaq":
         return <HelpFaq />
-
       case "aiHelper":
         return <AIHelperScreen />
-
       case "practiceTest":
         return <PublicPracticeTestPage />
-
       case "restartOnboarding":
         return <RestartOnboarding />
-
       case "dataCleared":
         return <DataCleared />
-
       case "pricing":
         return <PricingPage />
-
       default: {
         if (import.meta.env.DEV) {
           return (

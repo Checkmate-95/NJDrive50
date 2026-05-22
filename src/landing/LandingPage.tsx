@@ -301,7 +301,7 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={() => setScreen("pricing")}
-              aria-label="View NJDrive50 pricing and start free trial"
+              aria-label="View pricing and start your 7-day free trial"
               className="rounded-xl bg-[#38BDF8] px-4 py-2 text-xs font-extrabold text-[#020617] transition hover:bg-[#0EA5E9]"
             >
               Start 7-Day Free Trial

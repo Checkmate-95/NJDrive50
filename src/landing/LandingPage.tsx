@@ -279,14 +279,7 @@ export default function LandingPage() {
             <div className="relative mx-auto flex max-w-5xl flex-col gap-10 px-4 py-16 md:flex-row md:items-center md:py-24">
               <div className="max-w-xl">
 
-                {/* Logo — hero size */}
-                <div className="mb-8 flex">
-                  <img
-                    src="/njdrive50Logo5.png"
-                    alt="NJDrive50 Logo"
-                    className="h-auto w-32 drop-shadow-2xl sm:w-40"
-                  />
-                </div>
+                
 
                 {/* Badge */}
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-1">
@@ -574,7 +567,7 @@ export default function LandingPage() {
             <div>
               <div className="flex items-center gap-2">
                 <img
-                  src="/njdrive50Logo5.png"
+                  src="//njdrive50Logo6.png"
                   alt="NJDrive50 Logo"
                   className="h-7 w-7 rounded-lg object-contain"
                 />

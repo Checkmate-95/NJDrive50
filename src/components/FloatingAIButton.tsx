@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom"
 import { useState } from "react"
 
-
 type FloatingAIButtonProps = {
   className?: string
 }
@@ -12,7 +11,7 @@ export default function FloatingAIButton({ className = "" }: FloatingAIButtonPro
 
   return (
     <button
-      onClick={() => navigate("/ask")}  // ✅ opens your Ask Gemini Q&A page
+      onClick={() => navigate("/ask")}  // ✅ takes user to the AI Q&A screen
       className={className}
       aria-label="Open AI Helper"
       onMouseEnter={() => setHovered(true)}

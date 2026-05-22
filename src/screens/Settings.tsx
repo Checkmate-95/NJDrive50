@@ -196,6 +196,27 @@ export default function Settings() {
           </section>
 
           <SettingsCard
+  eyebrow="AI Assistant"
+  title="NJDrive50 Q&A"
+  description="Ask questions about permit rules, night hours, logs, or anything related to your driving journey."
+>
+  <div className="grid gap-3 sm:grid-cols-2">
+    <ActionButton
+      label="Open AI Q&A"
+      tone="primary"
+      onClick={() => setScreen("aiHelper")}
+    />
+    <ActionButton
+      label="FAQ Mode"
+      tone="secondary"
+      onClick={() => setScreen("helpFaq")}
+    />
+  </div>
+</SettingsCard>
+
+
+
+          <SettingsCard
             eyebrow="Internal"
             title="Reset and developer tools"
             description="Temporary builder/testing actions. Keep this section isolated at the bottom until removed from production."

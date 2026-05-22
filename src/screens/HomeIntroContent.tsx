@@ -81,7 +81,7 @@ export default function HomeIntroContent({
           onClick={() => setScreen("onboarding")}
           className="mt-6 min-h-[48px] w-full rounded-xl bg-[#08194A] px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
         >
-          Get Started
+          Set Up My Driver Profile
         </button>
       </section>
     </div>

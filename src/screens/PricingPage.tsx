@@ -455,9 +455,9 @@ export default function PricingPage() {
                 </button>
 
                 <p className="mt-3 text-xs leading-5 text-white/56">
-                  7-day free trial. Cancel anytime for monthly plans, or cancel annual renewal
-                  before the next billing date.
+                  7‑day free trial. Cancel anytime for monthly plans, or cancel annual renewal before your next billing date.
                 </p>
+
               </div>
             </aside>
           </section>

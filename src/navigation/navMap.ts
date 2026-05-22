@@ -8,6 +8,16 @@ type NavDefinition = {
 
 // Explicit annotation prevents TS inference bugs
 export const NAV: NavDefinition = {
+  landing: {
+    continue: "intro",
+    pricing: "pricing",
+  },
+
+  pricing: {
+    continue: "intro",
+    landing: "landing",
+  },
+
   intro: {
     continue: "onboarding",
   },
@@ -80,7 +90,6 @@ export const NAV: NavDefinition = {
   },
 
   reminderSettings: {},
-
   reminderLog: {},
 
   manageProfile: {
@@ -89,7 +98,6 @@ export const NAV: NavDefinition = {
   },
 
   restartOnboarding: {},
-
   dataCleared: {},
 
   dmv: {
@@ -99,13 +107,9 @@ export const NAV: NavDefinition = {
   dmvPrep: {},
 
   share: {},
-
   helpFaq: {},
-
   aiHelper: {},
-
   teenDriverRules: {},
-
   practiceTest: {},
 }
 

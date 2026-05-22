@@ -5,6 +5,15 @@ import { useNav } from "../state/navStore"
 export default function LandingPage() {
   const { setScreen } = useNav()
 
+  const PAGE_URL = "https://njdrive50.com"
+  const OG_IMAGE_URL = "https://njdrive50.com/og-image.png"
+  const PRICING_PAGE_PATH = "/pricing"
+
+  const metaTitle =
+    "NJDrive50 | New Jersey 50-Hour Driving Log App for NJ Supervised Driving Hours"
+  const metaDescription =
+    "NJDrive50 is a New Jersey driving log app for parents and teens. Track 50 supervised driving hours, 10 night driving hours, permit milestones, and NJMVC Form BA-CSD progress with a 7-day free trial."
+
   const faqs = [
     {
       question: "How many supervised driving hours are required in NJ?",
@@ -24,12 +33,12 @@ export default function LandingPage() {
     {
       question: "Do I have to submit my driving log to the NJ MVC?",
       answer:
-        "No. The NJ MVC does not require you to submit your practice driving log. However, you must bring a signed Certification of Supervised Driving (NJMVC Form BA-CSD) when applying for your probationary license. NJDrive50 helps you keep an accurate New Jersey 50-hour driving log so that certification is easier to complete.",
+        "No. What New Jersey requires at licensure is a signed Certification of Supervised Driving (NJMVC Form BA-CSD), not submission of your app log itself. NJDrive50 helps you maintain an accurate New Jersey 50-hour driving record so completing that certification is easier.",
     },
     {
-      question: "How long is a New Jersey learner permit valid?",
+      question: "How long do I have to wait before the NJ road test?",
       answer:
-        "A New Jersey learner's permit is generally valid for 2 years from the issue date. Drivers under 21 must also wait at least 6 months from permit issuance before taking the NJ road test and applying for a probationary license.",
+        "Drivers under 21 must generally wait at least 6 months from permit issuance before taking the NJ road test and applying for a probationary license. NJDrive50 helps families track the permit issue date, road test eligibility timeline, and related milestones.",
     },
     {
       question: "How do I track driving hours in NJ?",
@@ -65,13 +74,13 @@ export default function LandingPage() {
       icon: "📋",
       title: "See permit and road test dates",
       description:
-        "Track your permit issue date, road test eligibility date, and permit expiration so you can stay on top of New Jersey learner permit deadlines.",
+        "Track your permit issue date, road test eligibility date, and permit milestones so you can stay on top of New Jersey learner permit deadlines.",
     },
     {
       icon: "🔔",
       title: "Get reminders before you fall behind",
       description:
-        "Receive reminders to log drives, alerts before permit expiration, and milestone nudges so your family stays on pace for the NJ road test.",
+        "Receive reminders to log drives, alerts before important milestones, and nudges so your family stays on pace for the NJ road test.",
     },
     {
       icon: "🏆",
@@ -83,7 +92,7 @@ export default function LandingPage() {
       icon: "📄",
       title: "Stay ready for NJMVC Form BA-CSD",
       description:
-        "Generate a clean supervised driving summary to make the Certification of Supervised Driving faster and less stressful to complete.",
+        "Keep a clean supervised driving record that makes the Certification of Supervised Driving faster and less stressful to complete.",
     },
   ]
 
@@ -92,7 +101,7 @@ export default function LandingPage() {
       step: "01",
       title: "Create your teen driver's profile",
       description:
-        "Enter the teen driver's name, birthday, permit issue date, and permit number. NJDrive50 instantly calculates the 6-month waiting period, road test eligibility date, and permit expiration.",
+        "Enter the teen driver's name, birthday, permit issue date, and permit number. NJDrive50 instantly helps organize the 6-month waiting period, road test eligibility date, and key permit milestones.",
     },
     {
       step: "02",
@@ -110,18 +119,9 @@ export default function LandingPage() {
       step: "04",
       title: "Prepare for the NJ road test",
       description:
-        "Once you reach 50 hours, including 10 hours at night, NJDrive50 helps you prepare a clean summary for NJMVC Form BA-CSD so you can move toward a probationary license with confidence.",
+        "Once you reach 50 hours, including 10 hours at night, NJDrive50 helps you keep a clean record for NJMVC Form BA-CSD so you can move toward a probationary license with confidence.",
     },
   ]
-
-  const PAGE_URL = "https://njdrive50.com"
-  const OG_IMAGE_URL = "https://njdrive50.com/og-image.png"
-  const PRICING_PAGE_PATH = "/pricing"
-
-  const metaTitle =
-    "NJDrive50 | New Jersey 50-Hour Driving Log App for NJ Supervised Driving Hours"
-  const metaDescription =
-    "NJDrive50 is a New Jersey driving log app for parents and teens. Track 50 supervised driving hours, 10 night driving hours, permit milestones, and NJMVC Form BA-CSD progress with a 7-day free trial."
 
   const softwareAppSchema = {
     "@context": "https://schema.org",
@@ -136,19 +136,26 @@ export default function LandingPage() {
     image: OG_IMAGE_URL,
     screenshot: OG_IMAGE_URL,
     installUrl: `${PAGE_URL}${PRICING_PAGE_PATH}`,
-    offers: {
-      "@type": "Offer",
-      price: "4.99",
-      priceCurrency: "USD",
-      availability: "https://schema.org/InStock",
-      url: `${PAGE_URL}${PRICING_PAGE_PATH}`,
-      category: "Subscription",
-      eligibleTransactionVolume: {
-        "@type": "PriceSpecification",
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Monthly Plan",
         price: "4.99",
         priceCurrency: "USD",
+        availability: "https://schema.org/InStock",
+        url: `${PAGE_URL}${PRICING_PAGE_PATH}`,
+        category: "Subscription",
       },
-    },
+      {
+        "@type": "Offer",
+        name: "Annual Plan",
+        price: "39.99",
+        priceCurrency: "USD",
+        availability: "https://schema.org/InStock",
+        url: `${PAGE_URL}${PRICING_PAGE_PATH}`,
+        category: "Subscription",
+      },
+    ],
     areaServed: {
       "@type": "State",
       name: "New Jersey",
@@ -181,6 +188,19 @@ export default function LandingPage() {
         text: answer,
       },
     })),
+  }
+
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${PAGE_URL}#website`,
+    name: "NJDrive50",
+    url: PAGE_URL,
+    description: metaDescription,
+    inLanguage: "en-US",
+    publisher: {
+      "@id": `${PAGE_URL}#organization`,
+    },
   }
 
   const webPageSchema = {
@@ -239,6 +259,7 @@ export default function LandingPage() {
 
         <script type="application/ld+json">{JSON.stringify(softwareAppSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(faqPageSchema)}</script>
+        <script type="application/ld+json">{JSON.stringify(websiteSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(webPageSchema)}</script>
       </Helmet>
 
@@ -504,7 +525,7 @@ export default function LandingPage() {
                       <h3 className="text-sm font-bold text-white">What NJDrive50 tracks</h3>
                       <p className="mt-2 text-xs leading-relaxed text-white/60">
                         Total supervised driving hours, night driving hours, permit issue date,
-                        permit expiration, road test eligibility, and BA-CSD preparation.
+                        road test eligibility timing, and BA-CSD preparation.
                       </p>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">

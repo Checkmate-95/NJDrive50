@@ -27,18 +27,13 @@ export default function AppShell({
     ].join(" ")
 
   if (chromeHidden) {
-    return (
-      <div className="relative min-h-dvh w-full overflow-x-hidden bg-[#08194A]">
-        {children}
+  return (
+    <div className="relative min-h-dvh w-full overflow-x-hidden bg-[#08194A]">
+      {children}
+    </div>
+  )
+}
 
-        <div className="pointer-events-none fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 sm:right-6">
-          <div className="pointer-events-auto">
-            <FloatingAIButton />
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="relative flex min-h-dvh w-full flex-col overflow-hidden bg-[#08194A]">

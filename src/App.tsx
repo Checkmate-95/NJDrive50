@@ -89,41 +89,48 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    let cancelled = false
+  let cancelled = false
 
-    const load = async () => {
-      const result = await Preferences.get({ key: "onboardingData" })
-      if (cancelled) return
+  const load = async () => {
+    const result = await Preferences.get({ key: "onboardingData" })
+    if (cancelled) return
 
-      const currentScreen = useNav.getState().screen
+    const currentScreen = useNav.getState().screen
 
-      if (result.value) {
+    let hasOnboardingData = false
+
+    if (result.value) {
+      try {
         const data = JSON.parse(result.value)
-
-        if (data?.teenName) {
-           if (currentScreen === "intro" || currentScreen === "onboarding") {
-            setScreen("home")
-           }
-        // do NOT return here — let pricing be valid
-        }
-       }
-
-      if (
-        currentScreen !== "landing" &&
-        currentScreen !== "pricing" &&
-        currentScreen !== "intro" &&
-        currentScreen !== "onboarding"
-      ) {
-        setScreen("intro")
+        hasOnboardingData = !!data?.teenName
+      } catch {
+        hasOnboardingData = false
       }
     }
 
-    load()
-
-    return () => {
-      cancelled = true
+    if (hasOnboardingData) {
+      if (currentScreen === "intro" || currentScreen === "onboarding") {
+        setScreen("home")
+      }
+      return
     }
-  }, [setScreen])
+
+    if (
+      currentScreen !== "landing" &&
+      currentScreen !== "pricing" &&
+      currentScreen !== "intro" &&
+      currentScreen !== "onboarding"
+    ) {
+      setScreen("intro")
+    }
+  }
+
+  load()
+
+  return () => {
+    cancelled = true
+  }
+}, [setScreen])
 
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current

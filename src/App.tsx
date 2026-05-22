@@ -27,6 +27,7 @@ const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPa
 const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
 const PricingPage = lazy(() => import("./screens/PricingPage"))
+const LandingPage = lazy(() => import("./landing/LandingPage"))
 
 import {
   loadReminderPreferences,
@@ -39,6 +40,7 @@ import type { DriveEntry } from "./state/driveStore"
 import { MapProvider } from "./components/map/MapProvider"
 
 export type Screen =
+  | "landing"
   | "intro"
   | "onboarding"
   | "home"
@@ -87,27 +89,41 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+
     const load = async () => {
       const result = await Preferences.get({ key: "onboardingData" })
+      if (cancelled) return
+
+      const currentScreen = useNav.getState().screen
 
       if (result.value) {
         const data = JSON.parse(result.value)
 
-        if (data.teenName) {
-          if (screen === "intro" || screen === "onboarding") {
+        if (data?.teenName) {
+          if (currentScreen === "intro" || currentScreen === "onboarding") {
             setScreen("home")
           }
           return
         }
       }
 
-      if (screen !== "intro" && screen !== "onboarding") {
+      if (
+        currentScreen !== "landing" &&
+        currentScreen !== "pricing" &&
+        currentScreen !== "intro" &&
+        currentScreen !== "onboarding"
+      ) {
         setScreen("intro")
       }
     }
 
     load()
-  }, [])
+
+    return () => {
+      cancelled = true
+    }
+  }, [setScreen])
 
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current
@@ -127,6 +143,9 @@ export default function App() {
 
   const renderScreen = () => {
     switch (screen) {
+      case "landing":
+        return <LandingPage />
+
       case "intro":
         return <HomeIntro setScreen={setScreenCompat} />
 
@@ -204,7 +223,7 @@ export default function App() {
       default: {
         if (import.meta.env.DEV) {
           return (
-            <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
+            <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
               <p className="text-2xl font-bold text-red-600">
                 Unknown screen: &quot;{screen}&quot;
               </p>

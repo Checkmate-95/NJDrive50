@@ -1,5 +1,7 @@
 import { Helmet } from "react-helmet-async"
 
+
+
 export default function LandingPage() {
   const faqs = [
     {
@@ -160,6 +162,8 @@ export default function LandingPage() {
           }
         `}</script>
 
+       
+
         {/* FAQPage Schema */}
         <script type="application/ld+json">{`
           {
@@ -226,10 +230,12 @@ export default function LandingPage() {
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
             <div className="flex items-center gap-3">
               <img
-                src="/njdrive50Logo5.png"
-                alt="NJDrive50 Logo"
-                className="h-9 w-9 rounded-xl object-contain"
-              />
+  src="/njdrive50Logo6.png"
+  alt="NJDrive50 Logo"
+  className="h-7 w-auto object-contain"
+/>
+
+
               <div className="flex flex-col leading-tight">
                 <span className="text-sm font-semibold tracking-[0.18em] text-[#38BDF8]">
                   NJDRIVE50

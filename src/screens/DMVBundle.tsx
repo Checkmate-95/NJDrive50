@@ -84,13 +84,11 @@ async function savePDF(doc: jsPDF, filename: string): Promise<void> {
       })
     } catch (err) {
       console.error("Native PDF save failed, falling back to blob URL:", err)
-      // Fallback: open as blob URL inside the WebView
       const blob = doc.output("blob")
       const url = URL.createObjectURL(blob)
       window.open(url, "_blank")
     }
   } else {
-    // Desktop / browser
     doc.save(filename)
   }
 }
@@ -110,11 +108,14 @@ function BundleCard({
     "mt-4 w-full rounded-xl bg-[#08194A] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
 
   return (
-    <div className="rounded-2xl border border-[#08194A]/10 bg-white p-5 shadow-[0_10px_28px_rgba(0,0,0,0.06)]">
-      <h3 className="text-lg font-extrabold leading-tight text-[#08194A]">
-        {title}
-      </h3>
-      <p className="mt-2 text-sm leading-6 text-[#08194A]/70">{description}</p>
+    <div className="flex h-full flex-col rounded-2xl border border-[#08194A]/10 bg-white p-5 shadow-[0_10px_28px_rgba(0,0,0,0.06)]">
+      <div className="flex-1">
+        <h3 className="text-lg font-extrabold leading-tight text-[#08194A]">
+          {title}
+        </h3>
+        <p className="mt-2 text-sm leading-6 text-[#08194A]/70">{description}</p>
+      </div>
+
       <button type="button" onClick={onClick} className={blueButtonClasses}>
         {actionLabel}
       </button>
@@ -189,8 +190,6 @@ export default function DMVBundle() {
 
     return 26
   }
-
-  // ─── PDF generators (all async for Android/iOS native support) ───────────
 
   const generateDrivingLogPDF = async () => {
     const doc = new jsPDF()
@@ -506,8 +505,6 @@ export default function DMVBundle() {
     await savePDF(doc, "6_Point_ID_Checklist_NJDrive50.pdf")
   }
 
-  // ─── Combo generators ────────────────────────────────────────────────────
-
   const downloadOfficialBACSD = () => openExternal(OFFICIAL_BACSD_URL)
   const openSixPointGuide = () => openExternal(OFFICIAL_6_POINT_URL)
   const openRealIdSelector = () => openExternal(OFFICIAL_REAL_ID_URL)
@@ -526,8 +523,6 @@ export default function DMVBundle() {
     downloadOfficialBACSD()
   }
 
-  // ─── Share link ──────────────────────────────────────────────────────────
-
   const generateShareLink = async () => {
     const payload = {
       teenName: sharedFields.teenName,
@@ -541,7 +536,6 @@ export default function DMVBundle() {
       const url = `${window.location.origin}/share#${encoded}`
 
       if (Capacitor.isNativePlatform()) {
-        // Android/iOS: use native share sheet
         await Share.share({
           title: "NJDrive50 Records",
           text: "Here are my supervised driving records from NJDrive50.",
@@ -549,7 +543,6 @@ export default function DMVBundle() {
           dialogTitle: "Share your records",
         })
       } else {
-        // Desktop/browser: copy to clipboard
         try {
           await navigator.clipboard.writeText(url)
           alert("Share link copied to clipboard!")
@@ -563,23 +556,20 @@ export default function DMVBundle() {
     }
   }
 
-  // ─── UI ──────────────────────────────────────────────────────────────────
-
   const solidBlueButton =
     "inline-flex items-center rounded-xl bg-[#08194A] px-4 py-2 text-sm font-bold text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
 
   const complianceLabel = isCompliant
     ? "Ready for BA-CSD review"
     : totalHours >= REQUIRED_TOTAL_HOURS && nightHours < REQUIRED_NIGHT_HOURS
-    ? `${remainingNightHours.toFixed(1)} night hours still needed`
-    : `${remainingHours.toFixed(1)} total hrs / ${remainingNightHours.toFixed(
-        1
-      )} night hrs remaining`
+      ? `${remainingNightHours.toFixed(1)} night hours still needed`
+      : `${remainingHours.toFixed(1)} total hrs / ${remainingNightHours.toFixed(
+          1
+        )} night hrs remaining`
 
   return (
     <main className="min-h-screen bg-[#F7F9FC] px-4 py-6 text-[#08194A] sm:px-6">
       <div className="mx-auto w-full max-w-4xl space-y-6">
-
         {/* ── Header ── */}
         <header className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -714,7 +704,7 @@ export default function DMVBundle() {
 
         {/* ── Paperwork Center ── */}
         <section className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#08194A]/50">
                 Paperwork Center
@@ -723,50 +713,92 @@ export default function DMVBundle() {
                 Download support forms and the complete packet
               </h2>
             </div>
-            <div className="text-sm text-[#08194A]/65">
+            <div className="max-w-md text-sm leading-6 text-[#08194A]/65">
               Generated from your saved NJDrive50 records where applicable.
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <BundleCard
-              title="Permit Packet"
-              description="Download the road test checklist, 6-point ID checklist, and MVC document-prep packet together."
-              actionLabel="Download Permit Packet"
-              onClick={generatePermitPacket}
-            />
-            <BundleCard
-              title="Driving Log PDF"
-              description="A saved-session reference log with totals and drive details. Helpful for records, but not a replacement for the official BA-CSD."
-              actionLabel="Download Driving Log"
-              onClick={generateDrivingLogPDF}
-            />
-            <BundleCard
-              title="Parent/Guardian Summary Sheet"
-              description="Create a printable support sheet summarizing hours before completing the official MVC certification form."
-              actionLabel="Generate Summary Sheet"
-              onClick={generateParentSummarySheet}
-            />
-            <BundleCard
-              title="Road Test Readiness Checklist"
-              description="Review vehicle readiness, required documents, and key skills before the road test appointment."
-              actionLabel="Generate Checklist"
-              onClick={generateRoadTestChecklist}
-            />
-            <BundleCard
-              title="What to Bring to MVC"
-              description="A parent-friendly overview of documents and links to verify requirements before the MVC visit."
-              actionLabel="Generate Packet"
-              onClick={generateMVCWhatToBring}
-            />
-            <BundleCard
-              title="6-Point ID Checklist"
-              description="Generate a planning checklist for ID and address prep before your MVC appointment."
-              actionLabel="Generate Checklist"
-              onClick={generateSixPointID}
-            />
+          <div className="mt-6 space-y-6">
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-[#08194A]" />
+                <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-[#08194A]/70">
+                  Complete packets
+                </h3>
+              </div>
 
-            <div className="lg:col-span-3">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <BundleCard
+                  title="Permit Packet"
+                  description="Download the road test checklist, 6-point ID checklist, and MVC document-prep packet together."
+                  actionLabel="Download Permit Packet"
+                  onClick={generatePermitPacket}
+                />
+                <BundleCard
+                  title="Driving Log PDF"
+                  description="A saved-session reference log with totals and drive details. Helpful for records, but not a replacement for the official BA-CSD."
+                  actionLabel="Download Driving Log"
+                  onClick={generateDrivingLogPDF}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-[#F9C80E]" />
+                <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-[#08194A]/70">
+                  Support forms
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <BundleCard
+                  title="Parent/Guardian Summary Sheet"
+                  description="Create a printable support sheet summarizing hours before completing the official MVC certification form."
+                  actionLabel="Generate Summary Sheet"
+                  onClick={generateParentSummarySheet}
+                />
+                <BundleCard
+                  title="What to Bring to MVC"
+                  description="A parent-friendly overview of documents and links to verify requirements before the MVC visit."
+                  actionLabel="Generate Packet"
+                  onClick={generateMVCWhatToBring}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-[#38BDF8]" />
+                <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-[#08194A]/70">
+                  Checklists
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <BundleCard
+                  title="Road Test Readiness Checklist"
+                  description="Review vehicle readiness, required documents, and key skills before the road test appointment."
+                  actionLabel="Generate Checklist"
+                  onClick={generateRoadTestChecklist}
+                />
+                <BundleCard
+                  title="6-Point ID Checklist"
+                  description="Generate a planning checklist for ID and address prep before your MVC appointment."
+                  actionLabel="Generate Checklist"
+                  onClick={generateSixPointID}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-dashed border-[#08194A]/12 bg-[#F7F9FC] p-4 sm:p-5">
+              <div className="mb-3 flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-[#16A34A]" />
+                <h3 className="text-sm font-extrabold uppercase tracking-[0.14em] text-[#08194A]/70">
+                  Sharing
+                </h3>
+              </div>
+
               <BundleCard
                 title="Share Records with Instructor or Reviewer"
                 description="Generate a read-only share link you can send to an instructor or approved reviewer. On mobile, opens the native share sheet."
@@ -784,14 +816,16 @@ export default function DMVBundle() {
           </h2>
 
           <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-5">
-              <h3 className="text-lg font-extrabold text-[#08194A]">
-                DMV Driving Test Appointment Prep
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-[#08194A]/70">
-                Review required documents, vehicle checks, and test-day steps
-                before the MVC appointment.
-              </p>
+            <div className="flex h-full flex-col rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-5">
+              <div className="flex-1">
+                <h3 className="text-lg font-extrabold text-[#08194A]">
+                  DMV Driving Test Appointment Prep
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-[#08194A]/70">
+                  Review required documents, vehicle checks, and test-day steps
+                  before the MVC appointment.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setScreen("dmvPrep")}
@@ -802,13 +836,15 @@ export default function DMVBundle() {
             </div>
 
             {SHOW_PRACTICE_TEST ? (
-              <div className="rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-5">
-                <h3 className="text-lg font-extrabold text-[#08194A]">
-                  Practice Test
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-[#08194A]/70">
-                  Future feature placeholder for NJ permit practice testing.
-                </p>
+              <div className="flex h-full flex-col rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-5">
+                <div className="flex-1">
+                  <h3 className="text-lg font-extrabold text-[#08194A]">
+                    Practice Test
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[#08194A]/70">
+                    Future feature placeholder for NJ permit practice testing.
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setScreen("practiceTest")}
@@ -830,7 +866,6 @@ export default function DMVBundle() {
             )}
           </div>
         </section>
-
       </div>
     </main>
   )

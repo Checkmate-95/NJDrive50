@@ -1,5 +1,4 @@
 import { Helmet } from "react-helmet-async"
-import FloatingAIButton from "../components/FloatingAIButton"
 import { useNav } from "../state/navStore"
 
 export default function LandingPage() {
@@ -237,9 +236,7 @@ export default function LandingPage() {
         />
         <meta name="robots" content="index, follow, max-image-preview:large" />
         <meta name="author" content="NJDrive50" />
-
         <link rel="canonical" href={PAGE_URL} />
-
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="NJDrive50" />
         <meta property="og:url" content={PAGE_URL} />
@@ -250,13 +247,11 @@ export default function LandingPage() {
         <meta property="og:locale" content="en_US" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={metaTitle} />
         <meta name="twitter:description" content={metaDescription} />
         <meta name="twitter:image" content={OG_IMAGE_URL} />
         <meta name="twitter:image:alt" content="NJDrive50 New Jersey driving log app" />
-
         <script type="application/ld+json">{JSON.stringify(softwareAppSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(faqPageSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(websiteSchema)}</script>
@@ -559,8 +554,8 @@ export default function LandingPage() {
                   What do you need before the NJ road test?
                 </h2>
                 <p className="mx-auto mt-3 max-w-lg text-sm text-white/60">
-                  Use this quick NJ teen driver checklist to stay on track with learner permit rules
-                  and probationary license requirements.
+                  Use this quick NJ teen driver checklist to stay on track with learner permit
+                  rules and probationary license requirements.
                 </p>
               </div>
 
@@ -655,8 +650,6 @@ export default function LandingPage() {
               </p>
             </div>
           </section>
-
-          <FloatingAIButton className="fixed bottom-6 right-6 z-50" />
         </main>
 
         <footer className="border-t border-white/10 bg-black/40">

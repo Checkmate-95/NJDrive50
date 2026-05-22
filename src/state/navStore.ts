@@ -79,7 +79,8 @@ function normalizePersistedNavState(
 export const useNav = create<NavState>()(
   persist(
     (set, get) => ({
-      screen: "home",
+      // ⭐ DEFAULT SCREEN UPDATED HERE
+      screen: "landing",
       stack: [],
       previousScreen: null,
 

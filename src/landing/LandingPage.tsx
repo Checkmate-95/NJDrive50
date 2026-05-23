@@ -384,7 +384,7 @@ export default function LandingPage() {
   <div className="w-full max-w-[180px] sm:max-w-[210px] md:max-w-[230px] lg:max-w-[250px]">
     <div className="relative w-full h-auto min-h-[420px] sm:min-h-[480px] md:min-h-[520px]">
       <div className="absolute inset-0 rounded-[34px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.7)] sm:rounded-[38px] md:shadow-[0_40px_100px_rgba(15,23,42,0.9)]">
-        <div className="flex h-full flex-col p-3.5 pt-5 sm:p-4 sm:pt-6 md:p-5 md:pt-7 space-y-3 sm:space-y-4">
+        <div className="flex h-full flex-col p-3.5 pt-5 sm:p-4 sm:pt-6 md:p-5 md:pt-7 space-y-1">
 
 
                         <div>

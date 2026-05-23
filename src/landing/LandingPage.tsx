@@ -317,7 +317,7 @@ export default function LandingPage() {
               <div className="h-[420px] w-[420px] rounded-full bg-[#38BDF8]/5 blur-[120px] sm:h-[500px] sm:w-[700px]" />
             </div>
 
-            <div className="relative mx-auto flex max-w-5xl flex-col gap-8 px-4 py-12 sm:gap-10 sm:py-16 md:flex-row md:items-center md:py-24">
+            <div className="relative mx-auto flex max-w-5xl flex-col gap-8 px-4 py-12 sm:gap-10 sm:py-16 md:flex-row md:items-center md:justify-between md:gap-12 md:py-24">
               <div className="max-w-xl">
                 <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#38BDF8]" />
@@ -380,64 +380,77 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className="flex flex-1 justify-center md:justify-end">
-                <div className="relative h-[360px] w-[220px] sm:h-[390px] sm:w-[240px]">
-                  <div className="absolute inset-0 rounded-[34px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_40px_100px_rgba(15,23,42,0.9)] sm:rounded-[38px]">
-                    <div className="flex h-full flex-col justify-between p-4 pt-6 sm:p-5 sm:pt-7">
-                      <div>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-center">
-                          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
-                            Total Hours
-                          </p>
-                          <p className="mt-2 text-4xl font-extrabold tracking-tight text-[#38BDF8]">
-                            32.5
-                          </p>
-                          <p className="mt-1 text-xs text-white/50">of 50 required hours</p>
+              <div className="flex w-full flex-1 justify-center md:justify-end">
+  <div className="w-full max-w-[180px] sm:max-w-[210px] md:max-w-[230px] lg:max-w-[250px]">
+    <div className="relative w-full h-auto min-h-[420px] sm:min-h-[480px] md:min-h-[520px]">
+      <div className="absolute inset-0 rounded-[34px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.7)] sm:rounded-[38px] md:shadow-[0_40px_100px_rgba(15,23,42,0.9)]">
+        <div className="flex h-full flex-col justify-between p-3.5 pt-5 sm:p-4 sm:pt-6 md:p-5 md:pt-7">
 
-                          <div className="mt-4">
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-                              <div
-                                className="h-full rounded-full bg-[#38BDF8]"
-                                style={{ width: "65%" }}
-                              />
+                        <div>
+                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center sm:px-4 sm:py-4">
+                            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45 sm:text-[11px] sm:tracking-[0.14em]">
+                              Total Hours
+                            </p>
+                            <p className="mt-1.5 text-3xl font-extrabold tracking-tight text-[#38BDF8] sm:mt-2 sm:text-4xl">
+                              32.5
+                            </p>
+                            <p className="mt-1 text-[11px] text-white/50 sm:text-xs">
+                              of 50 required hours
+                            </p>
+
+                            <div className="mt-3 sm:mt-4">
+                              <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                                <div
+                                  className="h-full rounded-full bg-[#38BDF8]"
+                                  style={{ width: "65%" }}
+                                />
+                              </div>
+                              <div className="mt-2 flex items-center justify-between text-[10px] text-white/45 sm:text-[11px]">
+                                <span>65% complete</span>
+                                <span>17.5 hrs left</span>
+                              </div>
                             </div>
-                            <div className="mt-2 flex items-center justify-between text-[11px] text-white/45">
-                              <span>65% complete</span>
-                              <span>17.5 hrs left</span>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3">
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-3 text-center sm:px-3">
+                              <p className="text-base font-extrabold text-yellow-400 sm:text-lg">
+                                26.5h
+                              </p>
+                              <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-white/45 sm:text-[11px] sm:tracking-[0.12em]">
+                                Day
+                              </p>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-3 text-center sm:px-3">
+                              <p className="text-base font-extrabold text-[#38BDF8] sm:text-lg">
+                                6.0h
+                              </p>
+                              <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-white/45 sm:text-[11px] sm:tracking-[0.12em]">
+                                Night
+                              </p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="mt-3 grid grid-cols-2 gap-3">
-                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
-                            <p className="text-lg font-extrabold text-yellow-400">26.5h</p>
-                            <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/45">
-                              Day
+                        <div className="mt-3 space-y-2.5 sm:space-y-3">
+                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 sm:px-4">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-white/45 sm:text-[11px] sm:tracking-[0.14em]">
+                              Road test eligibility
+                            </p>
+                            <p className="mt-1 text-sm font-bold text-white sm:text-base">
+                              47 days
                             </p>
                           </div>
 
-                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
-                            <p className="text-lg font-extrabold text-[#38BDF8]">6.0h</p>
-                            <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/45">
-                              Night
+                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 sm:px-4">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-white/45 sm:text-[11px] sm:tracking-[0.14em]">
+                              Night hours remaining
+                            </p>
+                            <p className="mt-1 text-sm font-bold text-yellow-400 sm:text-base">
+                              4.0 hrs
                             </p>
                           </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 space-y-3">
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-                          <p className="text-[11px] uppercase tracking-[0.14em] text-white/45">
-                            Road test eligibility
-                          </p>
-                          <p className="mt-1 text-base font-bold text-white">47 days</p>
-                        </div>
-
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
-                          <p className="text-[11px] uppercase tracking-[0.14em] text-white/45">
-                            Night hours remaining
-                          </p>
-                          <p className="mt-1 text-base font-bold text-yellow-400">4.0 hrs</p>
                         </div>
                       </div>
                     </div>
@@ -459,7 +472,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="how-it-works" className="border-b border-white/10 scroll-mt-24">
+          <section id="how-it-works" className="scroll-mt-24 border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
@@ -491,7 +504,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="features" className="border-b border-white/10 scroll-mt-24">
+          <section id="features" className="scroll-mt-24 border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
@@ -525,7 +538,7 @@ export default function LandingPage() {
 
           <section
             id="nj-requirements"
-            className="border-b border-white/10 bg-[#38BDF8]/5 scroll-mt-24"
+            className="scroll-mt-24 border-b border-white/10 bg-[#38BDF8]/5"
           >
             <div className="mx-auto max-w-5xl px-4 py-12">
               <div className="flex flex-col gap-5 rounded-2xl border border-[#38BDF8]/20 bg-[#38BDF8]/5 p-5 sm:flex-row sm:items-start sm:p-6">
@@ -622,7 +635,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section id="faq" className="border-b border-white/10 scroll-mt-24">
+          <section id="faq" className="scroll-mt-24 border-b border-white/10">
             <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">

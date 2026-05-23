@@ -381,39 +381,64 @@ export default function LandingPage() {
               </div>
 
               <div className="flex flex-1 justify-center md:justify-end">
-                <div className="relative h-[300px] w-[176px] sm:h-[340px] sm:w-[200px]">
-                  <div className="absolute inset-0 rounded-[32px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_40px_100px_rgba(15,23,42,0.9)] sm:rounded-[36px]">
-                    <div className="flex h-full flex-col gap-3 p-4 pt-7 sm:pt-8">
-                      <div className="text-center">
-                        <p className="text-[10px] text-white/40">Total Hours</p>
-                        <p className="text-3xl font-extrabold text-[#38BDF8]">32.5</p>
-                        <p className="text-[10px] text-white/40">of 50 hours</p>
-                      </div>
+                <div className="relative h-[360px] w-[220px] sm:h-[390px] sm:w-[240px]">
+                  <div className="absolute inset-0 rounded-[34px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_40px_100px_rgba(15,23,42,0.9)] sm:rounded-[38px]">
+                    <div className="flex h-full flex-col justify-between p-4 pt-6 sm:p-5 sm:pt-7">
+                      <div>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-center">
+                          <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
+                            Total Hours
+                          </p>
+                          <p className="mt-2 text-4xl font-extrabold tracking-tight text-[#38BDF8]">
+                            32.5
+                          </p>
+                          <p className="mt-1 text-xs text-white/50">of 50 required hours</p>
 
-                      <div className="mx-auto h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                        <div className="h-full rounded-full bg-[#38BDF8]" style={{ width: "65%" }} />
-                      </div>
-
-                      <div className="mt-1 grid grid-cols-2 gap-2">
-                        {[
-                          { label: "Day", value: "26.5h", color: "text-yellow-400" },
-                          { label: "Night", value: "6.0h", color: "text-[#38BDF8]" },
-                        ].map(({ label, value, color }) => (
-                          <div key={label} className="rounded-xl bg-white/5 p-2 text-center">
-                            <p className={`text-sm font-bold ${color}`}>{value}</p>
-                            <p className="text-[9px] text-white/40">{label}</p>
+                          <div className="mt-4">
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                              <div
+                                className="h-full rounded-full bg-[#38BDF8]"
+                                style={{ width: "65%" }}
+                              />
+                            </div>
+                            <div className="mt-2 flex items-center justify-between text-[11px] text-white/45">
+                              <span>65% complete</span>
+                              <span>17.5 hrs left</span>
+                            </div>
                           </div>
-                        ))}
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-3">
+                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
+                            <p className="text-lg font-extrabold text-yellow-400">26.5h</p>
+                            <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/45">
+                              Day
+                            </p>
+                          </div>
+
+                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
+                            <p className="text-lg font-extrabold text-[#38BDF8]">6.0h</p>
+                            <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-white/45">
+                              Night
+                            </p>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="mt-2 rounded-xl bg-white/5 p-2.5">
-                        <p className="text-[9px] text-white/50">Road test eligible in</p>
-                        <p className="text-sm font-bold text-white">47 days</p>
-                      </div>
+                      <div className="mt-3 space-y-3">
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                          <p className="text-[11px] uppercase tracking-[0.14em] text-white/45">
+                            Road test eligibility
+                          </p>
+                          <p className="mt-1 text-base font-bold text-white">47 days</p>
+                        </div>
 
-                      <div className="rounded-xl bg-white/5 p-2.5">
-                        <p className="text-[9px] text-white/50">Night hours needed</p>
-                        <p className="text-sm font-bold text-yellow-400">4.0 hrs</p>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                          <p className="text-[11px] uppercase tracking-[0.14em] text-white/45">
+                            Night hours remaining
+                          </p>
+                          <p className="mt-1 text-base font-bold text-yellow-400">4.0 hrs</p>
+                        </div>
                       </div>
                     </div>
                   </div>

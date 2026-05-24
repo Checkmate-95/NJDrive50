@@ -72,6 +72,12 @@ const toBase64Utf8 = (text: string) => {
   return btoa(String.fromCharCode(...bytes))
 }
 
+const toBase64FromArrayBuffer = (buffer: ArrayBuffer) => {
+  return btoa(
+    Array.from(new Uint8Array(buffer), (byte) => String.fromCharCode(byte)).join("")
+  )
+}
+
 function StatusBanner({
   status,
   onDismiss,
@@ -285,21 +291,24 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       }
 
       const fileName = `NJDrive50_Log_${Date.now()}.pdf`
-      const base64Data = doc.output("datauristring").split(",")[1]
+      const pdfArrayBuffer = doc.output("arraybuffer") as ArrayBuffer
+      const pdfBase64 = toBase64FromArrayBuffer(pdfArrayBuffer)
 
-      await Filesystem.writeFile({
+      const result = await Filesystem.writeFile({
         path: fileName,
-        data: base64Data,
-        directory: Directory.Cache,
+        data: pdfBase64,
+        directory: Directory.Documents,
+        recursive: true,
       })
 
-      const { uri } = await Filesystem.getUri({
-        path: fileName,
-        directory: Directory.Cache,
-      })
+      const fileUri = result.uri?.replace(/\/$/, "")
+
+      if (!fileUri) {
+        throw new Error("No file URI was returned after writing the PDF.")
+      }
 
       await shareNativeFile({
-        uri,
+        uri: fileUri,
         title: "NJDrive50 Drive Log",
         text: "Your supervised driving log is ready.",
         dialogTitle: "Share PDF",
@@ -355,21 +364,23 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         return
       }
 
-      const base64Data = toBase64Utf8(csv)
+      const csvBase64 = toBase64Utf8(csv)
 
-      await Filesystem.writeFile({
+      const result = await Filesystem.writeFile({
         path: fileName,
-        data: base64Data,
-        directory: Directory.Cache,
+        data: csvBase64,
+        directory: Directory.Documents,
+        recursive: true,
       })
 
-      const { uri } = await Filesystem.getUri({
-        path: fileName,
-        directory: Directory.Cache,
-      })
+      const fileUri = result.uri?.replace(/\/$/, "")
+
+      if (!fileUri) {
+        throw new Error("No file URI was returned after writing the CSV.")
+      }
 
       await shareNativeFile({
-        uri,
+        uri: fileUri,
         title: "NJDrive50 Drive Log CSV",
         text: "Your supervised driving CSV export is ready.",
         dialogTitle: "Share CSV",

@@ -34,6 +34,7 @@ const formatTime = (ms: number) => {
   const hours = Math.floor(totalSec / 3600)
   const minutes = Math.floor((totalSec % 3600) / 60)
   const seconds = totalSec % 60
+
   return [hours, minutes, seconds]
     .map((part) => String(part).padStart(2, "0"))
     .join(":")
@@ -207,68 +208,59 @@ async function buildDriveSnapshot(
   }
 
   const baseTrail = Array.isArray(fresh.routeTrail) ? fresh.routeTrail : []
-const lastTrailCoord =
-  baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
+  const lastTrailCoord =
+    baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
 
-const finalTrail =
-  currentEndCoord && !sameCoord(lastTrailCoord, currentEndCoord)
-    ? [...baseTrail, currentEndCoord]
-    : baseTrail
+  const finalTrail =
+    currentEndCoord && !sameCoord(lastTrailCoord, currentEndCoord)
+      ? [...baseTrail, currentEndCoord]
+      : baseTrail
 
-const startDate = new Date(savedStartTime)
-const endDate = new Date(snapshotTime)
+  const startDate = new Date(savedStartTime)
+  const endDate = new Date(snapshotTime)
 
-let dayHours = normalizedTotalMs / 3600000   // fallback
-let nightHours = 0
-let nightCalcMode: NightCalcMode | undefined = "estimated"
+  // Fallback first: use actual accumulated buckets from the live drive session
+  let dayHours = finalDayMs / 3600000
+  let nightHours = finalNightMs / 3600000
+  let nightCalcMode: NightCalcMode | undefined = "estimated"
 
-const onboarding = loadOnboardingData()
-const { homeLat, homeLng } = onboarding
+  const onboarding = loadOnboardingData()
+  const { homeLat, homeLng } = onboarding
 
-if (
-  typeof homeLat === "number" &&
-  Number.isFinite(homeLat) &&
-  typeof homeLng === "number" &&
-  Number.isFinite(homeLng)
-) {
-  const solarWindow = getSolarWindowForDate(homeLat, homeLng, startDate)
-  const split = computeDayNightSplit(startDate, endDate, solarWindow)
+  // Override only when solar verification is available
+  if (
+    typeof homeLat === "number" &&
+    Number.isFinite(homeLat) &&
+    typeof homeLng === "number" &&
+    Number.isFinite(homeLng)
+  ) {
+    const solarWindow = getSolarWindowForDate(homeLat, homeLng, startDate)
+    const split = computeDayNightSplit(startDate, endDate, solarWindow)
 
-  dayHours = split.dayHours
-  nightHours = split.nightHours
-  nightCalcMode = "verified"
+    dayHours = split.dayHours
+    nightHours = split.nightHours
+    nightCalcMode = "verified"
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    startTime: new Date(savedStartTime).toISOString(),
+    endTime: new Date(snapshotTime).toISOString(),
+    totalDurationHours: normalizedTotalMs / 3600000,
+    dayDurationHours: dayHours,
+    nightDurationHours: nightHours,
+    verifiedNightDurationHours: nightHours,
+    nightCalcMode,
+    source: "timer",
+    miles: safeNumber(accurateMiles),
+    milesSource,
+    weather: fresh.weather,
+    routeCoords: finalTrail,
+    startLatitude: fresh.startCoord?.lat ?? null,
+    startLongitude: fresh.startCoord?.lng ?? null,
+    isPreview: opts?.isPreview ?? false,
+  }
 }
-
-return {
-  id: crypto.randomUUID(),
-  startTime: new Date(savedStartTime).toISOString(),
-  endTime: new Date(snapshotTime).toISOString(),
-
-  totalDurationHours: normalizedTotalMs / 3600000,
-
-  // Solar‑verified split
-  dayDurationHours: dayHours,
-  nightDurationHours: nightHours,
-
-  verifiedNightDurationHours: nightHours,
-  nightCalcMode,
-
-  source: "timer",
-
-  miles: safeNumber(accurateMiles),
-  milesSource,
-  weather: fresh.weather,
-  routeCoords: finalTrail,
-
-  startLatitude: fresh.startCoord?.lat ?? null,
-  startLongitude: fresh.startCoord?.lng ?? null,
-
-  isPreview: opts?.isPreview ?? false,
-}
-}
-
-
-
 
 function ActiveDriveContent({
   setScreen,
@@ -335,40 +327,39 @@ function ActiveDriveContent({
     })
   }, [])
 
- // ✅ REPLACE with this:
-const [displayedMs, setDisplayedMs] = useState(() => {
-  const s = useActiveDriveStore.getState().session
-  return s.dayMs + s.nightMs
-})
+  const [displayedMs, setDisplayedMs] = useState(() => {
+    const s = useActiveDriveStore.getState().session
+    return s.dayMs + s.nightMs
+  })
 
-useEffect(() => {
-  // Always run a local interval — reads directly from store state each tick
-  const id = window.setInterval(() => {
-  const s = useActiveDriveStore.getState().session
-  if (!s.isActive) return
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const s = useActiveDriveStore.getState().session
 
-  if (s.isRunning && s.lastTickAt !== null) {
-    const accumulated = s.dayMs + s.nightMs
-    const liveDelta = Math.max(0, Date.now() - s.lastTickAt)
-    setDisplayedMs(accumulated + liveDelta)
-  } else {
-    setDisplayedMs(s.dayMs + s.nightMs)
-  }
-}, 500)
+      if (!s.isActive) {
+        setDisplayedMs(s.dayMs + s.nightMs)
+        return
+      }
 
-  return () => window.clearInterval(id)
-}, []) // ✅ empty deps — this interval runs for the lifetime of the component
+      if (s.isRunning && s.lastTickAt !== null) {
+        const accumulated = s.dayMs + s.nightMs
+        const liveDelta = Math.max(0, Date.now() - s.lastTickAt)
+        setDisplayedMs(accumulated + liveDelta)
+      } else {
+        setDisplayedMs(s.dayMs + s.nightMs)
+      }
+    }, 500)
 
-const formattedElapsed = formatTime(displayedMs)
+    return () => window.clearInterval(id)
+  }, [])
 
-
+  const formattedElapsed = formatTime(displayedMs)
 
   const isRunning = session.isRunning
   const hasActiveDrive = session.isActive
   const saveDisabled = !hasActiveDrive || displayedMs < 10000 || isStopping
   const previewDisabled =
-  !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing;
-
+    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing
 
   const effectiveMode: DriveMode | null = hasActiveDrive
     ? getCurrentMode()
@@ -482,14 +473,12 @@ const formattedElapsed = formatTime(displayedMs)
     try {
       if (!session.isActive) {
         const today = new Date()
-        const solarWindow = getSolarWindowForDate(coord.lat, coord.lng, today);
-
+        const solarWindow = getSolarWindowForDate(coord.lat, coord.lng, today)
 
         startDrive(Date.now(), coord, {
-  sunrise: solarWindow.sunrise ? solarWindow.sunrise.getTime() : 0,
-  sunset: solarWindow.sunset ? solarWindow.sunset.getTime() : 0,
-});
-
+          sunrise: solarWindow.sunrise ? solarWindow.sunrise.getTime() : 0,
+          sunset: solarWindow.sunset ? solarWindow.sunset.getTime() : 0,
+        })
       } else {
         primeSessionCoord(coord)
         resumeDrive()
@@ -969,6 +958,7 @@ const formattedElapsed = formatTime(displayedMs)
               50% { transform: scale(1.06); }
               100% { transform: scale(1); }
             }
+
             .animate-pulse-slow {
               animation: pulse-slow 2.5s ease-in-out infinite;
             }
@@ -984,7 +974,5 @@ const formattedElapsed = formatTime(displayedMs)
     </div>
   )
 }
-
-
 
 export default ActiveDriveContent

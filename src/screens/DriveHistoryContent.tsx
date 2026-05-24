@@ -94,19 +94,6 @@ const getDisplaySegments = (d: DriveEntry) => {
   }
 }
 
-const escapeCsv = (value: unknown) => {
-  const stringValue = String(value ?? "")
-  if (
-    stringValue.includes(",") ||
-    stringValue.includes('"') ||
-    stringValue.includes("\n") ||
-    stringValue.includes("\r")
-  ) {
-    return `"${stringValue.replace(/"/g, '""')}"`
-  }
-  return stringValue
-}
-
 const VerifiedBadge = () => (
   <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
     <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -121,7 +108,7 @@ const EstimatedBadge = () => (
 )
 
 export default function DriveHistoryContent() {
-  const { goBack } = useNav()
+  const { goBack, setScreen } = useNav()
 
   const [drives, setDrives] = useState<DriveEntry[]>(() =>
     getDriveHistory().slice().reverse()
@@ -185,61 +172,8 @@ export default function DriveHistoryContent() {
       return
     }
 
-    const header = [
-      "id",
-      "startTime",
-      "endTime",
-      "totalDurationHours",
-      "dayDurationHours",
-      "nightDurationHours",
-      "verifiedNightDurationHours",
-      "nightCalcMode",
-      "lighting",
-      "dayRange",
-      "nightRange",
-      "miles",
-      "weather",
-      "notes",
-    ]
-
-    const rows = drives.map((d) => {
-      const { dayHours, nightHours, dayRange, nightRange } =
-        getDisplaySegments(d)
-      const totalHours = safeNumber(d.totalDurationHours)
-      const miles = safeNumber(d.miles)
-
-      return [
-        d.id,
-        d.startTime,
-        d.endTime,
-        totalHours.toFixed(2),
-        dayHours.toFixed(2),
-        nightHours.toFixed(2),
-        safeNumber(d.verifiedNightDurationHours).toFixed(2),
-        d.nightCalcMode ?? "",
-        getLightingLabel(dayHours, nightHours),
-        dayRange,
-        nightRange,
-        miles.toFixed(2),
-        d.weather ?? "",
-        d.notes ?? "",
-      ]
-    })
-
-    const csv = [
-      header.map(escapeCsv).join(","),
-      ...rows.map((row) => row.map(escapeCsv).join(",")),
-    ].join("\r\n")
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.setAttribute("download", "njdrive50_history.csv")
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    window.scrollTo({ top: 0, behavior: "smooth" })
+    setScreen("export")
   }
 
   return (
@@ -333,7 +267,7 @@ export default function DriveHistoryContent() {
                       {isVerified ? <VerifiedBadge /> : <EstimatedBadge />}
                     </div>
 
-                    <p className="mt-2 text-sm text-[#08194A]/68 break-words">
+                    <p className="mt-2 break-words text-sm text-[#08194A]/68">
                       {start} → {end}
                     </p>
 

@@ -53,7 +53,12 @@ const csvEscape = (value: unknown) => {
   return `"${text.replace(/"/g, '""')}"`
 }
 
-const downloadBlob = (blob: Blob, filename: string) => {
+const downloadTextFile = (
+  text: string,
+  filename: string,
+  mimeType: string
+) => {
+  const blob = new Blob([text], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const a = document.createElement("a")
   a.href = url
@@ -354,8 +359,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       const isNative = Capacitor.isNativePlatform()
 
       if (!isNative) {
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-        downloadBlob(blob, "NJDrive50_Log.csv")
+        downloadTextFile(csv, "NJDrive50_Log.csv", "text/csv;charset=utf-8;")
         setStatus({
           type: "success",
           title: "CSV export started",
@@ -429,7 +433,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 rounded-[28px] border border-[#08194A]/10 bg-[#F7F9FC] p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-3 rounded-[28px] border border-[#08194A]/10 bg-[#F7F9FC] p-4 shadow-sm sm:grid-cols-2 sm:p-5 lg:grid-cols-4">
           <div className="rounded-2xl border border-[#08194A]/10 bg-white p-4 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.16em] text-[#08194A]/55">
               Saved Drives

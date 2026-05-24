@@ -267,49 +267,40 @@ export default function LandingPage() {
 
       <div className="min-h-screen bg-[#020617] pb-24 text-white md:pb-0">
         <header className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
-          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <img
-                src="/njdrive50Logo6.png"
-                alt="NJDrive50 Logo"
-                className="h-12 w-auto shrink-0 object-contain sm:h-16"
-              />
+  <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
+    <div className="flex min-w-0 items-center gap-2.5">
+      <img
+        src="/njdrive50Logo6.png"
+        alt="NJDrive50 Logo"
+        className="h-12 w-auto shrink-0 object-contain sm:h-16"
+      />
 
-              <div className="min-w-0 leading-tight">
-                <span className="block truncate text-xs font-semibold tracking-[0.16em] text-[#38BDF8] sm:text-sm">
-                  NJDRIVE50
-                </span>
-                <span className="hidden text-[11px] font-medium text-white/60 sm:block">
-                  New Jersey Teen Driving Log App
-                </span>
-              </div>
-            </div>
+      <div className="min-w-0 leading-tight">
+        <span className="block truncate text-xs font-semibold tracking-[0.16em] text-[#38BDF8] sm:text-sm">
+          NJDRIVE50
+        </span>
+        <span className="hidden text-[11px] font-medium text-white/60 sm:block">
+          New Jersey Teen Driving Log App
+        </span>
+      </div>
+    </div>
 
-            <nav className="hidden gap-6 text-xs font-semibold text-white/60 md:flex">
-              <a href="#how-it-works" className="transition hover:text-white">
-                How it works
-              </a>
-              <a href="#features" className="transition hover:text-white">
-                Features
-              </a>
-              <a href="#nj-requirements" className="transition hover:text-white">
-                NJ requirements
-              </a>
-              <a href="#faq" className="transition hover:text-white">
-                FAQ
-              </a>
-            </nav>
-
-            <button
-              type="button"
-              onClick={() => setScreen("pricing")}
-              aria-label="View pricing and start your 7-day free trial"
-              className="min-h-[44px] shrink-0 rounded-xl bg-[#38BDF8] px-3 py-2 text-xs font-extrabold text-[#020617] transition hover:bg-[#0EA5E9] active:scale-[0.99] sm:min-h-[48px] sm:px-4"
-            >
-              Free Trial
-            </button>
-          </div>
-        </header>
+    <nav className="hidden gap-6 text-xs font-semibold text-white/60 md:flex">
+      <a href="#how-it-works" className="transition hover:text-white">
+        How it works
+      </a>
+      <a href="#features" className="transition hover:text-white">
+        Features
+      </a>
+      <a href="#nj-requirements" className="transition hover:text-white">
+        NJ requirements
+      </a>
+      <a href="#faq" className="transition hover:text-white">
+        FAQ
+      </a>
+    </nav>
+  </div>
+</header>
 
         <main>
           <section className="relative overflow-hidden border-b border-white/10">
@@ -366,7 +357,7 @@ export default function LandingPage() {
                     onClick={() => setScreen("pricing")}
                     className={ctaButtonClass}
                   >
-                    Start 7-Day Free Trial
+                    Get started free
                   </button>
 
                   <a href="#how-it-works" className={secondaryButtonClass}>
@@ -381,77 +372,65 @@ export default function LandingPage() {
               </div>
 
               <div className="flex w-full flex-1 justify-center md:justify-end">
-  <div className="w-full max-w-[180px] sm:max-w-[210px] md:max-w-[230px] lg:max-w-[250px]">
-    <div className="relative w-full h-auto min-h-[420px] sm:min-h-[480px] md:min-h-[520px]">
-      <div className="absolute inset-0 rounded-[34px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.7)] sm:rounded-[38px] md:shadow-[0_40px_100px_rgba(15,23,42,0.9)]">
-        <div className="flex h-full flex-col p-3.5 pt-5 sm:p-4 sm:pt-6 md:p-5 md:pt-7 space-y-1">
+                <div className="w-full max-w-[190px] sm:max-w-[215px] md:max-w-[225px]">
+                  <div className="relative overflow-hidden rounded-[32px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.72)]">
+                    <div className="flex flex-col gap-2.5 p-3.5 sm:p-4">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
+                        <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+                          Total Hours
+                        </p>
+                        <p className="mt-1 text-[28px] font-extrabold tracking-tight text-[#38BDF8] sm:text-[30px]">
+                          32.5
+                        </p>
+                        <p className="mt-1 text-[10px] text-white/50">17.5 hours left</p>
 
-
-                        <div>
-                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center sm:px-4 sm:py-4">
-                            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-white/45 sm:text-[11px] sm:tracking-[0.14em]">
-                              Total Hours
-                            </p>
-                            <p className="mt-1.5 text-3xl font-extrabold tracking-tight text-[#38BDF8] sm:mt-2 sm:text-4xl">
-                              32.5
-                            </p>
-                            <p className="mt-1 text-[11px] text-white/50 sm:text-xs">
-                              of 50 required hours
-                            </p>
-
-                            <div className="mt-3 sm:mt-4">
-                              <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
-                                <div
-                                  className="h-full rounded-full bg-[#38BDF8]"
-                                  style={{ width: "65%" }}
-                                />
-                              </div>
-                              <div className="mt-2 flex items-center justify-between text-[10px] text-white/45 sm:text-[11px]">
-                                <span>65% complete</span>
-                                <span>17.5 hrs left</span>
-                              </div>
-                            </div>
+                        <div className="mt-2.5">
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className="h-full rounded-full bg-[#38BDF8]"
+                              style={{ width: "65%" }}
+                            />
                           </div>
-
-                          <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3">
-                            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-3 text-center sm:px-3">
-                              <p className="text-base font-extrabold text-yellow-400 sm:text-lg">
-                                26.5h
-                              </p>
-                              <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-white/45 sm:text-[11px] sm:tracking-[0.12em]">
-                                Day
-                              </p>
-                            </div>
-
-                            <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-3 text-center sm:px-3">
-                              <p className="text-base font-extrabold text-[#38BDF8] sm:text-lg">
-                                6.0h
-                              </p>
-                              <p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-white/45 sm:text-[11px] sm:tracking-[0.12em]">
-                                Night
-                              </p>
-                            </div>
+                          <div className="mt-1.5 flex items-center justify-between text-[9px] text-white/45 sm:text-[10px]">
+                            <span>65% complete</span>
+                            <span>Goal: 50 hrs</span>
                           </div>
                         </div>
+                      </div>
 
-                        <div className="mt-3 space-y-2.5 sm:space-y-3">
-                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 sm:px-4">
-                            <p className="text-[10px] uppercase tracking-[0.12em] text-white/45 sm:text-[11px] sm:tracking-[0.14em]">
-                              Road test eligibility
-                            </p>
-                            <p className="mt-1 text-sm font-bold text-white sm:text-base">
-                              47 days
-                            </p>
-                          </div>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
+                          <p className="text-sm font-extrabold text-yellow-400 sm:text-[15px]">
+                            26.5h
+                          </p>
+                          <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
+                            Day
+                          </p>
+                        </div>
 
-                          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 sm:px-4">
-                            <p className="text-[10px] uppercase tracking-[0.12em] text-white/45 sm:text-[11px] sm:tracking-[0.14em]">
-                              Night hours remaining
-                            </p>
-                            <p className="mt-1 text-sm font-bold text-yellow-400 sm:text-base">
-                              4.0 hrs
-                            </p>
-                          </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
+                          <p className="text-sm font-extrabold text-[#38BDF8] sm:text-[15px]">
+                            6.0h
+                          </p>
+                          <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
+                            Night
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+                          <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+                            Road test eligibility
+                          </p>
+                          <p className="mt-1 text-sm font-bold text-white">47 days</p>
+                        </div>
+
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
+                          <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+                            Night hours remaining
+                          </p>
+                          <p className="mt-1 text-sm font-bold text-yellow-400">4.0 hrs</p>
                         </div>
                       </div>
                     </div>
@@ -461,44 +440,35 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <section className="border-b border-white/10 bg-white/[0.02]">
-            <div className="mx-auto max-w-5xl px-4 py-5">
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 text-center text-[11px] font-semibold tracking-[0.14em] text-white/40 sm:gap-x-8">
-                <span>✓ NJ MVC 50-HOUR COMPLIANT</span>
-                <span className="hidden sm:block">·</span>
-                <span>✓ FORM BA-CSD READY</span>
-                <span className="hidden sm:block">·</span>
-                <span>✓ TRACK NIGHT DRIVING HOURS NJ</span>
-              </div>
-            </div>
-          </section>
-
-          <section id="how-it-works" className="scroll-mt-24 border-b border-white/10">
+          <section
+            id="how-it-works"
+            className="scroll-mt-24 border-b border-white/10 bg-white/[0.02]"
+          >
             <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
                 <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
-                  How It Works
+                  How it works
                 </p>
                 <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  How do you track driving hours in NJ?
+                  Go from permit day to road test with less stress
                 </h2>
-                <p className="mx-auto mt-3 max-w-lg text-base leading-7 text-white/65">
-                  NJDrive50 helps parents and teens log practice driving, track night hours, and
-                  stay ready for the NJ road test.
+                <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-white/65">
+                  NJDrive50 helps families organize permit details, log supervised drives, and stay
+                  on pace for the 50-hour requirement.
                 </p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 {steps.map(({ step, title, description }) => (
                   <div
                     key={step}
-                    className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-5"
+                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"
                   >
-                    <span className="mb-3 block text-3xl font-extrabold text-[#38BDF8]/25">
-                      {step}
-                    </span>
-                    <h3 className="mb-2 text-base font-bold text-white">{title}</h3>
-                    <p className="text-sm leading-7 text-white/65">{description}</p>
+                    <div className="text-xs font-extrabold tracking-[0.22em] text-[#38BDF8]">
+                      STEP {step}
+                    </div>
+                    <h3 className="mt-3 text-lg font-bold text-white">{title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-white/65">{description}</p>
                   </div>
                 ))}
               </div>
@@ -512,11 +482,11 @@ export default function LandingPage() {
                   Features
                 </p>
                 <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  What should a NJ driving log app track?
+                  Everything needed to track NJ supervised driving hours
                 </h2>
-                <p className="mx-auto mt-3 max-w-lg text-base leading-7 text-white/65">
-                  A good New Jersey driving log app should track supervised driving hours, night
-                  driving hours, permit dates, and BA-CSD readiness without extra work.
+                <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-white/65">
+                  Built for New Jersey parents and teens who want a cleaner way to manage driving
+                  practice, milestones, and road test readiness.
                 </p>
               </div>
 
@@ -524,13 +494,11 @@ export default function LandingPage() {
                 {features.map(({ icon, title, description }) => (
                   <div
                     key={title}
-                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-[#38BDF8]/20 hover:bg-white/[0.05]"
+                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"
                   >
-                    <span className="mb-3 block text-2xl" aria-hidden="true">
-                      {icon}
-                    </span>
-                    <h3 className="mb-2 text-base font-bold text-white">{title}</h3>
-                    <p className="text-sm leading-7 text-white/65">{description}</p>
+                    <div className="text-2xl">{icon}</div>
+                    <h3 className="mt-4 text-lg font-bold text-white">{title}</h3>
+                    <p className="mt-3 text-sm leading-7 text-white/65">{description}</p>
                   </div>
                 ))}
               </div>
@@ -671,38 +639,33 @@ export default function LandingPage() {
           </section>
 
           <section className="border-b border-white/10">
-            <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:py-20">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
-                Get Started
-              </p>
-              <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
-                Ready to track supervised driving hours in NJ?
-              </h2>
-              <p className="mx-auto mt-4 max-w-md text-base leading-7 text-white/65">
-                Start your 7-day free trial of NJDrive50 to track driving hours, monitor night
-                driving progress, and stay ready for the NJ road test and NJMVC Form BA-CSD.
-              </p>
+  <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:py-20">
+    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+      Get Started
+    </p>
+    <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
+      Ready to track supervised driving hours in NJ?
+    </h2>
+    <p className="mx-auto mt-4 max-w-md text-base leading-7 text-white/65">
+      Start your 7-day free trial of NJDrive50 to track driving hours, monitor night
+      driving progress, and stay ready for the NJ road test and NJMVC Form BA-CSD.
+    </p>
 
-              <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:justify-center">
-                <button
-                  type="button"
-                  onClick={() => setScreen("pricing")}
-                  className={ctaButtonClass}
-                >
-                  Start 7-Day Free Trial
-                </button>
+    <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:justify-center">
+      <button
+        type="button"
+        onClick={() => setScreen("pricing")}
+        className={ctaButtonClass}
+      >
+        Start 7-Day Free Trial
+      </button>
 
-                <a href="#faq" className={secondaryButtonClass}>
-                  Check NJ permit FAQs
-                </a>
-              </div>
-
-              <p className="mt-3 text-xs leading-6 text-white/50">
-                7-day free trial · Cancel anytime for monthly plans · $4.99 per month or $39.99
-                per year after trial · Annual plans can be canceled before renewal
-              </p>
-            </div>
-          </section>
+      <a href="#faq" className={secondaryButtonClass}>
+        Check NJ permit FAQs
+      </a>
+    </div>
+  </div>
+</section>
         </main>
 
         <footer className="border-t border-white/10 bg-black/40">

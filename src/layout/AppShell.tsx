@@ -35,7 +35,7 @@ export default function AppShell({
   }
 
   return (
-    <div className="relative flex min-h-dvh w-full flex-col bg-[#08194A]">
+    <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#08194A]">
       <header className="w-full shrink-0 bg-[#08194A] px-4 pb-3 pt-5 sm:pb-4 sm:pt-6">
         <div className="mx-auto flex w-full max-w-[42rem] justify-center">
           <img
@@ -47,13 +47,13 @@ export default function AppShell({
       </header>
 
       <main className="flex min-h-0 flex-1 justify-center px-3 sm:px-4">
-        <section className="min-h-0 w-full max-w-[42rem] overflow-y-auto pb-32">
+        <section className="min-h-0 w-full max-w-[42rem] overflow-y-auto pb-40">
           {children}
         </section>
       </main>
 
-      <nav className="sticky bottom-0 z-20 w-full shrink-0 border-t border-white/10 bg-[#08194A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#08194A]/88">
-        <div className="mx-auto w-full max-w-[42rem] px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-3 sm:pt-3">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#08194A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#08194A]/88">
+        <div className="mx-auto w-full max-w-[42rem] px-2 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-3 sm:pt-3">
           <div className="grid grid-cols-5 gap-1 sm:gap-2">
             <button
               type="button"
@@ -109,11 +109,15 @@ export default function AppShell({
         </div>
       </nav>
 
-      <div className="pointer-events-none fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-4 z-30 sm:bottom-[calc(7.25rem+env(safe-area-inset-bottom))] sm:right-6">
-        <div className="pointer-events-auto">
-          <FloatingAIButton />
-        </div>
-      </div>
+      <div className="pointer-events-none fixed right-4 z-50 bottom-[calc(5.5rem+env(safe-area-inset-bottom))]
+">
+  <div className="pointer-events-auto">
+    <FloatingAIButton />
+  </div>
+</div>
+
+
+
     </div>
   )
 }

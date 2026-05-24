@@ -5,13 +5,10 @@ type FloatingAIButtonProps = {
   className?: string
 }
 
-export default function FloatingAIButton({
-  className = "",
-}: FloatingAIButtonProps) {
+export default function FloatingAIButton({ className = "" }: FloatingAIButtonProps) {
   const { screen, setScreen } = useNav()
   const [hovered, setHovered] = useState(false)
 
-  // Hide the bubble when the AI helper is open
   if (screen === "aiHelper") return null
 
   return (
@@ -25,9 +22,6 @@ export default function FloatingAIButton({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
-          position: "fixed",
-          bottom: 32, // moved up slightly to make room for label
-          right: 24,
           width: 64,
           height: 64,
           borderRadius: "50%",
@@ -53,15 +47,13 @@ export default function FloatingAIButton({
       {/* Label Under Bubble */}
       <div
         style={{
-          position: "fixed",
-          bottom: 4,
-          right: 24,
+          marginTop: 6,
           color: "#f9c80e",
           fontSize: 12,
           fontWeight: 600,
           textShadow: "0 0 6px rgba(0,0,0,0.6)",
-          zIndex: 9999,
-          pointerEvents: "none", // prevents accidental taps
+          textAlign: "center",
+          pointerEvents: "none",
         }}
       >
         AI FAQ

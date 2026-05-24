@@ -80,7 +80,6 @@ export default function App() {
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const prevStackLengthRef = useRef(stack.length)
 
-  // ⭐ Ensure landing page shows first if Zustand hasn't hydrated yet
   useEffect(() => {
     const nav = useNav.getState()
     if (nav.screen === "home" || !nav.screen) {
@@ -88,7 +87,6 @@ export default function App() {
     }
   }, [])
 
-  // ⭐ Initialize reminders only if onboarding exists
   useEffect(() => {
     const data = loadOnboardingData()
     if (!data?.teenName) return
@@ -97,12 +95,10 @@ export default function App() {
     initializeReminders(prefs)
   }, [])
 
-  // ⭐ Navigation guard for onboarding and intro flow
   useEffect(() => {
     let cancelled = false
 
     const load = async () => {
-      // Prevent redirect before Zustand finishes hydrating
       if (!useNav.persist.hasHydrated()) return
 
       const result = await Preferences.get({ key: "onboardingData" })
@@ -143,7 +139,6 @@ export default function App() {
     }
   }, [setScreen])
 
-  // ⭐ Scroll reset on navigation
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current
     prevStackLengthRef.current = stack.length

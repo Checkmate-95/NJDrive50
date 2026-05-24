@@ -1,4 +1,3 @@
-// src/state/navStore.ts
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 import type { Screen } from "../App"
@@ -79,7 +78,6 @@ function normalizePersistedNavState(
 export const useNav = create<NavState>()(
   persist(
     (set, get) => ({
-      // ⭐ DEFAULT SCREEN UPDATED HERE
       screen: "landing",
       stack: [],
       previousScreen: null,

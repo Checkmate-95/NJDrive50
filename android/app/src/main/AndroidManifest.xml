@@ -19,11 +19,6 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <!-- Android 14+ requirement for location foreground service usage -->
-        <meta-data
-            android:name="android.app.PROPERTY_FOREGROUND_SERVICE_LOCATION"
-            android:value="true" />
-
         <!-- Main Capacitor activity -->
         <activity
             android:name="com.getcapacitor.BridgeActivity"
@@ -50,4 +45,3 @@
 
     </application>
 </manifest>
-

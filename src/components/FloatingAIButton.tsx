@@ -5,16 +5,18 @@ type FloatingAIButtonProps = {
   className?: string
 }
 
-export default function FloatingAIButton({ className = "" }: FloatingAIButtonProps) {
+export default function FloatingAIButton({
+  className = "",
+}: FloatingAIButtonProps) {
   const { screen, setScreen } = useNav()
   const [hovered, setHovered] = useState(false)
 
-  // Hide bubble when AI helper is open
   if (screen === "aiHelper") return null
 
   return (
     <button
-      onClick={() => setScreen("aiHelper")}  // ✅ switches to your AI Q&A screen inside NJDrive50
+      type="button"
+      onClick={() => setScreen("aiHelper")}
       className={className}
       aria-label="Open AI Helper"
       onMouseEnter={() => setHovered(true)}

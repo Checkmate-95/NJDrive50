@@ -26,31 +26,16 @@ export default function AppShell({
       active === screen ? "text-[#f9c80e]" : "text-white/88 hover:text-[#f9c80e]",
     ].join(" ")
 
-  // -----------------------------------------
-  // SCREENS WITH NO CHROME (landing, pricing, intro, onboarding)
-  // Floating AI bubble ONLY appears here
-  // -----------------------------------------
   if (chromeHidden) {
     return (
       <div className="relative min-h-dvh w-full overflow-x-hidden bg-[#08194A]">
         {children}
-
-        {/* Floating AI Bubble ONLY on chromeHidden screens */}
-        <div className="pointer-events-none fixed right-4 z-30 sm:right-6 bottom-6">
-          <div className="pointer-events-auto">
-            <FloatingAIButton />
-          </div>
-        </div>
       </div>
     )
   }
 
-  // -----------------------------------------
-  // MAIN APP WITH BOTTOM NAV
-  // Floating AI bubble is NOT shown here
-  // -----------------------------------------
   return (
-    <div className="relative flex min-h-dvh w-full flex-col overflow-hidden bg-[#08194A]">
+    <div className="relative flex min-h-dvh w-full flex-col bg-[#08194A]">
       <header className="w-full shrink-0 bg-[#08194A] px-4 pb-3 pt-5 sm:pb-4 sm:pt-6">
         <div className="mx-auto flex w-full max-w-[42rem] justify-center">
           <img
@@ -61,8 +46,8 @@ export default function AppShell({
         </div>
       </header>
 
-      <main className="flex min-w-0 flex-1 justify-center px-3 pb-4 sm:px-4">
-        <section className="min-w-0 w-full max-w-[42rem] overflow-y-auto">
+      <main className="flex min-h-0 flex-1 justify-center px-3 sm:px-4">
+        <section className="min-h-0 w-full max-w-[42rem] overflow-y-auto pb-32">
           {children}
         </section>
       </main>
@@ -123,6 +108,12 @@ export default function AppShell({
           </div>
         </div>
       </nav>
+
+      <div className="pointer-events-none fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom))] right-4 z-30 sm:bottom-[calc(7.25rem+env(safe-area-inset-bottom))] sm:right-6">
+        <div className="pointer-events-auto">
+          <FloatingAIButton />
+        </div>
+      </div>
     </div>
   )
 }

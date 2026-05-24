@@ -67,7 +67,6 @@ const downloadBlob = (blob: Blob, filename: string) => {
   }, 1000)
 }
 
-// Modern UTF‑8 → base64 encoder
 const toBase64Utf8 = (text: string) => {
   const bytes = new Uint8Array(new TextEncoder().encode(text))
   return btoa(String.fromCharCode(...bytes))
@@ -108,9 +107,7 @@ function StatusBanner({
           </div>
 
           <div className="min-w-0">
-            <p className="text-sm font-extrabold tracking-tight">
-              {status.title}
-            </p>
+            <p className="text-sm font-extrabold tracking-tight">{status.title}</p>
             <p className="mt-1 text-sm text-[#08194A]/78">{status.message}</p>
           </div>
         </div>
@@ -181,6 +178,44 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       { totalHours: 0, dayHours: 0, nightHours: 0, totalMiles: 0 }
     )
   }, [rows])
+
+  const shareNativeFile = useCallback(
+    async ({
+      uri,
+      title,
+      text,
+      dialogTitle,
+      successTitle,
+      successMessage,
+    }: {
+      uri: string
+      title: string
+      text: string
+      dialogTitle: string
+      successTitle: string
+      successMessage: string
+    }) => {
+      const canShareResult = await Share.canShare()
+
+      if (!canShareResult.value) {
+        throw new Error("Native share is not available on this device.")
+      }
+
+      await Share.share({
+        title,
+        text,
+        files: [uri],
+        dialogTitle,
+      })
+
+      setStatus({
+        type: "success",
+        title: successTitle,
+        message: successMessage,
+      })
+    },
+    []
+  )
 
   const exportPDF = useCallback(async () => {
     try {
@@ -263,17 +298,13 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         directory: Directory.Cache,
       })
 
-      await Share.share({
+      await shareNativeFile({
+        uri,
         title: "NJDrive50 Drive Log",
         text: "Your supervised driving log is ready.",
-        url: uri,
         dialogTitle: "Share PDF",
-      })
-
-      setStatus({
-        type: "success",
-        title: "PDF ready",
-        message: "Your drive log PDF is ready to share.",
+        successTitle: "PDF ready",
+        successMessage: "Your drive log PDF is ready to share.",
       })
     } catch (error) {
       console.error("PDF export failed:", error)
@@ -283,7 +314,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         message: "We couldn’t generate your PDF right now. Please try again.",
       })
     }
-  }, [rows, totals])
+  }, [rows, totals, shareNativeFile])
 
   const exportCSV = useCallback(async () => {
     try {
@@ -337,17 +368,13 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         directory: Directory.Cache,
       })
 
-      await Share.share({
+      await shareNativeFile({
+        uri,
         title: "NJDrive50 Drive Log CSV",
         text: "Your supervised driving CSV export is ready.",
-        url: uri,
         dialogTitle: "Share CSV",
-      })
-
-      setStatus({
-        type: "success",
-        title: "CSV ready",
-        message: "Your drive log CSV is ready to share.",
+        successTitle: "CSV ready",
+        successMessage: "Your drive log CSV is ready to share.",
       })
     } catch (error) {
       console.error("CSV export failed:", error)
@@ -357,7 +384,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         message: "We couldn’t generate your CSV right now. Please try again.",
       })
     }
-  }, [rows])
+  }, [rows, shareNativeFile])
 
   const hasDrives = rows.length > 0
 

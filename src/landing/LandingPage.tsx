@@ -1,9 +1,7 @@
 import { Helmet } from "react-helmet-async"
-import { useNav } from "../state/navStore"
+import { Link } from "react-router-dom"
 
 export default function LandingPage() {
-  const { setScreen } = useNav()
-
   const PAGE_URL = "https://njdrive50.com"
   const OG_IMAGE_URL = "https://njdrive50.com/og-image.png"
   const PRICING_PAGE_PATH = "/pricing"
@@ -134,7 +132,6 @@ export default function LandingPage() {
       "NJDrive50 is an NJ driving log app for New Jersey families to track supervised driving hours, night driving hours, permit dates, and progress toward the NJ MVC 50-hour requirement.",
     image: OG_IMAGE_URL,
     screenshot: OG_IMAGE_URL,
-    installUrl: `${PAGE_URL}${PRICING_PAGE_PATH}`,
     offers: [
       {
         "@type": "Offer",
@@ -224,10 +221,10 @@ export default function LandingPage() {
     },
   }
 
-  const ctaButtonClass =
-    "min-h-[48px] w-full rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9] active:scale-[0.99] sm:w-auto"
+  const ctaLinkClass =
+    "inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9] active:scale-[0.99] sm:w-auto"
 
-  const secondaryButtonClass =
+  const secondaryLinkClass =
     "flex min-h-[48px] w-full items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/5 active:scale-[0.99] sm:w-auto"
 
   return (
@@ -242,7 +239,10 @@ export default function LandingPage() {
         />
         <meta name="robots" content="index, follow, max-image-preview:large" />
         <meta name="author" content="NJDrive50" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
         <link rel="canonical" href={PAGE_URL} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="NJDrive50" />
@@ -267,40 +267,43 @@ export default function LandingPage() {
 
       <div className="min-h-screen bg-[#020617] pb-24 text-white md:pb-0">
         <header className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
-  <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
-    <div className="flex min-w-0 items-center gap-2.5">
-      <img
-        src="/njdrive50Logo6.png"
-        alt="NJDrive50 Logo"
-        className="h-12 w-auto shrink-0 object-contain sm:h-16"
-      />
+          <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <img
+                src="/njdrive50Logo6.png"
+                alt="NJDrive50 Logo"
+                className="h-12 w-auto shrink-0 object-contain sm:h-16"
+              />
 
-      <div className="min-w-0 leading-tight">
-        <span className="block truncate text-xs font-semibold tracking-[0.16em] text-[#38BDF8] sm:text-sm">
-          NJDRIVE50
-        </span>
-        <span className="hidden text-[11px] font-medium text-white/60 sm:block">
-          New Jersey Teen Driving Log App
-        </span>
-      </div>
-    </div>
+              <div className="min-w-0 leading-tight">
+                <span className="block truncate text-xs font-semibold tracking-[0.16em] text-[#38BDF8] sm:text-sm">
+                  NJDRIVE50
+                </span>
+                <span className="hidden text-[11px] font-medium text-white/60 sm:block">
+                  New Jersey Teen Driving Log App
+                </span>
+              </div>
+            </div>
 
-    <nav className="hidden gap-6 text-xs font-semibold text-white/60 md:flex">
-      <a href="#how-it-works" className="transition hover:text-white">
-        How it works
-      </a>
-      <a href="#features" className="transition hover:text-white">
-        Features
-      </a>
-      <a href="#nj-requirements" className="transition hover:text-white">
-        NJ requirements
-      </a>
-      <a href="#faq" className="transition hover:text-white">
-        FAQ
-      </a>
-    </nav>
-  </div>
-</header>
+            <nav className="hidden gap-6 text-xs font-semibold text-white/60 md:flex">
+              <a href="#how-it-works" className="transition hover:text-white">
+                How it works
+              </a>
+              <a href="#features" className="transition hover:text-white">
+                Features
+              </a>
+              <a href="#nj-requirements" className="transition hover:text-white">
+                NJ requirements
+              </a>
+              <a href="#faq" className="transition hover:text-white">
+                FAQ
+              </a>
+              <Link to={PRICING_PAGE_PATH} className="transition hover:text-white">
+                Pricing
+              </Link>
+            </nav>
+          </div>
+        </header>
 
         <main>
           <section className="relative overflow-hidden border-b border-white/10">
@@ -351,16 +354,11 @@ export default function LandingPage() {
                 </div>
 
                 <div className="mt-7 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
-                  <button
-                    id="get-app"
-                    type="button"
-                    onClick={() => setScreen("pricing")}
-                    className={ctaButtonClass}
-                  >
+                  <Link id="get-app" to={PRICING_PAGE_PATH} className={ctaLinkClass}>
                     Get started free
-                  </button>
+                  </Link>
 
-                  <a href="#how-it-works" className={secondaryButtonClass}>
+                  <a href="#how-it-works" className={secondaryLinkClass}>
                     See how it works
                   </a>
                 </div>
@@ -496,7 +494,9 @@ export default function LandingPage() {
                     key={title}
                     className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"
                   >
-                    <div className="text-2xl">{icon}</div>
+                    <div className="text-2xl" aria-hidden="true">
+                      {icon}
+                    </div>
                     <h3 className="mt-4 text-lg font-bold text-white">{title}</h3>
                     <p className="mt-3 text-sm leading-7 text-white/65">{description}</p>
                   </div>
@@ -511,7 +511,10 @@ export default function LandingPage() {
           >
             <div className="mx-auto max-w-5xl px-4 py-12">
               <div className="flex flex-col gap-5 rounded-2xl border border-[#38BDF8]/20 bg-[#38BDF8]/5 p-5 sm:flex-row sm:items-start sm:p-6">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#38BDF8]/15 text-xl">
+                <div
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#38BDF8]/15 text-xl"
+                  aria-hidden="true"
+                >
                   📋
                 </div>
 
@@ -548,7 +551,9 @@ export default function LandingPage() {
                     </div>
 
                     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                      <h3 className="text-sm font-bold text-white">What you need for the NJ MVC</h3>
+                      <h3 className="text-sm font-bold text-white">
+                        What you need for the NJ MVC
+                      </h3>
                       <p className="mt-2 text-sm leading-7 text-white/65">
                         A completed 50-hour practice period, 10 hours during darkness, a signed
                         BA-CSD form, and completion of the waiting period before road testing.
@@ -562,7 +567,7 @@ export default function LandingPage() {
                     rel="noopener noreferrer"
                     className="mt-4 inline-block text-sm font-semibold text-[#38BDF8] underline underline-offset-2 hover:text-white"
                   >
-                    Read the official NJ MVC requirements →
+                    Read the official NJ MVC requirements
                   </a>
                 </div>
               </div>
@@ -627,11 +632,16 @@ export default function LandingPage() {
                   >
                     <summary className="flex min-h-[52px] cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 text-left text-sm font-semibold text-white">
                       <span>{question}</span>
-                      <span className="mt-0.5 shrink-0 text-[#38BDF8] transition group-open:rotate-45">
+                      <span
+                        className="mt-0.5 shrink-0 text-[#38BDF8] transition group-open:rotate-45"
+                        aria-hidden="true"
+                      >
                         +
                       </span>
                     </summary>
-                    <div className="px-5 pb-5 pt-0 text-sm leading-7 text-white/65">{answer}</div>
+                    <div className="px-5 pb-5 pt-0 text-sm leading-7 text-white/65">
+                      {answer}
+                    </div>
                   </details>
                 ))}
               </div>
@@ -639,33 +649,29 @@ export default function LandingPage() {
           </section>
 
           <section className="border-b border-white/10">
-  <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:py-20">
-    <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
-      Get Started
-    </p>
-    <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
-      Ready to track supervised driving hours in NJ?
-    </h2>
-    <p className="mx-auto mt-4 max-w-md text-base leading-7 text-white/65">
-      Start your 7-day free trial of NJDrive50 to track driving hours, monitor night
-      driving progress, and stay ready for the NJ road test and NJMVC Form BA-CSD.
-    </p>
+            <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:py-20">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+                Get Started
+              </p>
+              <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
+                Ready to track supervised driving hours in NJ?
+              </h2>
+              <p className="mx-auto mt-4 max-w-md text-base leading-7 text-white/65">
+                Start your 7-day free trial of NJDrive50 to track driving hours, monitor night
+                driving progress, and stay ready for the NJ road test and NJMVC Form BA-CSD.
+              </p>
 
-    <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:justify-center">
-      <button
-        type="button"
-        onClick={() => setScreen("pricing")}
-        className={ctaButtonClass}
-      >
-        Start 7-Day Free Trial
-      </button>
+              <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:justify-center">
+                <Link to={PRICING_PAGE_PATH} className={ctaLinkClass}>
+                  Start 7-Day Free Trial
+                </Link>
 
-      <a href="#faq" className={secondaryButtonClass}>
-        Check NJ permit FAQs
-      </a>
-    </div>
-  </div>
-</section>
+                <a href="#faq" className={secondaryLinkClass}>
+                  Check NJ permit FAQs
+                </a>
+              </div>
+            </div>
+          </section>
         </main>
 
         <footer className="border-t border-white/10 bg-black/40">
@@ -736,13 +742,12 @@ export default function LandingPage() {
         </footer>
 
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#020617]/95 p-3 backdrop-blur md:hidden">
-          <button
-            type="button"
-            onClick={() => setScreen("pricing")}
-            className="min-h-[52px] w-full rounded-xl bg-[#38BDF8] px-5 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] active:scale-[0.99]"
+          <Link
+            to={PRICING_PAGE_PATH}
+            className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-5 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] active:scale-[0.99]"
           >
             Start 7-Day Free Trial
-          </button>
+          </Link>
         </div>
       </div>
     </>

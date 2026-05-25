@@ -7,20 +7,18 @@ type AppShellProps = PropsWithChildren<{
   active: Screen
 }>
 
+const CHROMELESS_SCREENS: Screen[] = ["landing", "pricing", "intro", "onboarding"]
+
 export default function AppShell({
   children,
   setScreen,
   active,
 }: AppShellProps) {
-  const chromeHidden =
-    active === "landing" ||
-    active === "pricing" ||
-    active === "intro" ||
-    active === "onboarding"
+  const chromeHidden = CHROMELESS_SCREENS.includes(active)
 
   const itemClasses = (screen: Screen) =>
     [
-      "flex min-w-0 flex-col items-center justify-center rounded-xl px-1 py-2",
+      "flex min-w-0 min-h-11 flex-col items-center justify-center rounded-xl px-1 py-2",
       "text-center text-[11px] font-semibold leading-tight transition-colors duration-200",
       "sm:px-2 sm:py-3 sm:text-sm",
       active === screen ? "text-[#f9c80e]" : "text-white/88 hover:text-[#f9c80e]",
@@ -47,7 +45,7 @@ export default function AppShell({
       </header>
 
       <main className="flex min-h-0 flex-1 justify-center px-3 sm:px-4">
-        <section className="min-h-0 w-full max-w-[42rem] overflow-y-auto pb-40">
+        <section className="min-h-0 w-full max-w-[42rem] overflow-y-auto pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
           {children}
         </section>
       </main>
@@ -109,15 +107,11 @@ export default function AppShell({
         </div>
       </nav>
 
-      <div className="pointer-events-none fixed right-4 z-50 bottom-[calc(5.5rem+env(safe-area-inset-bottom))]
-">
-  <div className="pointer-events-auto">
-    <FloatingAIButton />
-  </div>
-</div>
-
-
-
+      <div className="pointer-events-none fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-50">
+        <div className="pointer-events-auto">
+          <FloatingAIButton />
+        </div>
+      </div>
     </div>
   )
 }

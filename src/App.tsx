@@ -130,13 +130,8 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
 
-    const bootstrap = async () => {
+    const runBootstrap = async () => {
       try {
-        if (!useNav.persist.hasHydrated()) {
-          if (!cancelled) setBootstrapped(true)
-          return
-        }
-
         const nav = useNav.getState()
         const current = isValidScreen(nav.screen) ? nav.screen : "landing"
 
@@ -180,10 +175,20 @@ export default function App() {
       }
     }
 
-    bootstrap()
+    if (useNav.persist.hasHydrated()) {
+      runBootstrap()
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const unsubscribe = useNav.persist.onFinishHydration(() => {
+      void runBootstrap()
+    })
 
     return () => {
       cancelled = true
+      unsubscribe?.()
     }
   }, [setScreen])
 

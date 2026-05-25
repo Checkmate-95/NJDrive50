@@ -41,6 +41,7 @@ export type DriveCompliance = DriveSummary & {
   meetsNight: boolean
   meetsNightVerified: boolean
   meetsRequirement: boolean
+  meetsRequirementIncludingEstimated: boolean
   requiresReview: boolean
   remainingTotal: number
   remainingNight: number
@@ -67,7 +68,7 @@ const CURFEW_END_HOUR = 5
 ------------------------------------------------------- */
 
 const generateId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
+  typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
@@ -345,13 +346,16 @@ export const getCompliance = (driveLog: DriveEntry[]): DriveCompliance => {
   const meetsNight = summary.nightDuration >= REQUIRED_NIGHT
   const meetsNightVerified = summary.solarNightDuration >= REQUIRED_NIGHT
   const requiresReview = summary.estimatedNightDuration > 0
+  const meetsRequirementIncludingEstimated = meetsTotal && meetsNight
+  const meetsRequirement = meetsTotal && meetsNightVerified
 
   return {
     ...summary,
     meetsTotal,
     meetsNight,
     meetsNightVerified,
-    meetsRequirement: meetsTotal && meetsNight,
+    meetsRequirement,
+    meetsRequirementIncludingEstimated,
     requiresReview,
     remainingTotal: Math.max(REQUIRED_TOTAL - summary.totalDuration, 0),
     remainingNight: Math.max(REQUIRED_NIGHT - summary.nightDuration, 0),

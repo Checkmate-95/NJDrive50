@@ -6,8 +6,20 @@ export type SolarWindow = {
   sunset: Date | null
 }
 
+export type SolarSplitMode = "solar" | "unverified"
+
+export type DayNightSplit = {
+  dayHours: number
+  nightHours: number
+  mode: SolarSplitMode
+}
+
 function isFiniteCoord(value: number): boolean {
   return Number.isFinite(value)
+}
+
+function isValidDate(value: Date): boolean {
+  return value instanceof Date && !Number.isNaN(value.getTime())
 }
 
 function getOverlapMs(
@@ -28,18 +40,22 @@ export function getSolarWindowForDate(
   longitude: number,
   date: Date = new Date()
 ): SolarWindow {
-  if (!isFiniteCoord(latitude) || !isFiniteCoord(longitude)) {
+  if (!isFiniteCoord(latitude) || !isFiniteCoord(longitude) || !isValidDate(date)) {
     return { sunrise: null, sunset: null }
   }
 
   try {
-    const sunrise = getSunrise(latitude, longitude, date) ?? null
-    const sunset = getSunset(latitude, longitude, date) ?? null
+    const rawSunrise = getSunrise(latitude, longitude, date) ?? null
+    const rawSunset = getSunset(latitude, longitude, date) ?? null
 
     const safeSunrise =
-      sunrise instanceof Date && !Number.isNaN(sunrise.getTime()) ? sunrise : null
+      rawSunrise !== null && isValidDate(rawSunrise) ? rawSunrise : null
     const safeSunset =
-      sunset instanceof Date && !Number.isNaN(sunset.getTime()) ? sunset : null
+      rawSunset !== null && isValidDate(rawSunset) ? rawSunset : null
+
+    if (!safeSunrise || !safeSunset || safeSunset <= safeSunrise) {
+      return { sunrise: null, sunset: null }
+    }
 
     return { sunrise: safeSunrise, sunset: safeSunset }
   } catch {
@@ -48,15 +64,13 @@ export function getSolarWindowForDate(
 }
 
 /**
- * Determines if a drive start time qualifies as a night drive.
- * Missing or invalid solar data → treated as NOT verified night.
+ * Determines if a drive start time qualifies as a verified night drive.
+ * Missing or invalid solar data -> treated as NOT verified night.
  */
-export function isNightDrive(
-  startTime: Date,
-  solarWindow: SolarWindow
-): boolean {
-  if (!(startTime instanceof Date) || Number.isNaN(startTime.getTime())) return false
+export function isNightDrive(startTime: Date, solarWindow: SolarWindow): boolean {
+  if (!isValidDate(startTime)) return false
   if (!solarWindow.sunrise || !solarWindow.sunset) return false
+  if (!isValidDate(solarWindow.sunrise) || !isValidDate(solarWindow.sunset)) return false
   if (solarWindow.sunset <= solarWindow.sunrise) return false
 
   return startTime < solarWindow.sunrise || startTime >= solarWindow.sunset
@@ -73,51 +87,42 @@ export function computeDayNightSplit(
   startTime: Date,
   endTime: Date,
   solarWindow: SolarWindow
-): { dayHours: number; nightHours: number } {
-  if (
-    !(startTime instanceof Date) ||
-    !(endTime instanceof Date) ||
-    Number.isNaN(startTime.getTime()) ||
-    Number.isNaN(endTime.getTime())
-  ) {
-    return { dayHours: 0, nightHours: 0 }
+): DayNightSplit {
+  if (!isValidDate(startTime) || !isValidDate(endTime)) {
+    return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
   const start = startTime.getTime()
   const end = endTime.getTime()
 
   if (end <= start) {
-    return { dayHours: 0, nightHours: 0 }
+    return { dayHours: 0, nightHours: 0, mode: "unverified" }
+  }
+
+  const { sunrise, sunset } = solarWindow
+
+  if (!sunrise || !sunset) {
+    return { dayHours: 0, nightHours: 0, mode: "unverified" }
+  }
+
+  if (!isValidDate(sunrise) || !isValidDate(sunset)) {
+    return { dayHours: 0, nightHours: 0, mode: "unverified" }
+  }
+
+  const sunriseMs = sunrise.getTime()
+  const sunsetMs = sunset.getTime()
+
+  if (!Number.isFinite(sunriseMs) || !Number.isFinite(sunsetMs) || sunsetMs <= sunriseMs) {
+    return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
   const totalMs = end - start
-
-  if (!solarWindow.sunrise || !solarWindow.sunset) {
-    return {
-      dayHours: totalMs / (1000 * 60 * 60),
-      nightHours: 0,
-    }
-  }
-
-  const sunrise = solarWindow.sunrise.getTime()
-  const sunset = solarWindow.sunset.getTime()
-
-  if (
-    Number.isNaN(sunrise) ||
-    Number.isNaN(sunset) ||
-    sunset <= sunrise
-  ) {
-    return {
-      dayHours: totalMs / (1000 * 60 * 60),
-      nightHours: 0,
-    }
-  }
-
-  const dayMs = getOverlapMs(start, end, sunrise, sunset)
+  const dayMs = getOverlapMs(start, end, sunriseMs, sunsetMs)
   const nightMs = Math.max(totalMs - dayMs, 0)
 
   return {
     dayHours: Math.max(dayMs / (1000 * 60 * 60), 0),
     nightHours: Math.max(nightMs / (1000 * 60 * 60), 0),
+    mode: "solar",
   }
 }

@@ -50,7 +50,9 @@ function isSharedLogPayload(value: unknown): value is SharedLogPayload {
 function decodeBase64Url(input: string): string {
   const normalized = input.replace(/-/g, "+").replace(/_/g, "/")
   const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4)
-  return atob(padded)
+  const binary = atob(padded)
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+  return new TextDecoder().decode(bytes)
 }
 
 function formatDateTime(value: string): string {
@@ -82,6 +84,12 @@ export default function ShareLogView() {
       }
 
       setData(parsed)
+
+      window.history.replaceState(
+        null,
+        document.title,
+        window.location.pathname + window.location.search,
+      )
     } catch (err) {
       console.error("Invalid share link", err)
       setError("Invalid or expired share link.")
@@ -90,8 +98,8 @@ export default function ShareLogView() {
 
   if (error || !data) {
     return (
-      <main className="min-h-screen flex items-center justify-center text-[#08194A] p-6">
-        <div className="text-center space-y-2 max-w-sm">
+      <main className="flex min-h-screen items-center justify-center p-6 text-[#08194A]">
+        <div className="max-w-sm space-y-2 text-center">
           <p className="text-lg font-semibold">
             {error ?? "Invalid or expired share link."}
           </p>
@@ -104,14 +112,14 @@ export default function ShareLogView() {
   }
 
   return (
-    <main className="min-h-screen bg-white text-[#08194A] p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-center">Driving Log</h1>
+    <main className="min-h-screen space-y-6 bg-white p-6 text-[#08194A]">
+      <h1 className="text-center text-3xl font-bold">Driving Log</h1>
 
       <div className="rounded-xl bg-gray-100 p-4 text-center">
         <p className="text-sm font-semibold">Teen Driver</p>
-        <p className="text-lg font-bold mt-1">{data.teenName}</p>
+        <p className="mt-1 text-lg font-bold">{data.teenName}</p>
 
-        <p className="text-sm text-gray-700 mt-3">
+        <p className="mt-3 text-sm text-gray-700">
           Total Hours: <strong>{data.totalHours.toFixed(2)}</strong>
         </p>
         <p className="text-sm text-gray-700">
@@ -119,8 +127,8 @@ export default function ShareLogView() {
         </p>
       </div>
 
-      <div className="rounded-xl bg-gray-50 border border-gray-200 p-4">
-        <p className="text-sm font-semibold mb-2">Drive History</p>
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+        <p className="mb-2 text-sm font-semibold">Drive History</p>
 
         {data.drives.length === 0 ? (
           <p className="text-sm text-gray-600">No drives were included in this shared log.</p>
@@ -133,7 +141,7 @@ export default function ShareLogView() {
             return (
               <div
                 key={drive.id}
-                className="mb-3 pb-3 border-b border-gray-200 last:border-none last:pb-0"
+                className="mb-3 border-b border-gray-200 pb-3 last:border-none last:pb-0"
               >
                 <p className="text-sm font-semibold">{duration}</p>
                 <p className="text-xs text-gray-600">

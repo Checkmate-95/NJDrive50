@@ -13,6 +13,8 @@ export default function Settings() {
     setAutoExport,
   } = useSettingsStore()
 
+  const isDev = import.meta.env.DEV
+
   const handleDevReset = async () => {
     await devResetAll()
     setScreen("intro")
@@ -159,13 +161,12 @@ export default function Settings() {
                 </div>
 
                 <div className="mt-4">
-                  <ActionButton
-                    label="Contact Support"
-                    tone="secondary"
-                    onClick={() => {
-                      window.location.href = "mailto:support@njdrive50.com"
-                    }}
-                  />
+                  <a
+                    href="mailto:support@njdrive50.com"
+                    className="flex min-h-[48px] w-full items-center justify-center rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-4 py-3 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
+                  >
+                    Contact Support
+                  </a>
                 </div>
               </div>
             </SettingsCard>
@@ -196,51 +197,51 @@ export default function Settings() {
           </section>
 
           <SettingsCard
-  eyebrow="AI Assistant"
-  title="NJDrive50 Q&A"
-  description="Ask questions about permit rules, night hours, logs, or anything related to your driving journey."
->
-  <div className="grid gap-3 sm:grid-cols-2">
-    <ActionButton
-      label="Open AI Q&A"
-      tone="primary"
-      onClick={() => setScreen("aiHelper")}
-    />
-    <ActionButton
-      label="FAQ Mode"
-      tone="secondary"
-      onClick={() => setScreen("helpFaq")}
-    />
-  </div>
-</SettingsCard>
-
-
-
-          <SettingsCard
-            eyebrow="Internal"
-            title="Reset and developer tools"
-            description="Temporary builder/testing actions. Keep this section isolated at the bottom until removed from production."
-            tone="danger"
+            eyebrow="AI Assistant"
+            title="NJDrive50 Q&A"
+            description="Ask questions about permit rules, night hours, logs, or anything related to your driving journey."
           >
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4">
-              <p className="text-sm font-bold text-red-800">
-                Internal testing only
-              </p>
-              <p className="mt-1 text-sm leading-6 text-red-700">
-                These controls are only for development and testing. They should
-                stay visually separated from user-facing settings and be removed
-                from the final production version.
-              </p>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               <ActionButton
-                label="Developer Reset (Wipe All Data)"
-                tone="danger"
-                onClick={handleDevReset}
+                label="Open AI Q&A"
+                tone="primary"
+                onClick={() => setScreen("aiHelper")}
+              />
+              <ActionButton
+                label="FAQ Mode"
+                tone="secondary"
+                onClick={() => setScreen("helpFaq")}
               />
             </div>
           </SettingsCard>
+
+          {isDev && (
+            <SettingsCard
+              eyebrow="Internal"
+              title="Reset and developer tools"
+              description="Temporary builder/testing actions. Keep this section isolated at the bottom until removed from production."
+              tone="danger"
+            >
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4">
+                <p className="text-sm font-bold text-red-800">
+                  Internal testing only
+                </p>
+                <p className="mt-1 text-sm leading-6 text-red-700">
+                  These controls are only for development and testing. They should
+                  stay visually separated from user-facing settings and be removed
+                  from the final production version.
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <ActionButton
+                  label="Developer Reset (Wipe All Data)"
+                  tone="danger"
+                  onClick={handleDevReset}
+                />
+              </div>
+            </SettingsCard>
+          )}
         </div>
       </div>
     </main>
@@ -370,10 +371,10 @@ function SidebarStat({
 }) {
   const toneClasses =
     tone === "success"
-      ? "bg-[#ECFDF3] text-[#166534] border-[#16A34A]/15"
+      ? "border-[#16A34A]/15 bg-[#ECFDF3] text-[#166534]"
       : tone === "muted"
-        ? "bg-[#F7F9FC] text-[#08194A]/70 border-[#08194A]/10"
-        : "bg-[#FFF7DB] text-[#8A6500] border-[#f9c80e]/30"
+        ? "border-[#08194A]/10 bg-[#F7F9FC] text-[#08194A]/70"
+        : "border-[#f9c80e]/30 bg-[#FFF7DB] text-[#8A6500]"
 
   return (
     <div className={`rounded-2xl border px-4 py-3 ${toneClasses}`}>

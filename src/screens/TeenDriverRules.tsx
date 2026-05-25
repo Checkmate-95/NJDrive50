@@ -17,7 +17,7 @@ export default function TeenDriverRules() {
 
           <div className="px-4 pb-6 pt-2 sm:px-6">
             <p className="max-w-3xl text-sm leading-6 text-[#08194A]/65 sm:text-base">
-              A quick summary of common New Jersey teen driver restrictions.
+              A quick summary of common New Jersey teen driver restrictions and permit requirements.
             </p>
 
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -42,16 +42,16 @@ export default function TeenDriverRules() {
               </RuleCard>
 
               <RuleCard title="Seatbelts" icon="🛡️">
-                <Rule>Seat belts must be worn at all times.</Rule>
+                <Rule>Seat belts must be worn at all times for all occupants.</Rule>
               </RuleCard>
 
-              <RuleCard title="Driving Hours" icon="🌙">
+              <RuleCard title="Practice Driving" icon="🌙">
                 <Rule>Must complete <b>50 hours</b> of supervised driving.</Rule>
                 <Rule>Must complete <b>10 hours during darkness</b>.</Rule>
               </RuleCard>
 
               <RuleCard title="Permit Period" icon="📄">
-                <Rule>Must hold the permit for <b>at least 6 months</b>.</Rule>
+                <Rule>Must hold the permit for <b>at least 6 months</b> before moving to the next licensing step.</Rule>
               </RuleCard>
 
               <RuleCard title="Wireless Devices" icon="📵">
@@ -60,8 +60,16 @@ export default function TeenDriverRules() {
                 </Rule>
               </RuleCard>
 
+              <RuleCard title="GDL Decals" icon="🔖">
+                <Rule>
+                  Drivers under 21 with a permit or probationary license must display the required <b>GDL decals</b> on the vehicle.
+                </Rule>
+              </RuleCard>
+
               <RuleCard title="Probationary License" icon="🔒">
-                <Rule>Curfew, passenger, and seatbelt restrictions still apply.</Rule>
+                <Rule>
+                  Curfew, passenger, seatbelt, and wireless-device restrictions still apply during the probationary stage.
+                </Rule>
               </RuleCard>
             </div>
 

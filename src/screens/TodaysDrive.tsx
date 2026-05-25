@@ -21,10 +21,17 @@ function formatHours(hours?: number): string {
 }
 
 function formatClockTime(date: Date): string {
+  if (Number.isNaN(date.getTime())) return "Invalid time"
   return date.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
   })
+}
+
+function formatDateTime(value: unknown): string {
+  const date = new Date(typeof value === "string" || typeof value === "number" ? value : "")
+  if (Number.isNaN(date.getTime())) return "Invalid date"
+  return date.toLocaleString()
 }
 
 function getLightingLabel(
@@ -195,7 +202,7 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
   }
 
   return (
-    <div className="w-full flex flex-col items-center px-3 pb-24 pt-3 text-[#0A1E5E] sm:px-4">
+    <div className="flex w-full flex-col items-center px-3 pb-24 pt-3 text-[#0A1E5E] sm:px-4">
       {isPreview && (
         <div className="mb-4 w-full max-w-md rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">
@@ -235,12 +242,12 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
         <div className="mb-4 space-y-2 text-sm text-[#1b2755]">
           <p>
             <strong>Start Time:</strong>{" "}
-            {new Date(startTime).toLocaleString()}
+            {formatDateTime(startTime)}
           </p>
 
           <p>
             <strong>End Time:</strong>{" "}
-            {new Date(endTime).toLocaleString()}
+            {formatDateTime(endTime)}
           </p>
 
           <p>
@@ -317,6 +324,7 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
 
       <div className="flex w-full max-w-md flex-col gap-3 pt-6">
         <button
+          type="button"
           onClick={handleStartNew}
           className="w-full rounded-lg bg-[#0A1E5E] py-3 font-semibold text-white transition-colors hover:bg-[#f9c80e] hover:text-[#0A1E5E]"
         >
@@ -324,6 +332,7 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
         </button>
 
         <button
+          type="button"
           onClick={handleViewSummary}
           className="w-full rounded-lg border border-[#0A1E5E] bg-white py-3 font-semibold text-[#0A1E5E] transition-colors hover:bg-[#0A1E5E] hover:text-white"
         >

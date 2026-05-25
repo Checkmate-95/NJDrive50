@@ -24,6 +24,16 @@ type ActiveDriveContentProps = {
   setCurrentDrive: Dispatch<SetStateAction<DriveEntry | null>>
 }
 
+type MilesSource = "routes-api" | "gps-accumulated"
+
+type PreviewDriveEntry = DriveEntry & {
+  milesSource?: MilesSource
+  isPreview?: boolean
+}
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
+const GPS_POLL_INTERVAL_MS = 20000
+
 const safeNumber = (value: unknown) => {
   const num = Number(value)
   return Number.isFinite(num) ? num : 0
@@ -48,217 +58,61 @@ const sameCoord = (
   return a.lat === b.lat && a.lng === b.lng
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
+function makeDriveId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
 
-async function getAccurateMileage(start: RouteCoord, end: RouteCoord) {
+  return `drive-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+async function getAccurateMileage(
+  start: RouteCoord,
+  end: RouteCoord,
+  signal?: AbortSignal
+) {
   try {
     if (!API_BASE_URL) return null
 
-    const res = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        origin: {
-          location: { latLng: { latitude: start.lat, longitude: start.lng } },
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000)
+
+    const abortHandler = () => controller.abort()
+    signal?.addEventListener("abort", abortHandler, { once: true })
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        destination: {
-          location: { latLng: { latitude: end.lat, longitude: end.lng } },
-        },
-        travelMode: "DRIVE",
-        routingPreference: "TRAFFIC_AWARE",
-        units: "IMPERIAL",
-      }),
-    })
-
-    if (!res.ok) return null
-
-    const data = await res.json()
-    const meters = data?.routes?.[0]?.distanceMeters
-    if (typeof meters !== "number") return null
-
-    return meters / 1609.34
-  } catch {
-    return null
-  }
-}
-
-async function requestAndGetLocation(): Promise<RouteCoord | null> {
-  try {
-    if (Capacitor.isNativePlatform()) {
-      const permission = await Geolocation.checkPermissions()
-
-      const needsLocation =
-        permission.location !== "granted" &&
-        permission.coarseLocation !== "granted"
-
-      if (needsLocation) {
-        const requested = await Geolocation.requestPermissions()
-
-        const granted =
-          requested.location === "granted" ||
-          requested.coarseLocation === "granted"
-
-        if (!granted) return null
-      }
-
-      const pos = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 5000,
+        signal: controller.signal,
+        body: JSON.stringify({
+          origin: {
+            location: { latLng: { latitude: start.lat, longitude: start.lng } },
+          },
+          destination: {
+            location: { latLng: { latitude: end.lat, longitude: end.lng } },
+          },
+          travelMode: "DRIVE",
+          routingPreference: "TRAFFIC_AWARE",
+          units: "IMPERIAL",
+        }),
       })
 
-      const lat = pos.coords.latitude
-      const lng = pos.coords.longitude
+      if (!res.ok) return null
 
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-      if (lat === 0 && lng === 0) return null
+      const data = await res.json()
+      const meters = data?.routes?.[0]?.distanceMeters
+      if (typeof meters !== "number") return null
 
-      return { lat, lng }
+      return meters / 1609.34
+    } finally {
+      window.clearTimeout(timeoutId)
+      signal?.removeEventListener("abort", abortHandler)
     }
-
-    return await new Promise<RouteCoord | null>((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = pos.coords.latitude
-          const lng = pos.coords.longitude
-
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            resolve(null)
-            return
-          }
-
-          if (lat === 0 && lng === 0) {
-            resolve(null)
-            return
-          }
-
-          resolve({ lat, lng })
-        },
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-      )
-    })
-  } catch (err) {
-    console.error("Location error:", err)
+  } catch {
     return null
-  }
-}
-
-type MilesSource = "routes-api" | "gps-accumulated"
-
-type PreviewDriveEntry = DriveEntry & {
-  milesSource?: MilesSource
-  isPreview?: boolean
-}
-
-async function buildDriveSnapshot(
-  opts?: { isPreview?: boolean }
-): Promise<PreviewDriveEntry | null> {
-  const storeSnapshot = useActiveDriveStore.getState()
-  const session = storeSnapshot.session
-
-  const savedStartTime = session.startTime
-  if (!savedStartTime) return null
-
-  const snapshotTime = Date.now()
-
-  storeSnapshot.tick(undefined, snapshotTime)
-
-  const fresh = useActiveDriveStore.getState().session
-  const liveMode =
-    useActiveDriveStore.getState().getCurrentMode() ?? fresh.currentMode ?? "day"
-
-  const currentEndCoord = await requestAndGetLocation()
-
-  const finalElapsedMs = fresh.dayMs + fresh.nightMs
-  if (finalElapsedMs <= 0) return null
-
-  let finalDayMs = Math.max(0, fresh.dayMs)
-  let finalNightMs = Math.max(0, fresh.nightMs)
-  const bucketTotal = finalDayMs + finalNightMs
-
-  if (bucketTotal < finalElapsedMs) {
-    const remainder = finalElapsedMs - bucketTotal
-    if (liveMode === "night") {
-      finalNightMs += remainder
-    } else {
-      finalDayMs += remainder
-    }
-  } else if (bucketTotal <= 0) {
-    if (liveMode === "night") {
-      finalNightMs = finalElapsedMs
-    } else {
-      finalDayMs = finalElapsedMs
-    }
-  }
-
-  const normalizedTotalMs = Math.max(finalElapsedMs, finalDayMs + finalNightMs)
-
-  let accurateMiles = safeNumber(fresh.liveMiles)
-  let milesSource: MilesSource = "gps-accumulated"
-
-  if (fresh.startCoord && currentEndCoord) {
-    const routeMiles = await getAccurateMileage(fresh.startCoord, currentEndCoord)
-    if (routeMiles !== null) {
-      accurateMiles = routeMiles
-      milesSource = "routes-api"
-    }
-  }
-
-  const baseTrail = Array.isArray(fresh.routeTrail) ? fresh.routeTrail : []
-  const lastTrailCoord =
-    baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
-
-  const finalTrail =
-    currentEndCoord && !sameCoord(lastTrailCoord, currentEndCoord)
-      ? [...baseTrail, currentEndCoord]
-      : baseTrail
-
-  const startDate = new Date(savedStartTime)
-  const endDate = new Date(snapshotTime)
-
-  // Fallback first: use actual accumulated buckets from the live drive session
-  let dayHours = finalDayMs / 3600000
-  let nightHours = finalNightMs / 3600000
-  let nightCalcMode: NightCalcMode | undefined = "estimated"
-
-  const onboarding = loadOnboardingData()
-  const { homeLat, homeLng } = onboarding
-
-  // Override only when solar verification is available
-  if (
-    typeof homeLat === "number" &&
-    Number.isFinite(homeLat) &&
-    typeof homeLng === "number" &&
-    Number.isFinite(homeLng)
-  ) {
-    const solarWindow = getSolarWindowForDate(homeLat, homeLng, startDate)
-    const split = computeDayNightSplit(startDate, endDate, solarWindow)
-
-    dayHours = split.dayHours
-    nightHours = split.nightHours
-    nightCalcMode = "verified"
-  }
-
-  return {
-    id: crypto.randomUUID(),
-    startTime: new Date(savedStartTime).toISOString(),
-    endTime: new Date(snapshotTime).toISOString(),
-    totalDurationHours: normalizedTotalMs / 3600000,
-    dayDurationHours: dayHours,
-    nightDurationHours: nightHours,
-    verifiedNightDurationHours: nightHours,
-    nightCalcMode,
-    source: "timer",
-    miles: safeNumber(accurateMiles),
-    milesSource,
-    weather: fresh.weather,
-    routeCoords: finalTrail,
-    startLatitude: fresh.startCoord?.lat ?? null,
-    startLongitude: fresh.startCoord?.lng ?? null,
-    isPreview: opts?.isPreview ?? false,
   }
 }
 
@@ -278,6 +132,9 @@ function ActiveDriveContent({
   const isSavingRef = useRef(false)
   const weatherHelpRef = useRef<HTMLDivElement | null>(null)
   const wasRunningBeforeStopRef = useRef(false)
+  const inflightLocationRef = useRef<Promise<RouteCoord | null> | null>(null)
+  const activeSnapshotAbortRef = useRef<AbortController | null>(null)
+  const mountedRef = useRef(true)
 
   const {
     session,
@@ -301,6 +158,81 @@ function ActiveDriveContent({
   const clearAllLoops = useCallback(() => {
     clearGpsLoop()
   }, [clearGpsLoop])
+
+  const requestAndGetLocation = useCallback(async (): Promise<RouteCoord | null> => {
+    if (inflightLocationRef.current) {
+      return inflightLocationRef.current
+    }
+
+    const promise = (async () => {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const permission = await Geolocation.checkPermissions()
+
+          const needsLocation =
+            permission.location !== "granted" &&
+            permission.coarseLocation !== "granted"
+
+          if (needsLocation) {
+            const requested = await Geolocation.requestPermissions()
+
+            const granted =
+              requested.location === "granted" ||
+              requested.coarseLocation === "granted"
+
+            if (!granted) return null
+          }
+
+          const pos = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 5000,
+          })
+
+          const lat = pos.coords.latitude
+          const lng = pos.coords.longitude
+
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+          if (lat === 0 && lng === 0) return null
+
+          return { lat, lng }
+        }
+
+        if (!navigator.geolocation) return null
+
+        return await new Promise<RouteCoord | null>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const lat = pos.coords.latitude
+              const lng = pos.coords.longitude
+
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                resolve(null)
+                return
+              }
+
+              if (lat === 0 && lng === 0) {
+                resolve(null)
+                return
+              }
+
+              resolve({ lat, lng })
+            },
+            () => resolve(null),
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+          )
+        })
+      } catch (err) {
+        console.error("Location error:", err)
+        return null
+      } finally {
+        inflightLocationRef.current = null
+      }
+    })()
+
+    inflightLocationRef.current = promise
+    return promise
+  }, [])
 
   const primeSessionCoord = useCallback((coord: RouteCoord) => {
     useActiveDriveStore.setState((state) => {
@@ -327,10 +259,152 @@ function ActiveDriveContent({
     })
   }, [])
 
+  const buildDriveSnapshot = useCallback(
+    async (opts?: { isPreview?: boolean; signal?: AbortSignal }): Promise<PreviewDriveEntry | null> => {
+      const state = useActiveDriveStore.getState()
+      const sessionSnapshot = state.session
+
+      const savedStartTime = sessionSnapshot.startTime
+      if (!savedStartTime) return null
+
+      const snapshotTime = Date.now()
+      state.tick(undefined, snapshotTime)
+
+      const freshState = useActiveDriveStore.getState()
+      const fresh = freshState.session
+      const liveMode =
+        freshState.getCurrentMode() ?? fresh.currentMode ?? "day"
+
+      const currentEndCoord = await requestAndGetLocation()
+      if (opts?.signal?.aborted) return null
+
+      const finalElapsedMs = fresh.dayMs + fresh.nightMs
+      if (finalElapsedMs <= 0) return null
+
+      let finalDayMs = Math.max(0, fresh.dayMs)
+      let finalNightMs = Math.max(0, fresh.nightMs)
+      const bucketTotal = finalDayMs + finalNightMs
+
+      if (bucketTotal < finalElapsedMs) {
+        const remainder = finalElapsedMs - bucketTotal
+        if (liveMode === "night") {
+          finalNightMs += remainder
+        } else {
+          finalDayMs += remainder
+        }
+      } else if (bucketTotal <= 0) {
+        if (liveMode === "night") {
+          finalNightMs = finalElapsedMs
+        } else {
+          finalDayMs = finalElapsedMs
+        }
+      }
+
+      const normalizedTotalMs = Math.max(finalElapsedMs, finalDayMs + finalNightMs)
+
+      let accurateMiles = safeNumber(fresh.liveMiles)
+      let milesSource: MilesSource = "gps-accumulated"
+
+      if (fresh.startCoord && currentEndCoord) {
+        const routeMiles = await getAccurateMileage(
+          fresh.startCoord,
+          currentEndCoord,
+          opts?.signal
+        )
+
+        if (opts?.signal?.aborted) return null
+
+        if (routeMiles !== null) {
+          accurateMiles = routeMiles
+          milesSource = "routes-api"
+        }
+      }
+
+      const baseTrail = Array.isArray(fresh.routeTrail) ? fresh.routeTrail : []
+      const lastTrailCoord =
+        baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
+
+      const finalTrail =
+        currentEndCoord && !sameCoord(lastTrailCoord, currentEndCoord)
+          ? [...baseTrail, currentEndCoord]
+          : baseTrail
+
+      const startDate = new Date(savedStartTime)
+      const endDate = new Date(snapshotTime)
+
+      let dayHours = finalDayMs / 3600000
+      let nightHours = finalNightMs / 3600000
+      let nightCalcMode: NightCalcMode | undefined = "estimated"
+
+      const onboarding = loadOnboardingData()
+      const { homeLat, homeLng } = onboarding
+
+      if (
+        typeof homeLat === "number" &&
+        Number.isFinite(homeLat) &&
+        typeof homeLng === "number" &&
+        Number.isFinite(homeLng)
+      ) {
+        const solarWindow = getSolarWindowForDate(homeLat, homeLng, startDate)
+        const split = computeDayNightSplit(startDate, endDate, solarWindow)
+
+        dayHours = split.dayHours
+        nightHours = split.nightHours
+        nightCalcMode = "verified"
+      }
+
+      return {
+        id: makeDriveId(),
+        startTime: startDate.toISOString(),
+        endTime: endDate.toISOString(),
+        totalDurationHours: normalizedTotalMs / 3600000,
+        dayDurationHours: dayHours,
+        nightDurationHours: nightHours,
+        verifiedNightDurationHours: nightHours,
+        nightCalcMode,
+        source: "timer",
+        miles: safeNumber(accurateMiles),
+        milesSource,
+        weather: fresh.weather,
+        routeCoords: finalTrail,
+        startLatitude: fresh.startCoord?.lat ?? null,
+        startLongitude: fresh.startCoord?.lng ?? null,
+        isPreview: opts?.isPreview ?? false,
+      }
+    },
+    [requestAndGetLocation]
+  )
+
+  const startFrozenSnapshot = useCallback(
+    (opts?: { isPreview?: boolean }) => {
+      activeSnapshotAbortRef.current?.abort()
+
+      const controller = new AbortController()
+      activeSnapshotAbortRef.current = controller
+
+      const promise = buildDriveSnapshot({
+        isPreview: opts?.isPreview,
+        signal: controller.signal,
+      })
+
+      frozenSnapshotRef.current = promise
+      return promise
+    },
+    [buildDriveSnapshot]
+  )
+
   const [displayedMs, setDisplayedMs] = useState(() => {
     const s = useActiveDriveStore.getState().session
     return s.dayMs + s.nightMs
   })
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      activeSnapshotAbortRef.current?.abort()
+    }
+  }, [])
 
   useEffect(() => {
     const id = window.setInterval(() => {
@@ -388,18 +462,20 @@ function ActiveDriveContent({
 
     ;(async () => {
       const coord = await requestAndGetLocation()
-      if (cancelled) return
+      if (cancelled || !mountedRef.current) return
+
       if (coord) {
         primeSessionCoord(coord)
         setLocationError(null)
       }
+
       tick(undefined, Date.now())
     })()
 
     return () => {
       cancelled = true
     }
-  }, [session.isActive, primeSessionCoord, tick])
+  }, [session.isActive, primeSessionCoord, requestAndGetLocation, tick])
 
   useEffect(() => {
     clearGpsLoop()
@@ -408,6 +484,8 @@ function ActiveDriveContent({
 
     gpsRef.current = window.setInterval(() => {
       requestAndGetLocation().then((coord) => {
+        if (!mountedRef.current) return
+
         if (!coord) {
           setLocationError("Location access is required for accurate mileage.")
           return
@@ -416,10 +494,10 @@ function ActiveDriveContent({
         setLocationError(null)
         tick(coord, Date.now())
       })
-    }, 10000)
+    }, GPS_POLL_INTERVAL_MS)
 
     return clearGpsLoop
-  }, [session.isRunning, tick, clearGpsLoop])
+  }, [session.isRunning, tick, clearGpsLoop, requestAndGetLocation])
 
   useEffect(() => {
     return () => {
@@ -497,13 +575,17 @@ function ActiveDriveContent({
 
     wasRunningBeforeStopRef.current = session.isRunning
 
-    if (session.isRunning) pauseDrive()
+    if (session.isRunning) {
+      pauseDrive()
+    }
 
-    frozenSnapshotRef.current = buildDriveSnapshot({ isPreview: false })
+    startFrozenSnapshot({ isPreview: false })
     setShowStopConfirm(true)
   }
 
   const handleCancelStop = () => {
+    activeSnapshotAbortRef.current?.abort()
+    activeSnapshotAbortRef.current = null
     frozenSnapshotRef.current = null
     setShowStopConfirm(false)
 
@@ -523,7 +605,7 @@ function ActiveDriveContent({
 
       const finalizedDrive = frozenSnapshotRef.current
         ? await frozenSnapshotRef.current
-        : null
+        : await startFrozenSnapshot({ isPreview: false })
 
       if (!finalizedDrive) return
 
@@ -548,6 +630,7 @@ function ActiveDriveContent({
       isSavingRef.current = false
       setIsStopping(false)
       frozenSnapshotRef.current = null
+      activeSnapshotAbortRef.current = null
       wasRunningBeforeStopRef.current = false
     }
   }
@@ -558,10 +641,7 @@ function ActiveDriveContent({
     try {
       setIsPreviewing(true)
 
-      const snapshotPromise =
-        frozenSnapshotRef.current ?? buildDriveSnapshot({ isPreview: true })
-
-      const previewDrive = await snapshotPromise
+      const previewDrive = await startFrozenSnapshot({ isPreview: true })
       if (!previewDrive) return
 
       setCurrentDrive(previewDrive as DriveEntry)

@@ -103,7 +103,7 @@ export default function MilestonesContent() {
           <button
             type="button"
             onClick={() => goBack("summary")}
-            className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] text-[#08194A]/70 shadow-sm transition hover:bg-[#EEF3FA] hover:text-[#08194A] sm:right-6 sm:top-6"
+            className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] text-[#08194A]/70 shadow-sm transition hover:bg-[#EEF3FA] hover:text-[#08194A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#f9c80e]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:right-6 sm:top-6"
             aria-label="Close milestones"
           >
             <svg
@@ -113,6 +113,7 @@ export default function MilestonesContent() {
               viewBox="0 0 24 24"
               stroke="currentColor"
               strokeWidth={2}
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -160,6 +161,10 @@ export default function MilestonesContent() {
             const pct = Math.min((m.value / m.requirement) * 100, 100)
             const done = m.value >= m.requirement
             const remaining = Math.max(m.requirement - m.value, 0)
+            const progressLabel =
+              m.kind === "night"
+                ? `${m.label} progress in required night hours`
+                : `${m.label} progress in required total hours`
 
             return (
               <motion.div
@@ -180,7 +185,19 @@ export default function MilestonesContent() {
                   </span>
                 </div>
 
-                <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-[#E2E9F5]">
+                <div
+                  className="mt-2 h-3 w-full overflow-hidden rounded-full bg-[#E2E9F5]"
+                  role="progressbar"
+                  aria-label={progressLabel}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(pct)}
+                  aria-valuetext={
+                    done
+                      ? `${m.label} complete`
+                      : `${Math.round(pct)} percent complete`
+                  }
+                >
                   <motion.div
                     initial={prefersReducedMotion ? false : { width: 0 }}
                     animate={{ width: `${pct}%` }}
@@ -255,7 +272,15 @@ export default function MilestonesContent() {
           </div>
 
           <div className="mt-4">
-            <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#08194A]/10 shadow-inner">
+            <div
+              className="relative h-3 w-full overflow-hidden rounded-full bg-[#08194A]/10 shadow-inner"
+              role="progressbar"
+              aria-label="Total required supervised driving hours progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(progressPercent)}
+              aria-valuetext={`${Math.round(progressPercent)} percent of total required hours completed`}
+            >
               <div
                 className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#08194A] to-[#f9c80e] transition-all duration-700 ease-in-out"
                 style={{ width: `${progressPercent}%` }}
@@ -267,7 +292,15 @@ export default function MilestonesContent() {
           </div>
 
           <div className="mt-4">
-            <div className="relative h-3 w-full overflow-hidden rounded-full bg-[#08194A]/10 shadow-inner">
+            <div
+              className="relative h-3 w-full overflow-hidden rounded-full bg-[#08194A]/10 shadow-inner"
+              role="progressbar"
+              aria-label="Required night driving hours progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(nightProgressPercent)}
+              aria-valuetext={`${Math.round(nightProgressPercent)} percent of required night hours completed`}
+            >
               <div
                 className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#0A1E5E] to-[#00C49A] transition-all duration-700 ease-in-out"
                 style={{ width: `${nightProgressPercent}%` }}

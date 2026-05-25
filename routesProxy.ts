@@ -1,24 +1,35 @@
 import express from "express"
-import fetch from "node-fetch"
 import dotenv from "dotenv"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import cors from "cors"
 import helmet from "helmet"
 import rateLimit from "express-rate-limit"
 
-dotenv.config()
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const envPath = path.join(__dirname, "server", ".env")
+const dotenvResult = dotenv.config({ path: envPath })
+
+if (dotenvResult.error) {
+  console.error("dotenv load error:", dotenvResult.error)
+}
 
 const PORT = Number(process.env.PORT ?? 3001)
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
-const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "http://localhost:5173")
+const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
   .split(",")
-  .map(origin => origin.trim())
+  .map((origin) => origin.trim())
   .filter(Boolean)
 
 if (!GOOGLE_MAPS_API_KEY) {
-  throw new Error("Missing GOOGLE_MAPS_API_KEY")
+  throw new Error("Missing GOOGLE_MAPS_API_KEY in server/.env")
 }
 
 const app = express()
+
+app.set("trust proxy", 1)
 
 app.use(helmet())
 
@@ -28,7 +39,7 @@ app.use(
     max: 30,
     standardHeaders: true,
     legacyHeaders: false,
-  })
+  }),
 )
 
 app.use(
@@ -43,7 +54,7 @@ app.use(
     methods: ["POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400,
-  })
+  }),
 )
 
 app.use(express.json({ limit: "100kb" }))
@@ -145,7 +156,7 @@ app.post("/api/computeRoutes", async (req, res) => {
           },
           body: JSON.stringify(normalizedBody),
           signal: controller.signal,
-        }
+        },
       )
 
       const text = await response.text()
@@ -178,6 +189,6 @@ app.post("/api/computeRoutes", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log(
-    `Routes API proxy running on http://localhost:${PORT} (${process.env.NODE_ENV ?? "development"})`
+    `Routes API proxy running on http://localhost:${PORT} (${process.env.NODE_ENV ?? "development"})`,
   )
 })

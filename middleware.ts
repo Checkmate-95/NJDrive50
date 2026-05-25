@@ -17,18 +17,31 @@ export function middleware(req: NextRequest) {
   }
 
   const authHeader = req.headers.get("authorization")
-  const expectedAuth = `Basic ${btoa(`${USERNAME}:${PASSWORD}`)}`
 
-  if (authHeader !== expectedAuth) {
-    return new NextResponse("Unauthorized", {
-      status: 401,
-      headers: {
-        "WWW-Authenticate": 'Basic realm="NJDrive50 Staging"',
-      },
-    })
+  if (authHeader) {
+    const [scheme, encoded] = authHeader.split(" ")
+
+    if (scheme === "Basic" && encoded) {
+      try {
+        const decoded = atob(encoded)
+        const separatorIndex = decoded.indexOf(":")
+        const username = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : ""
+        const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : ""
+
+        if (username === USERNAME && password === PASSWORD) {
+          return NextResponse.next()
+        }
+      } catch {
+      }
+    }
   }
 
-  return NextResponse.next()
+  return new NextResponse("Unauthorized", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="NJDrive50 Staging"',
+    },
+  })
 }
 
 export const config = {

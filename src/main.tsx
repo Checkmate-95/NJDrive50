@@ -6,7 +6,13 @@ import ErrorBoundary from "./components/ErrorBoundary"
 import "./index.css"
 import "../animations.css"
 
-createRoot(document.getElementById("root")!).render(
+const rootElement = document.getElementById("root")
+
+if (!rootElement) {
+  throw new Error('Root element with id "root" was not found.')
+}
+
+createRoot(rootElement).render(
   <StrictMode>
     <HelmetProvider>
       <ErrorBoundary>

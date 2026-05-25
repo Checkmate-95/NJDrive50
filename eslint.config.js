@@ -21,20 +21,14 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
-      // Allow unused vars prefixed with _ (e.g. _event, _props)
       '@typescript-eslint/no-unused-vars': ['warn', {
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
       }],
 
-      // Downgrade explicit-any to warn instead of error (common in React apps)
       '@typescript-eslint/no-explicit-any': 'warn',
 
-      // Exhaustive deps in useEffect — warn instead of off
       'react-hooks/exhaustive-deps': 'warn',
-
-      // Not needed in React 17+ (JSX transform)
-      'react/react-in-jsx-scope': 'off',
     },
   },
 ])

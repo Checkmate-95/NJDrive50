@@ -20,7 +20,7 @@ export type DriveEntry = {
   duration: number
   nightDuration: number
   dayDuration: number
-  isNight: boolean
+  hasNightPortion: boolean
   notes?: string
   source: DriveSource
   location?: DriveLocation
@@ -269,18 +269,18 @@ export const createDriveEntry = (params: {
   })
 
   return {
-    id: generateId(),
-    start,
-    end,
-    duration,
-    nightDuration,
-    dayDuration,
-    isNight: nightDuration > 0,
-    notes: notes?.trim() || undefined,
-    source,
-    location: cleanLocation,
-    nightCalcMode: mode,
-  }
+  id: generateId(),
+  start,
+  end,
+  duration,
+  nightDuration,
+  dayDuration,
+  hasNightPortion: nightDuration > 0,
+  notes: notes?.trim() || undefined,
+  source,
+  location: cleanLocation,
+  nightCalcMode: mode,
+}
 }
 
 export const createDriveEntryFromTimer = (params: {

@@ -1,7 +1,8 @@
-import type { CapacitorConfig } from "@capacitor/cli";
+import type { CapacitorConfig } from "@capacitor/cli"
 
-const appEnv = process.env.CAP_BUILD_TARGET ?? process.env.NODE_ENV ?? "development";
-const isProduction = appEnv === "production";
+const appEnv =
+  process.env.CAP_BUILD_TARGET ?? process.env.NODE_ENV ?? "development"
+const isProduction = appEnv === "production"
 
 const config: CapacitorConfig = {
   appId: "com.njdrive50.app",
@@ -10,7 +11,7 @@ const config: CapacitorConfig = {
 
   server: {
     androidScheme: "https",
-    cleartext: false,
+    cleartext: !isProduction,
   },
 
   android: {
@@ -33,6 +34,6 @@ const config: CapacitorConfig = {
       resizeOnFullScreen: true,
     },
   },
-};
+}
 
-export default config;
+export default config

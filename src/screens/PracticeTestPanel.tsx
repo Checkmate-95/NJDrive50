@@ -39,7 +39,7 @@ export default function PracticeTestPanel() {
 
   const scorePercent = useMemo(
     () => calcScorePercent(score, totalQuestions),
-    [score, totalQuestions],
+    [score, totalQuestions]
   )
 
   const passed = isPassing(scorePercent, PASSING_PERCENT)
@@ -217,6 +217,8 @@ export default function PracticeTestPanel() {
 
                   <a
                     href={LANDING_PAGE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex w-full items-center justify-center rounded-xl bg-[#f9c80e] py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
                   >
                     Start NJDrive50
@@ -461,6 +463,8 @@ export default function PracticeTestPanel() {
           <div className="mt-4 text-center">
             <a
               href={LANDING_PAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-sm font-semibold text-[#08194A] underline underline-offset-4"
             >
               Explore NJDrive50 driving hour tracking

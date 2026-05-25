@@ -268,14 +268,17 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
 
     if (addressSelectedFromAutocompleteRef.current) {
       addressSelectedFromAutocompleteRef.current = false
+      persistOnboarding({ address: value })
       return
     }
+
+    persistOnboarding({ address: value })
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
 
     typingTimeoutRef.current = setTimeout(() => {
       clearResolvedAddressState()
-      persistOnboarding({ address: value, ...emptyResolvedAddress })
+      persistOnboarding({ ...emptyResolvedAddress })
       typingTimeoutRef.current = null
     }, 600)
   }
@@ -289,25 +292,25 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   }, [])
 
   const handleTeenPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0]
-  if (!file) return
+    const file = e.target.files?.[0]
+    if (!file) return
 
-  const reader = new FileReader()
-  reader.onloadend = () => {
-    const result = reader.result
-    if (typeof result === "string") {
-      setCropImageSrc(result)
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const result = reader.result
+      if (typeof result === "string") {
+        setCropImageSrc(result)
+      }
     }
+    reader.readAsDataURL(file)
+    e.target.value = ""
   }
-  reader.readAsDataURL(file)
-  e.target.value = ""
-}
 
   const handleTeenPhotoCropSave = (croppedDataUrl: string) => {
-  setGlobalTeenPhoto(croppedDataUrl)
-  persistOnboarding({ teenPhoto: croppedDataUrl })
-  setCropImageSrc(null)
-}
+    setGlobalTeenPhoto(croppedDataUrl)
+    persistOnboarding({ teenPhoto: croppedDataUrl })
+    setCropImageSrc(null)
+  }
 
   const handleRemoveTeenPhoto = () => {
     setGlobalTeenPhoto("")
@@ -362,12 +365,12 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
       style={{ WebkitOverflowScrolling: "touch" }}
     >
       {cropImageSrc && (
-  <PhotoCropModal
-    imageSrc={cropImageSrc}
-    onCancel={() => setCropImageSrc(null)}
-    onSave={handleTeenPhotoCropSave}
-  />
-)}
+        <PhotoCropModal
+          imageSrc={cropImageSrc}
+          onCancel={() => setCropImageSrc(null)}
+          onSave={handleTeenPhotoCropSave}
+        />
+      )}
 
       <section className="relative mx-auto w-full min-w-0 max-w-[42rem] overflow-hidden rounded-[28px] border border-white/15 bg-[#F8FAFD] shadow-[0_20px_55px_rgba(0,0,0,0.18)]">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#f9c80e] via-white/80 to-[#0A1E5E]" />
@@ -626,35 +629,35 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
           </div>
 
           <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 pb-6 text-white shadow-[0_14px_34px_rgba(10,30,94,0.18)]">
-  <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
-    <div className="min-w-0">
-      <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">
-        Ready Check
-      </p>
-      <h3 className="mt-1 text-lg font-bold">Finish onboarding</h3>
-      <p className="mt-1 text-sm text-white/72">
-        Save this setup and move into the dashboard.
-      </p>
-    </div>
+            <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">
+                  Ready Check
+                </p>
+                <h3 className="mt-1 text-lg font-bold">Finish onboarding</h3>
+                <p className="mt-1 text-sm text-white/72">
+                  Save this setup and move into the dashboard.
+                </p>
+              </div>
 
-    <div className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.14em] text-white/85">
-      {canContinue ? "READY" : "INCOMPLETE"}
-    </div>
-  </div>
+              <div className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.14em] text-white/85">
+                {canContinue ? "READY" : "INCOMPLETE"}
+              </div>
+            </div>
 
-  <button
-    type="button"
-    onClick={handleContinue}
-    disabled={!canContinue}
-    className={`mt-4 w-full rounded-xl py-3.5 font-bold transition duration-200 ${
-      canContinue
-        ? "bg-[#f9c80e] text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] hover:-translate-y-[1px] hover:brightness-105 hover:shadow-[0_0_22px_rgba(249,200,14,0.38)]"
-        : "cursor-not-allowed bg-white/15 text-white/45"
-    }`}
-  >
-    Continue to Dashboard
-  </button>
-</div>
+            <button
+              type="button"
+              onClick={handleContinue}
+              disabled={!canContinue}
+              className={`mt-4 w-full rounded-xl py-3.5 font-bold transition duration-200 ${
+                canContinue
+                  ? "bg-[#f9c80e] text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] hover:-translate-y-[1px] hover:brightness-105 hover:shadow-[0_0_22px_rgba(249,200,14,0.38)]"
+                  : "cursor-not-allowed bg-white/15 text-white/45"
+              }`}
+            >
+              Continue to Dashboard
+            </button>
+          </div>
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async"
 import { useNav } from "../state/navStore"
-import { useMemo, useState } from "react"
+import { useState } from "react"
 
 type BillingCycle = "monthly" | "yearly"
 
@@ -318,7 +318,7 @@ export default function PricingPage() {
           featured: false,
         }
 
-  const plans = useMemo(() => [secondaryPlan, primaryPlan], [secondaryPlan, primaryPlan])
+  const plans = [secondaryPlan, primaryPlan]
 
   return (
     <>

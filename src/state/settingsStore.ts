@@ -22,6 +22,25 @@ type RawPersistedSettingsState = {
   autoExport?: unknown
 }
 
+const noopStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+}
+
+function getSafeLocalStorage() {
+  if (typeof window === "undefined") return noopStorage
+
+  try {
+    const testKey = "__njdrive50_settings_test__"
+    window.localStorage.setItem(testKey, testKey)
+    window.localStorage.removeItem(testKey)
+    return window.localStorage
+  } catch {
+    return noopStorage
+  }
+}
+
 function normalizePersistedSettings(
   value: unknown
 ): PersistedSettingsState {
@@ -49,7 +68,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: SETTINGS_STORAGE_KEY,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(getSafeLocalStorage),
       version: 1,
       migrate: (persistedState: unknown) => {
         return normalizePersistedSettings(persistedState)

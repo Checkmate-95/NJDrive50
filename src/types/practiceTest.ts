@@ -1,4 +1,4 @@
-export type AnswerSet = [string, string, string, string]
+export type AnswerSet = readonly [string, string, string, string]
 export type AnswerIndex = 0 | 1 | 2 | 3
 
 export type Question = {

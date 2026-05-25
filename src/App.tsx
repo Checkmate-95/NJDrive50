@@ -92,6 +92,10 @@ const VALID_SCREENS: readonly Screen[] = [
   "pricing",
 ] as const
 
+function isBrowser() {
+  return typeof window !== "undefined"
+}
+
 function isValidScreen(value: unknown): value is Screen {
   return typeof value === "string" && VALID_SCREENS.includes(value as Screen)
 }
@@ -193,6 +197,8 @@ export default function App() {
   }, [setScreen])
 
   useEffect(() => {
+    if (!isBrowser()) return
+
     const wasGoBack = stack.length < prevStackLengthRef.current
     prevStackLengthRef.current = stack.length
 
@@ -275,7 +281,9 @@ export default function App() {
           key={safeScreen}
           onReloadApp={() => {
             setScreen("landing")
-            window.location.reload()
+            if (isBrowser()) {
+              window.location.reload()
+            }
           }}
         >
           <Suspense fallback={<ScreenLoader />}>{renderScreen()}</Suspense>

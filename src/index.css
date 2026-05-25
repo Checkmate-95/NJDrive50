@@ -4,33 +4,33 @@
 
 @theme {
   /* Animation tokens */
-  --animate-pulse-green:  pulseGreen 1.5s ease-out infinite;
-  --animate-pulse-red:    pulseRed   1.5s ease-out infinite;
+  --animate-pulse-green: pulseGreen 1.5s ease-out infinite;
+  --animate-pulse-red: pulseRed 1.5s ease-out infinite;
   --animate-pulse-yellow: pulseYellow 1.5s ease-out infinite;
-  --animate-pulse-blue:   pulseBlue   1.5s ease-out infinite;
+  --animate-pulse-blue: pulseBlue 1.5s ease-out infinite;
 
   @keyframes pulseGreen {
-    0%   { box-shadow: 0 0 0 0    rgba(0, 200, 81, 0.5); }
-    70%  { box-shadow: 0 0 0 10px rgba(0, 200, 81, 0);   }
-    100% { box-shadow: 0 0 0 0    rgba(0, 200, 81, 0);   }
+    0% { box-shadow: 0 0 0 0 rgba(0, 200, 81, 0.5); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 200, 81, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 200, 81, 0); }
   }
 
   @keyframes pulseRed {
-    0%   { box-shadow: 0 0 0 0    rgba(217, 48, 37, 0.5); }
-    70%  { box-shadow: 0 0 0 10px rgba(217, 48, 37, 0);   }
-    100% { box-shadow: 0 0 0 0    rgba(217, 48, 37, 0);   }
+    0% { box-shadow: 0 0 0 0 rgba(217, 48, 37, 0.5); }
+    70% { box-shadow: 0 0 0 10px rgba(217, 48, 37, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(217, 48, 37, 0); }
   }
 
   @keyframes pulseYellow {
-    0%   { box-shadow: 0 0 0 0    rgba(255, 193, 7, 0.5); }
-    70%  { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0);   }
-    100% { box-shadow: 0 0 0 0    rgba(255, 193, 7, 0);   }
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.5); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
   }
 
   @keyframes pulseBlue {
-    0%   { box-shadow: 0 0 0 0    rgba(25, 118, 210, 0.5); }
-    70%  { box-shadow: 0 0 0 10px rgba(25, 118, 210, 0);   }
-    100% { box-shadow: 0 0 0 0    rgba(25, 118, 210, 0);   }
+    0% { box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.5); }
+    70% { box-shadow: 0 0 0 10px rgba(25, 118, 210, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(25, 118, 210, 0); }
   }
 }
 
@@ -60,8 +60,22 @@
   .animate-pulse-yellow,
   .animate-pulse-blue {
     animation: none;
-    /* Keep a static ring so feedback is still visible */
+  }
+
+  .animate-pulse-green {
     box-shadow: 0 0 0 2px rgba(0, 200, 81, 0.5);
+  }
+
+  .animate-pulse-red {
+    box-shadow: 0 0 0 2px rgba(217, 48, 37, 0.5);
+  }
+
+  .animate-pulse-yellow {
+    box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.5);
+  }
+
+  .animate-pulse-blue {
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.5);
   }
 }
 

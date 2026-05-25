@@ -65,6 +65,37 @@ export type Screen =
   | "practiceTest"
   | "pricing"
 
+const VALID_SCREENS: readonly Screen[] = [
+  "landing",
+  "intro",
+  "onboarding",
+  "home",
+  "active",
+  "todaysDrive",
+  "summary",
+  "milestones",
+  "driveHistory",
+  "export",
+  "settings",
+  "reminderSettings",
+  "reminderLog",
+  "dmv",
+  "dmvPrep",
+  "share",
+  "helpFaq",
+  "aiHelper",
+  "teenDriverRules",
+  "manageProfile",
+  "restartOnboarding",
+  "dataCleared",
+  "practiceTest",
+  "pricing",
+] as const
+
+function isValidScreen(value: unknown): value is Screen {
+  return typeof value === "string" && VALID_SCREENS.includes(value as Screen)
+}
+
 function ScreenLoader() {
   return (
     <div className="flex min-h-[40vh] items-center justify-center px-6 py-12 text-center text-white">
@@ -78,14 +109,15 @@ function ScreenLoader() {
 export default function App() {
   const { screen, setScreen, stack } = useNav()
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
+  const [bootstrapped, setBootstrapped] = useState(false)
   const prevStackLengthRef = useRef(stack.length)
 
-  useEffect(() => {
-    const nav = useNav.getState()
-    if (nav.screen === "home" || !nav.screen) {
-      nav.setScreen("landing")
-    }
-  }, [])
+  const safeScreen: Screen = isValidScreen(screen) ? screen : "landing"
+
+  const setScreenCompat = (nextScreen: Screen | ((prev: Screen) => Screen)) => {
+    const next = typeof nextScreen === "function" ? nextScreen(safeScreen) : nextScreen
+    setScreen(next)
+  }
 
   useEffect(() => {
     const data = loadOnboardingData()
@@ -98,42 +130,58 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
 
-    const load = async () => {
-      if (!useNav.persist.hasHydrated()) return
-
-      const result = await Preferences.get({ key: "onboardingData" })
-      if (cancelled) return
-
-      const currentScreen = useNav.getState().screen
-      let hasOnboardingData = false
-
-      if (result.value) {
-        try {
-          const data = JSON.parse(result.value)
-          hasOnboardingData = !!data?.teenName
-        } catch {
-          hasOnboardingData = false
+    const bootstrap = async () => {
+      try {
+        if (!useNav.persist.hasHydrated()) {
+          if (!cancelled) setBootstrapped(true)
+          return
         }
-      }
 
-      if (hasOnboardingData) {
-        if (currentScreen === "intro" || currentScreen === "onboarding") {
-          setScreen("home")
+        const nav = useNav.getState()
+        const current = isValidScreen(nav.screen) ? nav.screen : "landing"
+
+        let hasOnboardingData = false
+        const result = await Preferences.get({ key: "onboardingData" })
+
+        if (cancelled) return
+
+        if (result.value) {
+          try {
+            const data = JSON.parse(result.value)
+            hasOnboardingData = !!data?.teenName
+          } catch {
+            hasOnboardingData = false
+          }
         }
-        return
-      }
 
-      if (
-        currentScreen !== "landing" &&
-        currentScreen !== "pricing" &&
-        currentScreen !== "intro" &&
-        currentScreen !== "onboarding"
-      ) {
-        setScreen("intro")
+        if (!isValidScreen(nav.screen)) {
+          nav.setScreen("landing")
+        } else if (hasOnboardingData) {
+          if (current === "landing" || current === "intro" || current === "onboarding") {
+            nav.setScreen("home")
+          }
+        } else if (
+          current !== "landing" &&
+          current !== "pricing" &&
+          current !== "intro" &&
+          current !== "onboarding"
+        ) {
+          nav.setScreen("intro")
+        }
+      } catch (err) {
+        console.warn("App bootstrap failed:", err)
+        if (!cancelled) {
+          setScreen("landing")
+        }
+      } finally {
+        if (!cancelled) {
+          setBootstrapped(true)
+        }
       }
     }
 
-    load()
+    bootstrap()
+
     return () => {
       cancelled = true
     }
@@ -148,15 +196,10 @@ export default function App() {
         window.scrollTo({ top: 0, behavior: "auto" })
       })
     }
-  }, [screen, stack.length])
-
-  const setScreenCompat = (s: Screen | ((prev: Screen) => Screen)) => {
-    const next = typeof s === "function" ? s(screen) : s
-    setScreen(next)
-  }
+  }, [safeScreen, stack.length])
 
   const renderScreen = () => {
-    switch (screen) {
+    switch (safeScreen) {
       case "landing":
         return <LandingPage />
       case "intro":
@@ -205,36 +248,25 @@ export default function App() {
         return <DataCleared />
       case "pricing":
         return <PricingPage />
-      default: {
-        if (import.meta.env.DEV) {
-          return (
-            <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
-              <p className="text-2xl font-bold text-red-600">
-                Unknown screen: &quot;{screen}&quot;
-              </p>
-              <p className="text-sm text-gray-500">
-                Add a case for this screen in App.tsx renderScreen().
-              </p>
-              <button
-                className="rounded-xl bg-[#08194A] px-4 py-2 text-white"
-                onClick={() => setScreen("home")}
-              >
-                Go Home
-              </button>
-            </div>
-          )
-        }
-
-        setScreen("home")
+      default:
         return null
-      }
     }
   }
 
+  if (!bootstrapped) {
+    return (
+      <AppShell setScreen={setScreenCompat} active={safeScreen}>
+        <MapProvider>
+          <ScreenLoader />
+        </MapProvider>
+      </AppShell>
+    )
+  }
+
   return (
-    <AppShell setScreen={setScreenCompat} active={screen}>
+    <AppShell setScreen={setScreenCompat} active={safeScreen}>
       <MapProvider>
-        <ErrorBoundary key={screen} onReset={() => setScreen("home")}>
+        <ErrorBoundary key={safeScreen} onReset={() => setScreen("home")}>
           <Suspense fallback={<ScreenLoader />}>{renderScreen()}</Suspense>
         </ErrorBoundary>
       </MapProvider>

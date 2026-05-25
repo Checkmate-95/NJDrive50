@@ -1,8 +1,7 @@
-// src/state/driveStore.ts
 import { useSyncExternalStore } from "react"
 import {
   getSolarWindowForDate,
-  isNightDrive
+  isNightDrive,
 } from "../engine/solarEngine"
 
 import type { SolarWindow } from "../engine/solarEngine"
@@ -23,20 +22,30 @@ export type DriveState = {
   solar: SolarState
 }
 
-let driveState: DriveState = {
+const EMPTY_DRIVE_STATE: DriveState = {
   latitude: null,
   longitude: null,
   currentDriveStart: null,
   solar: {
     solarWindow: null,
-    isNightEligible: null
-  }
+    isNightEligible: null,
+  },
 }
+
+let driveState: DriveState = EMPTY_DRIVE_STATE
 
 const DRIVE_STATE_EVENT = "njdrive50-drive-state-change"
 
+function isBrowser() {
+  return typeof window !== "undefined"
+}
+
 export function getDriveState(): DriveState {
   return driveState
+}
+
+function getDriveStateServerSnapshot(): DriveState {
+  return EMPTY_DRIVE_STATE
 }
 
 export function updateSolarForDrive(
@@ -44,6 +53,15 @@ export function updateSolarForDrive(
   longitude: number,
   startTime: Date
 ): void {
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    !(startTime instanceof Date) ||
+    Number.isNaN(startTime.getTime())
+  ) {
+    return
+  }
+
   const solarWindow = getSolarWindowForDate(latitude, longitude, startTime)
   const isNightEligible = isNightDrive(startTime, solarWindow)
 
@@ -54,24 +72,33 @@ export function updateSolarForDrive(
     currentDriveStart: startTime,
     solar: {
       solarWindow,
-      isNightEligible
-    }
+      isNightEligible,
+    },
   }
 
-  window.dispatchEvent(new Event(DRIVE_STATE_EVENT))
+  if (isBrowser()) {
+    window.dispatchEvent(new Event(DRIVE_STATE_EVENT))
+  }
 }
 
 function subscribeDriveState(listener: () => void) {
+  if (!isBrowser()) {
+    return () => {}
+  }
+
   const onChange = () => listener()
   window.addEventListener(DRIVE_STATE_EVENT, onChange)
-  return () => window.removeEventListener(DRIVE_STATE_EVENT, onChange)
+
+  return () => {
+    window.removeEventListener(DRIVE_STATE_EVENT, onChange)
+  }
 }
 
 export function useDriveState() {
   return useSyncExternalStore(
     subscribeDriveState,
     getDriveState,
-    getDriveState
+    getDriveStateServerSnapshot
   )
 }
 
@@ -89,7 +116,6 @@ export type RouteCoord = {
 
 export type MilesSource = "routes-api" | "gps-accumulated"
 export type NightCalcMode = "estimated" | "solar" | "manual" | "verified"
-
 export type DriveSource = "timer" | "manual"
 
 export type DriveEntry = {
@@ -119,6 +145,21 @@ export type DriveEntry = {
 let driveHistory: DriveEntry[] = []
 let cachedSnapshot: DriveEntry[] = []
 
+function trimString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+function parseValidDateString(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const timestamp = Date.parse(trimmed)
+  return Number.isFinite(timestamp) ? trimmed : null
+}
+
 function normalizeRouteCoords(value: unknown): RouteCoord[] | undefined {
   if (!Array.isArray(value)) return undefined
 
@@ -132,7 +173,7 @@ function normalizeRouteCoords(value: unknown): RouteCoord[] | undefined {
         Number.isFinite((item as RouteCoord).lat) &&
         Number.isFinite((item as RouteCoord).lng)
     )
-    .map(coord => ({ lat: coord.lat, lng: coord.lng }))
+    .map((coord) => ({ lat: coord.lat, lng: coord.lng }))
 
   return coords.length > 0 ? coords : undefined
 }
@@ -142,10 +183,14 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
 
   const raw = value as Partial<DriveEntry>
 
+  const id = trimString(raw.id)
+  const startTime = parseValidDateString(raw.startTime)
+  const endTime = parseValidDateString(raw.endTime)
+
   if (
-    typeof raw.id !== "string" ||
-    typeof raw.startTime !== "string" ||
-    typeof raw.endTime !== "string" ||
+    !id ||
+    !startTime ||
+    !endTime ||
     !Number.isFinite(raw.totalDurationHours) ||
     !Number.isFinite(raw.dayDurationHours) ||
     !Number.isFinite(raw.nightDurationHours) ||
@@ -173,7 +218,8 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
   const nightCalcMode: NightCalcMode | undefined =
     raw.nightCalcMode === "estimated" ||
     raw.nightCalcMode === "solar" ||
-    raw.nightCalcMode === "manual"
+    raw.nightCalcMode === "manual" ||
+    raw.nightCalcMode === "verified"
       ? raw.nightCalcMode
       : undefined
 
@@ -193,9 +239,9 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
     Number.isFinite(raw.startLongitude) ? (raw.startLongitude as number) : null
 
   return {
-    id: raw.id,
-    startTime: raw.startTime,
-    endTime: raw.endTime,
+    id,
+    startTime,
+    endTime,
 
     totalDurationHours,
     dayDurationHours,
@@ -210,16 +256,23 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
     startLatitude,
     startLongitude,
 
-    weather: raw.weather ?? null,
-    notes: typeof raw.notes === "string" ? raw.notes : undefined,
-    teenPhoto: typeof raw.teenPhoto === "string" ? raw.teenPhoto : undefined,
-    routeCoords: normalizeRouteCoords(raw.routeCoords)
+    weather: raw.weather == null ? null : trimString(raw.weather) ?? null,
+    notes: trimString(raw.notes),
+    teenPhoto: trimString(raw.teenPhoto),
+    routeCoords: normalizeRouteCoords(raw.routeCoords),
   }
 }
 
 function loadHistoryFromStorage(): void {
+  if (!isBrowser()) {
+    driveHistory = []
+    cachedSnapshot = []
+    return
+  }
+
   try {
     const raw = localStorage.getItem(DRIVE_HISTORY_STORAGE_KEY)
+
     if (!raw) {
       driveHistory = []
       cachedSnapshot = []
@@ -236,7 +289,8 @@ function loadHistoryFromStorage(): void {
     driveHistory = parsed
       .map(normalizeDriveEntry)
       .filter((entry): entry is DriveEntry => entry !== null)
-    
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
     cachedSnapshot = [...driveHistory]
   } catch {
     driveHistory = []
@@ -245,12 +299,14 @@ function loadHistoryFromStorage(): void {
 }
 
 function saveHistoryToStorage(): void {
+  if (!isBrowser()) return
+
   try {
     localStorage.setItem(DRIVE_HISTORY_STORAGE_KEY, JSON.stringify(driveHistory))
     cachedSnapshot = [...driveHistory]
     window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
   } catch {
-    // storage may be unavailable — fail silently
+    // storage may be unavailable
   }
 }
 
@@ -264,10 +320,12 @@ export function addDriveToHistory(entry: DriveEntry): void {
   const normalized = normalizeDriveEntry(entry)
   if (!normalized) return
 
-  const existingIds = new Set(driveHistory.map(e => e.id))
+  const existingIds = new Set(driveHistory.map((e) => e.id))
   if (existingIds.has(normalized.id)) return
 
-  driveHistory = [...driveHistory, normalized]
+  driveHistory = [...driveHistory, normalized].sort((a, b) =>
+    a.startTime.localeCompare(b.startTime)
+  )
   saveHistoryToStorage()
 }
 
@@ -275,6 +333,10 @@ export const saveDrive = addDriveToHistory
 
 export function getDriveHistory(): DriveEntry[] {
   return cachedSnapshot
+}
+
+function getDriveHistoryServerSnapshot(): DriveEntry[] {
+  return []
 }
 
 /* -------------------------------------------------------
@@ -285,9 +347,13 @@ export function updateDriveInHistory(updated: DriveEntry): void {
   const normalized = normalizeDriveEntry(updated)
   if (!normalized) return
 
-  driveHistory = driveHistory.map(entry =>
-    entry.id === normalized.id ? normalized : entry
-  )
+  const existingIndex = driveHistory.findIndex((entry) => entry.id === normalized.id)
+  if (existingIndex === -1) return
+
+  driveHistory = driveHistory
+    .map((entry) => (entry.id === normalized.id ? normalized : entry))
+    .sort((a, b) => a.startTime.localeCompare(b.startTime))
+
   saveHistoryToStorage()
 }
 
@@ -305,7 +371,10 @@ export function replaceDriveHistory(next: DriveEntry[]): void {
 ------------------------------------------------------- */
 
 export function deleteDriveEntry(id: string): void {
-  driveHistory = driveHistory.filter(entry => entry.id !== id)
+  const nextHistory = driveHistory.filter((entry) => entry.id !== id)
+  if (nextHistory.length === driveHistory.length) return
+
+  driveHistory = nextHistory
   saveHistoryToStorage()
 }
 
@@ -314,14 +383,18 @@ export function deleteDriveEntry(id: string): void {
 ------------------------------------------------------- */
 
 function subscribeHistory(listener: () => void) {
+  if (!isBrowser()) {
+    return () => {}
+  }
+
   const onCustomEvent = () => listener()
 
   const onStorageEvent = (e: StorageEvent) => {
-  if (e.key === DRIVE_HISTORY_STORAGE_KEY) {
-    loadHistoryFromStorage()
-    listener()
+    if (e.key === DRIVE_HISTORY_STORAGE_KEY) {
+      loadHistoryFromStorage()
+      listener()
+    }
   }
-}
 
   window.addEventListener(DRIVE_HISTORY_EVENT, onCustomEvent)
   window.addEventListener("storage", onStorageEvent)
@@ -336,6 +409,6 @@ export function useDriveHistory() {
   return useSyncExternalStore(
     subscribeHistory,
     getDriveHistory,
-    getDriveHistory
+    getDriveHistoryServerSnapshot
   )
 }

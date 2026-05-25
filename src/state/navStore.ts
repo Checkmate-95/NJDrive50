@@ -21,6 +21,25 @@ type NavState = {
   resetTo: (s: Screen) => void
 }
 
+const noopStorage = {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+}
+
+function getSafeSessionStorage() {
+  if (typeof window === "undefined") return noopStorage
+
+  try {
+    const testKey = "__njdrive50_nav_test__"
+    window.sessionStorage.setItem(testKey, testKey)
+    window.sessionStorage.removeItem(testKey)
+    return window.sessionStorage
+  } catch {
+    return noopStorage
+  }
+}
+
 function isScreen(value: unknown): value is Screen {
   return (
     value === "landing" ||
@@ -130,7 +149,7 @@ export const useNav = create<NavState>()(
     }),
     {
       name: NAV_STORAGE_KEY,
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(getSafeSessionStorage),
       version: 1,
       migrate: (persistedState: unknown) => {
         return normalizePersistedNavState(persistedState)

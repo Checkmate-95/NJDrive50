@@ -35,6 +35,19 @@ const EMPTY_PROFILE = freezeProfile({ ...defaultProfile })
 let cachedTeenPhoto: string | null = null
 let cachedProfileSnapshot: Profile = EMPTY_PROFILE
 
+function canUseLocalStorage() {
+  if (typeof window === "undefined") return false
+
+  try {
+    const testKey = "__njdrive50_profile_test__"
+    window.localStorage.setItem(testKey, testKey)
+    window.localStorage.removeItem(testKey)
+    return true
+  } catch {
+    return false
+  }
+}
+
 function normalizeString(value: unknown): string {
   return typeof value === "string" ? value.trim() : ""
 }
@@ -82,8 +95,13 @@ function emitProfileChange() {
 }
 
 function loadTeenPhotoFromStorage(): string | null {
+  if (!canUseLocalStorage()) {
+    cachedTeenPhoto = null
+    return cachedTeenPhoto
+  }
+
   try {
-    cachedTeenPhoto = localStorage.getItem(PHOTO_KEY)
+    cachedTeenPhoto = window.localStorage.getItem(PHOTO_KEY)
     return cachedTeenPhoto
   } catch {
     cachedTeenPhoto = null
@@ -92,8 +110,13 @@ function loadTeenPhotoFromStorage(): string | null {
 }
 
 function loadProfileFromStorage(): Profile {
+  if (!canUseLocalStorage()) {
+    cachedProfileSnapshot = EMPTY_PROFILE
+    return cachedProfileSnapshot
+  }
+
   try {
-    const raw = localStorage.getItem(PROFILE_KEY)
+    const raw = window.localStorage.getItem(PROFILE_KEY)
 
     if (!raw) {
       cachedProfileSnapshot = EMPTY_PROFILE
@@ -109,10 +132,14 @@ function loadProfileFromStorage(): Profile {
   }
 }
 
-loadTeenPhotoFromStorage()
-loadProfileFromStorage()
+if (canUseLocalStorage()) {
+  loadTeenPhotoFromStorage()
+  loadProfileFromStorage()
+}
 
 export function setTeenPhoto(url: string): boolean {
+  if (!canUseLocalStorage()) return false
+
   const normalized = url.trim()
 
   if (!normalized) return false
@@ -130,7 +157,7 @@ export function setTeenPhoto(url: string): boolean {
   }
 
   try {
-    localStorage.setItem(PHOTO_KEY, normalized)
+    window.localStorage.setItem(PHOTO_KEY, normalized)
     cachedTeenPhoto = normalized
     emitPhotoChange()
     return true
@@ -143,8 +170,10 @@ export function setTeenPhoto(url: string): boolean {
 }
 
 export function clearTeenPhoto(): boolean {
+  if (!canUseLocalStorage()) return false
+
   try {
-    localStorage.removeItem(PHOTO_KEY)
+    window.localStorage.removeItem(PHOTO_KEY)
     cachedTeenPhoto = null
     emitPhotoChange()
     return true
@@ -198,9 +227,11 @@ export function getProfile(): Profile {
 }
 
 export function setProfile(profile: Profile): boolean {
+  if (!canUseLocalStorage()) return false
+
   try {
     const normalized = normalizeProfile(profile)
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(normalized))
+    window.localStorage.setItem(PROFILE_KEY, JSON.stringify(normalized))
     cachedProfileSnapshot = normalized
     emitProfileChange()
     return true
@@ -213,8 +244,10 @@ export function setProfile(profile: Profile): boolean {
 }
 
 export function clearProfile(): boolean {
+  if (!canUseLocalStorage()) return false
+
   try {
-    localStorage.removeItem(PROFILE_KEY)
+    window.localStorage.removeItem(PROFILE_KEY)
     cachedProfileSnapshot = EMPTY_PROFILE
     emitProfileChange()
     return true

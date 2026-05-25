@@ -30,6 +30,14 @@ let driveState: DriveState = {
 
 const DRIVE_STATE_EVENT = "njdrive50-drive-state-change"
 
+function isBrowser() {
+  return (
+    typeof window !== "undefined" &&
+    typeof localStorage !== "undefined" &&
+    typeof indexedDB !== "undefined"
+  )
+}
+
 export function getDriveState(): DriveState {
   return driveState
 }
@@ -53,10 +61,16 @@ export function updateSolarForDrive(
     },
   }
 
-  window.dispatchEvent(new Event(DRIVE_STATE_EVENT))
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(DRIVE_STATE_EVENT))
+  }
 }
 
 function subscribeDriveState(listener: () => void) {
+  if (typeof window === "undefined") {
+    return () => {}
+  }
+
   const onChange = () => listener()
   window.addEventListener(DRIVE_STATE_EVENT, onChange)
   return () => window.removeEventListener(DRIVE_STATE_EVENT, onChange)
@@ -119,6 +133,11 @@ let cachedSnapshot: DriveEntry[] = []
 
 function openDriveBlobDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    if (!isBrowser()) {
+      reject(new Error("IndexedDB is not available in this environment."))
+      return
+    }
+
     const request = indexedDB.open(DRIVE_BLOB_DB, 1)
 
     request.onupgradeneeded = () => {
@@ -179,7 +198,7 @@ function normalizeRouteCoords(value: unknown): RouteCoord[] | undefined {
         Number.isFinite((item as RouteCoord).lat) &&
         Number.isFinite((item as RouteCoord).lng)
     )
-    .map(coord => ({ lat: coord.lat, lng: coord.lng }))
+    .map((coord) => ({ lat: coord.lat, lng: coord.lng }))
 
   return coords.length > 0 ? coords : undefined
 }
@@ -303,6 +322,12 @@ async function hydrateBlobFields(entries: PersistedDriveEntry[]): Promise<DriveE
 }
 
 async function loadHistoryFromStorage(): Promise<void> {
+  if (!isBrowser()) {
+    driveHistory = []
+    cachedSnapshot = []
+    return
+  }
+
   try {
     const raw = localStorage.getItem(DRIVE_HISTORY_STORAGE_KEY)
     if (!raw) {
@@ -332,6 +357,11 @@ async function loadHistoryFromStorage(): Promise<void> {
 }
 
 async function saveHistoryToStorage(): Promise<void> {
+  if (!isBrowser()) {
+    cachedSnapshot = [...driveHistory]
+    return
+  }
+
   try {
     await Promise.all(
       driveHistory.map(async (entry) => {
@@ -351,16 +381,22 @@ async function saveHistoryToStorage(): Promise<void> {
   }
 }
 
-void loadHistoryFromStorage()
+if (isBrowser()) {
+  void loadHistoryFromStorage()
+}
 
 export function addDriveToHistory(entry: DriveEntry): void {
   const normalized = normalizeDriveEntry(entry)
   if (!normalized) return
 
-  const existingIds = new Set(driveHistory.map(e => e.id))
+  const existingIds = new Set(driveHistory.map((e) => e.id))
   if (existingIds.has(normalized.id)) return
 
   driveHistory = [...driveHistory, normalized]
+  cachedSnapshot = [...driveHistory]
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
+  }
   void saveHistoryToStorage()
 }
 
@@ -374,9 +410,13 @@ export function updateDriveInHistory(updated: DriveEntry): void {
   const normalized = normalizeDriveEntry(updated)
   if (!normalized) return
 
-  driveHistory = driveHistory.map(entry =>
+  driveHistory = driveHistory.map((entry) =>
     entry.id === normalized.id ? normalized : entry
   )
+  cachedSnapshot = [...driveHistory]
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
+  }
   void saveHistoryToStorage()
 }
 
@@ -386,16 +426,28 @@ export function replaceDriveHistory(next: DriveEntry[]): void {
     .filter((entry): entry is DriveEntry => entry !== null)
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
+  cachedSnapshot = [...driveHistory]
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
+  }
   void saveHistoryToStorage()
 }
 
 export function deleteDriveEntry(id: string): void {
-  driveHistory = driveHistory.filter(entry => entry.id !== id)
+  driveHistory = driveHistory.filter((entry) => entry.id !== id)
+  cachedSnapshot = [...driveHistory]
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
+  }
   void deleteDriveBlobPayload(id)
   void saveHistoryToStorage()
 }
 
 function subscribeHistory(listener: () => void) {
+  if (typeof window === "undefined") {
+    return () => {}
+  }
+
   const onCustomEvent = () => listener()
 
   const onStorageEvent = (e: StorageEvent) => {

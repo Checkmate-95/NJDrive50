@@ -475,20 +475,22 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         set((state) => {
           const s = state.session
           const now = Date.now()
+          const flushed = flushSessionToNow(s, now)
           const currentMode = resolveDriveMode(
             now,
             mode,
-            s.solarSunrise,
-            s.solarSunset
+            flushed.solarSunrise,
+            flushed.solarSunset
           )
 
           return {
             session: {
-              ...s,
+              ...flushed,
               nightOverride: mode,
               currentMode,
               lastModeChangeAt: now,
               lastUpdated: now,
+              lastTickAt: flushed.isActive && flushed.isRunning ? now : flushed.lastTickAt,
             },
           }
         })

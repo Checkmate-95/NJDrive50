@@ -244,6 +244,8 @@ export default function PublicPracticeTestPage() {
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <a
                 href={LANDING_PAGE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex w-full items-center justify-center rounded-xl bg-[#f9c80e] px-4 py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.20)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2"
               >
                 Start NJDrive50
@@ -341,6 +343,8 @@ export default function PublicPracticeTestPage() {
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <a
                 href={LANDING_PAGE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex w-full items-center justify-center rounded-xl bg-[#f9c80e] px-4 py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.18)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2"
               >
                 Start NJDrive50

@@ -128,6 +128,7 @@ export default function ReminderLog() {
         )}
 
         <button
+          type="button"
           onClick={() => goBack("settings")}
           className="w-full rounded-xl bg-[#08194A] py-3 font-semibold text-white transition hover:bg-[#0A1E5E]"
         >

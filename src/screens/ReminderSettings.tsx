@@ -1,5 +1,5 @@
 // src/screens/ReminderSettings.tsx
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   loadReminderPreferences,
   saveReminderPreferences,
@@ -24,7 +24,6 @@ function PreviewModal({
   body: string
   onClose: () => void
 }) {
-  // Escape-to-close
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
@@ -39,6 +38,9 @@ function PreviewModal({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reminder-preview-title"
         className="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl transition-all duration-200 scale-95 opacity-0 animate-[modalIn_0.2s_ease-out_forwards]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -47,7 +49,12 @@ function PreviewModal({
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0A1E5E]/45">
               Notification Preview
             </p>
-            <h3 className="mt-1 text-lg font-bold text-[#0A1E5E]">{title}</h3>
+            <h3
+              id="reminder-preview-title"
+              className="mt-1 text-lg font-bold text-[#0A1E5E]"
+            >
+              {title}
+            </h3>
           </div>
 
           <button
@@ -61,7 +68,7 @@ function PreviewModal({
         </div>
 
         <div className="mt-4 rounded-2xl border border-[#0A1E5E]/10 bg-[#F7F9FF] p-4">
-          <p className="text-sm leading-relaxed text-[#0A1E5E]/80 whitespace-pre-line">
+          <p className="whitespace-pre-line text-sm leading-relaxed text-[#0A1E5E]/80">
             {body}
           </p>
         </div>
@@ -135,7 +142,7 @@ function SettingItem({
         className={`mt-3 text-xs font-semibold underline underline-offset-4 transition ${
           checked
             ? "text-[#0A1E5E]/75 decoration-[#0A1E5E]/30 hover:text-[#08194A]"
-            : "text-[#0A1E5E]/30 decoration-transparent opacity-40 pointer-events-none"
+            : "pointer-events-none text-[#0A1E5E]/30 decoration-transparent opacity-40"
         }`}
       >
         Preview notification
@@ -235,7 +242,6 @@ export default function ReminderSettings() {
   })
   const [previewKey, setPreviewKey] = useState<ReminderType | null>(null)
 
-  // Flash timeout
   useEffect(() => {
     if (!flash.type) return
 
@@ -249,10 +255,7 @@ export default function ReminderSettings() {
     return () => window.clearTimeout(timer)
   }, [flash.type, lastSavedAt])
 
-  const lastSavedText = useMemo(() => {
-    if (flash.type) return flash.message
-    return formatLastSaved(lastSavedAt)
-  }, [flash, lastSavedAt])
+  const lastSavedText = flash.type ? flash.message : formatLastSaved(lastSavedAt)
 
   function markSaved(message = "Saved just now.") {
     const now = Date.now()
@@ -263,7 +266,6 @@ export default function ReminderSettings() {
     })
   }
 
-  // Update preference
   function updatePref(key: ReminderType, value: boolean) {
     const updated = { ...prefs, [key]: value }
     setPrefs(updated)
@@ -284,7 +286,6 @@ export default function ReminderSettings() {
     }
   }
 
-  // Restore defaults
   function restoreDefaults() {
     setPrefs(defaultPrefs)
     saveReminderPreferences(defaultPrefs)
@@ -352,9 +353,9 @@ export default function ReminderSettings() {
             })}
           </div>
 
-          <div className="h-px w-full bg-[#0A1E5E]/10 my-4" />
+          <div className="my-4 h-px w-full bg-[#0A1E5E]/10" />
 
-          <div className="rounded-2xl bg-[#F7F9FC] px-4 py-3 space-y-1">
+          <div className="space-y-1 rounded-2xl bg-[#F7F9FC] px-4 py-3">
             <h3 className="text-sm font-bold text-[#0A1E5E]">System Status</h3>
 
             <div className="flex items-center justify-between gap-3">

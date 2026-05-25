@@ -3,7 +3,7 @@
 //   Android/iOS → Capacitor Filesystem + Share (native share sheet)
 //   Desktop/browser → jsPDF doc.save() blob download
 
-import { getDriveHistory, type DriveEntry } from "../state/driveStore"
+import { useDriveHistory, type DriveEntry } from "../state/driveStore"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { loadOnboardingData } from "../../core/ReminderEngine"
@@ -58,6 +58,20 @@ function toBase64Utf8(text: string) {
   return btoa(String.fromCharCode(...bytes))
 }
 
+function getNightData(d: DriveEntry) {
+  const verifiedNight = safeNumber(d.verifiedNightDurationHours)
+  const estimatedNight = safeNumber(d.nightDurationHours)
+  const effectiveNight = verifiedNight > 0 ? verifiedNight : estimatedNight
+  const nightSource = verifiedNight > 0 ? "Verified" : "Estimated"
+
+  return {
+    effectiveNight,
+    verifiedNight,
+    estimatedNight,
+    nightSource,
+  }
+}
+
 // ─── Cross-platform PDF save ─────────────────────────────────────────────────
 // Android/iOS: writes blob to Cache dir then opens native share sheet
 // Desktop/browser: standard jsPDF doc.save() download
@@ -79,7 +93,8 @@ async function savePDF(doc: jsPDF, filename: string): Promise<void> {
 
       await Share.share({
         title: filename,
-        url: uri,
+        text: "Your NJDrive50 PDF is ready.",
+        files: [uri],
         dialogTitle: "Save or share your PDF",
       })
     } catch (err) {
@@ -126,7 +141,7 @@ function BundleCard({
 export default function DMVBundle() {
   const { goBack, setScreen } = useNav()
 
-  const drives: DriveEntry[] = getDriveHistory() || []
+  const drives: DriveEntry[] = useDriveHistory() || []
   const data = loadOnboardingData() || {}
 
   const SHOW_PRACTICE_TEST = false
@@ -137,9 +152,8 @@ export default function DMVBundle() {
   )
 
   const nightHours = drives.reduce((sum, d) => {
-    const verified = safeNumber(d.verifiedNightDurationHours)
-    const estimated = safeNumber(d.nightDurationHours)
-    return sum + (verified > 0 ? verified : estimated)
+    const { effectiveNight } = getNightData(d)
+    return sum + effectiveNight
   }, 0)
 
   const remainingHours = Math.max(REQUIRED_TOTAL_HOURS - totalHours, 0)
@@ -213,22 +227,30 @@ export default function DMVBundle() {
       const safeEnd = d?.endTime ? new Date(d.endTime).toLocaleString() : ""
       const safeTotalHours = safeNumber(d?.totalDurationHours)
       const safeDayHours = safeNumber(d?.dayDurationHours)
-      const verifiedNight = safeNumber(d?.verifiedNightDurationHours)
-      const estimatedNight = safeNumber(d?.nightDurationHours)
-      const safeNightHours = verifiedNight > 0 ? verifiedNight : estimatedNight
+      const { effectiveNight, nightSource } = getNightData(d)
 
       return [
         `${safeStart}${d.id ? ` (${d.id.slice(0, 4)})` : ""}`,
         safeEnd,
         safeTotalHours.toFixed(2),
-        getLightingLabel(safeDayHours, safeNightHours),
+        effectiveNight.toFixed(2),
+        nightSource,
+        getLightingLabel(safeDayHours, effectiveNight),
         safeNumber(d?.miles).toFixed(1),
       ]
     })
 
     autoTable(doc, {
       startY: y + 26,
-      head: [["Start Time", "End Time", "Hours", "Lighting", "Miles"]],
+      head: [[
+        "Start Time",
+        "End Time",
+        "Hours",
+        "Night Hours",
+        "Night Source",
+        "Lighting",
+        "Miles",
+      ]],
       body: tableData,
       styles: { fontSize: 9 },
       headStyles: { fillColor: [8, 25, 74] },
@@ -570,7 +592,6 @@ export default function DMVBundle() {
   return (
     <main className="min-h-screen bg-[#F7F9FC] px-4 py-6 text-[#08194A] sm:px-6">
       <div className="mx-auto w-full max-w-4xl space-y-6">
-        {/* ── Header ── */}
         <header className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
@@ -606,7 +627,6 @@ export default function DMVBundle() {
           </div>
         </header>
 
-        {/* ── Stats ── */}
         <section className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-[#08194A]/10 bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.05)]">
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#08194A]/50">
@@ -657,7 +677,6 @@ export default function DMVBundle() {
           </div>
         </section>
 
-        {/* ── Official Forms ── */}
         <section className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -702,7 +721,6 @@ export default function DMVBundle() {
           </div>
         </section>
 
-        {/* ── Paperwork Center ── */}
         <section className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -736,7 +754,7 @@ export default function DMVBundle() {
                 />
                 <BundleCard
                   title="Driving Log PDF"
-                  description="A saved-session reference log with totals and drive details. Helpful for records, but not a replacement for the official BA-CSD."
+                  description="A saved-session reference log with totals, night-source labeling, and drive details. Helpful for records, but not a replacement for the official BA-CSD."
                   actionLabel="Download Driving Log"
                   onClick={generateDrivingLogPDF}
                 />
@@ -809,7 +827,6 @@ export default function DMVBundle() {
           </div>
         </section>
 
-        {/* ── Next Steps ── */}
         <section className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <h2 className="text-2xl font-extrabold tracking-tight text-[#08194A]">
             Next steps

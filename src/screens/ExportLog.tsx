@@ -34,7 +34,8 @@ const safeNumber = (value: unknown) => {
   return Number.isFinite(num) ? num : 0
 }
 
-const formatHours = (hours: number) => safeNumber(hours).toFixed(2)
+const formatHoursValue = (hours: number) => safeNumber(hours).toFixed(2)
+const formatHoursLabel = (hours: number) => `${formatHoursValue(hours)} hrs`
 
 const formatDateTime = (value: unknown) => {
   const date = new Date(String(value))
@@ -159,8 +160,8 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
 
       const verifiedNightHours = safeNumber(d.verifiedNightDurationHours)
       const estimatedNightHours = safeNumber(d.nightDurationHours)
-      const nightHours =
-        verifiedNightHours > 0 ? verifiedNightHours : estimatedNightHours
+      const useVerifiedNight = verifiedNightHours > 0
+      const nightHours = useVerifiedNight ? verifiedNightHours : estimatedNightHours
 
       const miles = safeNumber(d.miles)
 
@@ -173,6 +174,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         nightHours,
         miles,
         lighting: getLightingLabel(dayHours, nightHours),
+        nightSource: useVerifiedNight ? "Verified" : "Estimated",
       }
     })
   }, [drives])
@@ -241,9 +243,9 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
 
       doc.setFontSize(10)
       doc.text(`Saved drives: ${rows.length}`, 14, 40)
-      doc.text(`Total hours: ${formatHours(totals.totalHours)}`, 70, 40)
-      doc.text(`Day hours: ${formatHours(totals.dayHours)}`, 128, 40)
-      doc.text(`Night hours: ${formatHours(totals.nightHours)}`, 182, 40)
+      doc.text(`Total hours: ${formatHoursValue(totals.totalHours)}`, 70, 40)
+      doc.text(`Day hours: ${formatHoursValue(totals.dayHours)}`, 128, 40)
+      doc.text(`Night hours: ${formatHoursValue(totals.nightHours)}`, 182, 40)
       doc.text(`Total miles: ${totals.totalMiles.toFixed(1)}`, 242, 40)
 
       autoTable(doc, {
@@ -255,6 +257,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
             "Total Hours",
             "Day Hours",
             "Night Hours",
+            "Night Source",
             "Miles",
             "Lighting",
           ],
@@ -262,9 +265,10 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         body: rows.map((row) => [
           row.start,
           row.end,
-          formatHours(row.totalHours),
-          formatHours(row.dayHours),
-          formatHours(row.nightHours),
+          formatHoursValue(row.totalHours),
+          formatHoursValue(row.dayHours),
+          formatHoursValue(row.nightHours),
+          row.nightSource,
           row.miles.toFixed(1),
           row.lighting,
         ]),
@@ -338,6 +342,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         "Total Hours",
         "Day Hours",
         "Night Hours",
+        "Night Source",
         "Miles",
         "Lighting",
       ]
@@ -346,9 +351,10 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         [
           csvEscape(row.start),
           csvEscape(row.end),
-          csvEscape(formatHours(row.totalHours)),
-          csvEscape(formatHours(row.dayHours)),
-          csvEscape(formatHours(row.nightHours)),
+          csvEscape(formatHoursValue(row.totalHours)),
+          csvEscape(formatHoursValue(row.dayHours)),
+          csvEscape(formatHoursValue(row.nightHours)),
+          csvEscape(row.nightSource),
           csvEscape(row.miles.toFixed(1)),
           csvEscape(row.lighting),
         ].join(",")
@@ -448,7 +454,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
               Total Hours
             </p>
             <p className="mt-2 text-2xl font-black text-[#08194A]">
-              {formatHours(totals.totalHours)}
+              {formatHoursLabel(totals.totalHours)}
             </p>
           </div>
 
@@ -457,7 +463,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
               Day Hours
             </p>
             <p className="mt-2 text-2xl font-black text-[#08194A]">
-              {formatHours(totals.dayHours)}
+              {formatHoursLabel(totals.dayHours)}
             </p>
           </div>
 
@@ -466,7 +472,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
               Night Hours
             </p>
             <p className="mt-2 text-2xl font-black text-[#08194A]">
-              {formatHours(totals.nightHours)}
+              {formatHoursLabel(totals.nightHours)}
             </p>
           </div>
 
@@ -485,8 +491,8 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
               </div>
 
               <div className="text-sm text-[#08194A]/60 sm:max-w-[22rem] sm:text-right">
-                Export includes timestamps, hour totals, miles, and lighting
-                classification.
+                Export includes timestamps, hour totals, miles, lighting
+                classification, and night-hour source.
               </div>
             </div>
           </div>
@@ -514,24 +520,38 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <p className="text-base font-bold text-[#08194A]">
-                        {formatHours(row.totalHours)} hrs
+                        {formatHoursLabel(row.totalHours)}
                       </p>
                       <p className="mt-1 text-xs text-[#08194A]/65">
                         {row.start} → {row.end}
                       </p>
                     </div>
 
-                    <span className="rounded-full border border-[#08194A]/10 bg-white px-3 py-1 text-xs font-semibold text-[#08194A]/75">
-                      {row.lighting}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-[#08194A]/10 bg-white px-3 py-1 text-xs font-semibold text-[#08194A]/75">
+                        {row.lighting}
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          row.nightSource === "Verified"
+                            ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border border-amber-200 bg-amber-50 text-amber-700"
+                        }`}
+                      >
+                        {row.nightSource}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[#08194A]/70 sm:grid-cols-3">
+                  <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-[#08194A]/70 sm:grid-cols-4">
                     <div className="rounded-xl bg-white px-3 py-2">
-                      Day: {formatHours(row.dayHours)}
+                      Day: {formatHoursLabel(row.dayHours)}
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2">
-                      Night: {formatHours(row.nightHours)}
+                      Night: {formatHoursLabel(row.nightHours)}
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-2">
+                      Source: {row.nightSource}
                     </div>
                     <div className="rounded-xl bg-white px-3 py-2">
                       Miles: {row.miles.toFixed(1)}

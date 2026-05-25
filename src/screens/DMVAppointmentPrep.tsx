@@ -62,7 +62,7 @@ export default function DMVAppointmentPrep() {
 
           <p className="mt-3 text-sm leading-6 text-[#08194A]/70 sm:text-base">
             Review what to bring, what to practice, and what to expect before
-            the road test appointment.
+            the New Jersey MVC road test appointment.
           </p>
 
           <div className="mt-5 rounded-2xl border border-[#08194A]/10 bg-[#08194A] p-4 text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)]">
@@ -77,8 +77,8 @@ export default function DMVAppointmentPrep() {
 
         <PrepCard title="Arrival Time">
           <p>
-            Arrive <strong>15 minutes early</strong> to avoid delays and allow
-            time for check-in.
+            Arrive about <strong>15 minutes early</strong> so you have time to
+            check in, organize documents, and avoid last-minute stress.
           </p>
         </PrepCard>
 
@@ -86,22 +86,28 @@ export default function DMVAppointmentPrep() {
           <PrepList
             items={[
               <>
-                <strong>Teen&apos;s 6 Points of ID</strong> (the teen is the
-                applicant)
+                <strong>Valid examination permit</strong>
               </>,
-              <>Teen&apos;s permit</>,
+              <>
+                <strong>Identification used for the permit</strong> or any
+                documents required by MVC for the transaction
+              </>,
               <>Vehicle registration</>,
               <>Insurance card</>,
               <>
-                <strong>Completed BA-CSD Form</strong> (parent-signed)
+                <strong>Completed BA-CSD form</strong>, when required for the
+                licensing step
               </>,
-              <>Parent/guardian&apos;s driver&apos;s license</>,
+              <>
+                <strong>Accompanying New Jersey licensed driver</strong>, such
+                as a parent or guardian when applicable
+              </>,
             ]}
           />
           <p className="mt-4 rounded-xl border border-[#f9c80e]/35 bg-[#FFF8DB] px-4 py-3 text-xs leading-snug text-[#6B5600] sm:text-sm">
-            Only the teen needs a full 6-Point ID set. The parent does{" "}
-            <strong>not</strong> need 6 Points — just their driver&apos;s
-            license and signature on the BA-CSD.
+            NJ MVC road-test guidance refers to bringing the same identification
+            used to obtain the permit. For document questions, confirm your
+            exact transaction on the official MVC pages before the appointment.
           </p>
         </PrepCard>
 
@@ -109,11 +115,23 @@ export default function DMVAppointmentPrep() {
           <PrepList
             items={[
               <>Valid inspection sticker</>,
-              <>Working brake lights and turn signals</>,
-              <>No dashboard warning lights</>,
-              <>Accessible parking brake (examiner must reach it)</>,
+              <>Current registration and insurance</>,
+              <>Working brake lights, turn signals, horn, and basic safety equipment</>,
+              <>
+                Vehicle in safe operating condition and suitable for the road
+                test
+              </>,
+              <>
+                Parking brake and controls should be accessible for proper test
+                administration
+              </>,
             ]}
           />
+          <p className="mt-4 rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-4 py-3 text-xs leading-snug text-[#08194A]/65 sm:text-sm">
+            If anything about the vehicle is questionable, verify current NJ MVC
+            road-test vehicle rules before the appointment instead of relying on
+            assumptions.
+          </p>
         </PrepCard>
 
         <PrepCard title="Skills to Review">
@@ -121,7 +139,7 @@ export default function DMVAppointmentPrep() {
             items={[
               <>Parallel parking</>,
               <>K-turn / 3-point turn</>,
-              <>Smooth braking</>,
+              <>Smooth braking and stopping</>,
               <>Lane changes with signaling</>,
               <>Reverse driving control</>,
             ]}
@@ -131,28 +149,41 @@ export default function DMVAppointmentPrep() {
         <PrepCard title="What to Expect at MVC">
           <PrepList
             items={[
-              <>Check in at the counter with your teen.</>,
-              <>The clerk will verify the teen&apos;s 6 Points of ID.</>,
+              <>Check in with your teen and present the required documents.</>,
               <>
-                Parent/guardian signs the BA-CSD if not already signed.
+                MVC staff will review the permit and confirm required
+                identification or related paperwork.
               </>,
-              <>The examiner will confirm the vehicle&apos;s safety basics.</>,
-              <>Your teen will be called for the road test when ready.</>,
-              <>After the test, the examiner will give immediate results.</>,
-              <>If passed, the teen receives their permit validation.</>,
+              <>
+                The vehicle may be checked for basic safety readiness before the
+                road test.
+              </>,
+              <>
+                Your teen will be called when the examiner is ready to begin the
+                test.
+              </>,
+              <>
+                After the road test, the examiner will explain the result and
+                next steps.
+              </>,
+              <>
+                If your teen passes, MVC will provide instructions for the
+                probationary-license step, which may be completed at the test
+                location if available or at a Licensing Center.
+              </>,
             ]}
           />
           <p className="mt-4 rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-4 py-3 text-xs leading-snug text-[#08194A]/65 sm:text-sm">
-            MVC visits can feel unpredictable, but the process is usually quick
-            and straightforward. Staying calm and organized helps your teen feel
-            confident.
+            MVC visits can feel unpredictable, but the process is usually
+            straightforward when your documents are organized and the vehicle is
+            ready.
           </p>
         </PrepCard>
 
         <PrepCard title="Final Ready Check">
           <p>
-            Make sure your teen is calm, confident, and familiar with the
-            test-route area before arriving.
+            Make sure your teen is rested, calm, familiar with the vehicle, and
+            comfortable with the local driving area before arriving.
           </p>
         </PrepCard>
 

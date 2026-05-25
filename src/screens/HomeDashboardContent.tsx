@@ -1,5 +1,12 @@
 // src/screens/HomeDashboardContent.tsx
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react"
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react"
 import { Geolocation } from "@capacitor/geolocation"
 import type { Screen } from "../App"
 import { useDriveHistory } from "../state/driveStore"
@@ -16,8 +23,6 @@ function safeNumber(val: unknown): number {
   return Number.isFinite(num) ? num : 0
 }
 
-// ✅ getLightingLabel removed — logic lives in lastDriveMode useMemo
-
 function formatElapsed(ms: number = 0) {
   const totalSeconds = Math.floor(ms / 1000)
   const minutes = Math.floor(totalSeconds / 60)
@@ -25,175 +30,237 @@ function formatElapsed(ms: number = 0) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
 }
 
+const isNonNullButton = (
+  el: HTMLButtonElement | null
+): el is HTMLButtonElement => el !== null
+
 export default function HomeDashboardContent({
   setScreen,
 }: HomeDashboardContentProps) {
-  const [startingDrive, setStartingDrive] = useState(false);
-  const [showLocationDisclosure, setShowLocationDisclosure] = useState(false);
+  const [startingDrive, setStartingDrive] = useState(false)
+  const [showLocationDisclosure, setShowLocationDisclosure] = useState(false)
 
-  const drives = useDriveHistory() || [];
-  const activeSession = useActiveDriveStore((s) => s.session);
-  const getElapsedSeconds = useActiveDriveStore((s) => s.getElapsedSeconds);
-  const hasActiveDrive = Boolean(activeSession?.isActive);
+  const allowButtonRef = useRef<HTMLButtonElement | null>(null)
+  const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
+  const lastFocusedElementRef = useRef<HTMLElement | null>(null)
+
+  const drives = useDriveHistory() ?? []
+  const activeSession = useActiveDriveStore((s) => s.session)
+  const hasActiveDrive = Boolean(activeSession?.isActive)
 
   const [activeDurationSeconds, setActiveDurationSeconds] = useState(() =>
-    getElapsedSeconds()
-  );
+    useActiveDriveStore.getState().getElapsedSeconds()
+  )
 
   useEffect(() => {
-    setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds());
-    if (!hasActiveDrive) return;
+    setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds())
+
+    if (!hasActiveDrive) return
 
     const interval = window.setInterval(() => {
-      setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds());
-    }, 1000);
+      setActiveDurationSeconds(useActiveDriveStore.getState().getElapsedSeconds())
+    }, 1000)
 
-    return () => window.clearInterval(interval);
-  }, [hasActiveDrive, activeSession?.isRunning, getElapsedSeconds]);
+    return () => window.clearInterval(interval)
+  }, [hasActiveDrive, activeSession?.isRunning])
 
-  const onboarding = useMemo(() => loadOnboardingData(), []);
+  useEffect(() => {
+    if (!showLocationDisclosure) return
 
-  const totalRequired = 50;
-  const nightRequired = 10;
+    lastFocusedElementRef.current = document.activeElement as HTMLElement | null
+
+    const frame = window.requestAnimationFrame(() => {
+      allowButtonRef.current?.focus()
+    })
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault()
+        setShowLocationDisclosure(false)
+        return
+      }
+
+      if (event.key !== "Tab") return
+
+      const focusable = [
+        cancelButtonRef.current,
+        allowButtonRef.current,
+      ].filter(isNonNullButton)
+
+      const first = focusable.at(0)
+      const last = focusable.at(-1)
+
+      if (!first || !last) return
+
+      const active = document.activeElement
+      const activeIsTrackedElement =
+        active instanceof HTMLButtonElement && focusable.includes(active)
+
+      if (event.shiftKey) {
+        if (active === first || !activeIsTrackedElement) {
+          event.preventDefault()
+          last.focus()
+        }
+      } else {
+        if (active === last || !activeIsTrackedElement) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.removeEventListener("keydown", handleKeyDown)
+      lastFocusedElementRef.current?.focus?.()
+    }
+  }, [showLocationDisclosure])
+
+  const onboarding = useMemo(() => loadOnboardingData(), [])
+
+  const totalRequired = 50
+  const nightRequired = 10
 
   const totalHours = useMemo(
     () => drives.reduce((sum, d) => sum + safeNumber(d.totalDurationHours), 0),
     [drives]
-  );
+  )
 
   const nightHours = useMemo(
     () =>
       drives.reduce((sum, d) => {
-        const verified = safeNumber(d.verifiedNightDurationHours);
-        const estimated = safeNumber(d.nightDurationHours);
-        return sum + (verified > 0 ? verified : estimated);
+        const verified = safeNumber(d.verifiedNightDurationHours)
+        const estimated = safeNumber(d.nightDurationHours)
+        return sum + (verified > 0 ? verified : estimated)
       }, 0),
     [drives]
-  );
+  )
 
   const totalMiles = useMemo(
     () => drives.reduce((sum, d) => sum + safeNumber(d.miles), 0),
     [drives]
-  );
+  )
 
-  const totalPercent = Math.min((totalHours / totalRequired) * 100, 100);
-  const nightPercent = Math.min((nightHours / nightRequired) * 100, 100);
-  const totalRemaining = Math.max(totalRequired - totalHours, 0);
-  const nightRemaining = Math.max(nightRequired - nightHours, 0);
+  const totalPercent = Math.min((totalHours / totalRequired) * 100, 100)
+  const nightPercent = Math.min((nightHours / nightRequired) * 100, 100)
+  const totalRemaining = Math.max(totalRequired - totalHours, 0)
+  const nightRemaining = Math.max(nightRequired - nightHours, 0)
 
   const lastDrive = useMemo(() => {
-    if (!drives.length) return null;
+    if (!drives.length) return null
     return [...drives].sort(
       (a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
-    )[0];
-  }, [drives]);
+    )[0]
+  }, [drives])
 
-  // ── Derived: last drive display values ──────────────────────────
   const lastDriveDuration = useMemo(() => {
-    if (!lastDrive) return "";
-    const hours = safeNumber(lastDrive.totalDurationHours);
-    const totalMins = Math.round(hours * 60);
-    const h = Math.floor(totalMins / 60);
-    const m = totalMins % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
-  }, [lastDrive]);
+    if (!lastDrive) return ""
+    const hours = safeNumber(lastDrive.totalDurationHours)
+    const totalMins = Math.round(hours * 60)
+    const h = Math.floor(totalMins / 60)
+    const m = totalMins % 60
+    return h > 0 ? `${h}h ${m}m` : `${m}m`
+  }, [lastDrive])
 
   const lastDriveMode = useMemo(() => {
-    if (!lastDrive) return "";
+    if (!lastDrive) return ""
     const night =
       safeNumber(lastDrive.verifiedNightDurationHours) ||
-      safeNumber(lastDrive.nightDurationHours);
-    const total = safeNumber(lastDrive.totalDurationHours);
-    if (total === 0) return "Day";
-    const nightRatio = night / total;
-    if (nightRatio >= 0.5) return "Night";
-    if (nightRatio > 0) return "Mixed";
-    return "Day";
-  }, [lastDrive]);
+      safeNumber(lastDrive.nightDurationHours)
+    const total = safeNumber(lastDrive.totalDurationHours)
+    if (total === 0) return "Day"
+    const nightRatio = night / total
+    if (nightRatio >= 0.5) return "Night"
+    if (nightRatio > 0) return "Mixed"
+    return "Day"
+  }, [lastDrive])
 
   const lastDriveStart = useMemo(() => {
-    if (!lastDrive) return "";
+    if (!lastDrive) return ""
     return new Date(lastDrive.startTime).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
-    });
-  }, [lastDrive]);
+    })
+  }, [lastDrive])
 
   const lastDriveEnd = useMemo(() => {
-    if (!lastDrive) return "";
+    if (!lastDrive) return ""
     return new Date(lastDrive.endTime).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
-    });
-  }, [lastDrive]);
+    })
+  }, [lastDrive])
 
-  // ── Derived: drive action button labels ─────────────────────────
   const driveActionState = hasActiveDrive
     ? activeSession?.isRunning
       ? "ACTIVE"
       : "PAUSED"
-    : "READY";
+    : "READY"
 
   const driveActionLabel = startingDrive
     ? "Starting..."
     : hasActiveDrive
-    ? activeSession?.isRunning
-      ? "Return to Active Drive"
-      : "Resume Paused Drive"
-    : "Start a New Drive";
+      ? activeSession?.isRunning
+        ? "Return to Active Drive"
+        : "Resume Paused Drive"
+      : "Start a New Drive"
 
-  // ── Location permission helpers ──────────────────────────────────
   const queryLocationPermission = async () => {
     try {
-      const result = await Geolocation.checkPermissions();
-      return result.location;
+      const result = await Geolocation.checkPermissions()
+      return result.location
     } catch (err) {
-      console.error("Location permission query failed:", err);
-      return null;
+      console.error("Location permission query failed:", err)
+      return null
     }
-  };
+  }
 
   const beginDrive = async () => {
-    setStartingDrive(true);
+    setStartingDrive(true)
     try {
-      navigate("home", "startDrive", setScreen);
+      navigate("home", "startDrive", setScreen)
     } finally {
-      setStartingDrive(false);
+      setStartingDrive(false)
     }
-  };
+  }
 
   const handleStartDrive = async () => {
-    if (startingDrive) return;
+    if (startingDrive) return
 
     if (hasActiveDrive) {
-      setScreen("active");
-      return;
+      setScreen("active")
+      return
     }
 
-    const perm = await queryLocationPermission();
+    const perm = await queryLocationPermission()
     if (perm !== "granted") {
-      setShowLocationDisclosure(true);
-      return;
+      setShowLocationDisclosure(true)
+      return
     }
 
-    await beginDrive();
-  };
+    await beginDrive()
+  }
 
   const handleAllowAndContinue = async () => {
     try {
-      const perm = await Geolocation.requestPermissions({ permissions: ["location"] });
+      const perm = await Geolocation.requestPermissions({
+        permissions: ["location"],
+      })
+
       if (perm.location === "granted") {
-        setShowLocationDisclosure(false);
-        await beginDrive();
+        setShowLocationDisclosure(false)
+        await beginDrive()
       } else {
-        console.warn("Location permission denied");
-        setShowLocationDisclosure(false);
+        console.warn("Location permission denied")
+        setShowLocationDisclosure(false)
       }
     } catch (err) {
-      console.error("Location permission error:", err);
-      setShowLocationDisclosure(false);
+      console.error("Location permission error:", err)
+      setShowLocationDisclosure(false)
     }
-  };
+  }
 
   return (
     <>
@@ -203,33 +270,40 @@ export default function HomeDashboardContent({
             role="dialog"
             aria-modal="true"
             aria-labelledby="location-disclosure-title"
+            aria-describedby="location-disclosure-description"
             className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-800 shadow-xl"
           >
             <h2 id="location-disclosure-title" className="mb-3 text-xl font-bold">
               Why NJDrive50 Needs Your Location
             </h2>
 
-            <p className="mb-6 text-sm leading-6 text-slate-600">
-              NJDrive50 tracks your supervised driving sessions to create accurate mileage logs.
-              To keep tracking even when the screen is off, the app needs location permission
-              while you're driving.
+            <p
+              id="location-disclosure-description"
+              className="mb-6 text-sm leading-6 text-slate-600"
+            >
+              NJDrive50 tracks your supervised driving sessions to create accurate
+              mileage logs. To keep tracking even when the screen is off, the app
+              needs location permission while you&apos;re driving.
               <br />
               <br />
-              Location is only used during active drives and never when a drive is not running.
+              Location is only used during active drives and never when a drive is
+              not running.
             </p>
 
             <div className="flex justify-end gap-3">
               <button
+                ref={cancelButtonRef}
                 type="button"
-                className="rounded-lg bg-slate-200 px-4 py-2 text-slate-700"
+                className="min-h-[44px] rounded-lg bg-slate-200 px-4 py-2 text-slate-700"
                 onClick={() => setShowLocationDisclosure(false)}
               >
                 Not Now
               </button>
 
               <button
+                ref={allowButtonRef}
                 type="button"
-                className="rounded-lg bg-blue-600 px-4 py-2 text-white"
+                className="min-h-[44px] rounded-lg bg-blue-600 px-4 py-2 text-white"
                 onClick={handleAllowAndContinue}
               >
                 Allow & Continue
@@ -254,7 +328,9 @@ export default function HomeDashboardContent({
                     : "animate-[pulseRed_2s_infinite] border border-[#D93025]/40 bg-[#D93025] shadow-[0_4px_12px_rgba(217,48,37,0.35)]"
                 }`}
               >
-                <span className="text-lg">🚗</span>
+                <span className="text-lg" aria-hidden="true">
+                  🚗
+                </span>
                 <span>
                   {activeSession?.isRunning
                     ? `Drive Active — ${formatElapsed(activeDurationSeconds * 1000)}`
@@ -342,7 +418,9 @@ export default function HomeDashboardContent({
 
                 <p className="flex items-end text-3xl font-extrabold leading-none tracking-tight text-[#0A1E5E]">
                   {totalMiles.toFixed(1)}
-                  <span className="ml-1 text-lg font-semibold text-[#0A1E5E]/65">mi</span>
+                  <span className="ml-1 text-lg font-semibold text-[#0A1E5E]/65">
+                    mi
+                  </span>
                 </p>
 
                 <div className="inline-flex h-[26px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70">
@@ -446,5 +524,5 @@ export default function HomeDashboardContent({
         </section>
       </div>
     </>
-  );
+  )
 }

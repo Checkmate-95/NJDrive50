@@ -23,13 +23,13 @@ type ExportLogProps = {
 
 type StatusState =
   | {
-      type: "success" | "error"
+      type: "success" | "error" | "loading"
       title: string
       message: string
     }
   | null
 
-const safeNumber = (value: unknown) => {
+const safeNumber = (value: unknown): number => {
   const num = Number(value)
   return Number.isFinite(num) ? num : 0
 }
@@ -37,19 +37,19 @@ const safeNumber = (value: unknown) => {
 const formatHoursValue = (hours: number) => safeNumber(hours).toFixed(2)
 const formatHoursLabel = (hours: number) => `${formatHoursValue(hours)} hrs`
 
-const formatDateTime = (value: unknown) => {
+const formatDateTime = (value: unknown): string => {
   const date = new Date(String(value))
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString()
 }
 
-const getLightingLabel = (dayHours: number, nightHours: number) => {
+const getLightingLabel = (dayHours: number, nightHours: number): string => {
   if (nightHours > 0 && dayHours > 0) return "Mixed"
   if (nightHours > 0) return "Night"
   if (dayHours > 0) return "Day"
   return "—"
 }
 
-const csvEscape = (value: unknown) => {
+const csvEscape = (value: unknown): string => {
   const text = String(value ?? "")
   return `"${text.replace(/"/g, '""')}"`
 }
@@ -73,15 +73,24 @@ const downloadTextFile = (
   }, 1000)
 }
 
+const bytesToBase64 = (bytes: Uint8Array) => {
+  let binary = ""
+  const chunkSize = 0x8000
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    binary += String.fromCharCode(...chunk)
+  }
+
+  return btoa(binary)
+}
+
 const toBase64Utf8 = (text: string) => {
-  const bytes = new Uint8Array(new TextEncoder().encode(text))
-  return btoa(String.fromCharCode(...bytes))
+  return bytesToBase64(new TextEncoder().encode(text))
 }
 
 const toBase64FromArrayBuffer = (buffer: ArrayBuffer) => {
-  return btoa(
-    Array.from(new Uint8Array(buffer), (byte) => String.fromCharCode(byte)).join("")
-  )
+  return bytesToBase64(new Uint8Array(buffer))
 }
 
 function StatusBanner({
@@ -92,78 +101,65 @@ function StatusBanner({
   onDismiss: () => void
 }) {
   const isSuccess = status.type === "success"
+  const isError = status.type === "error"
+  const isLoading = status.type === "loading"
 
   return (
     <div
-      role={isSuccess ? "status" : "alert"}
-      aria-live={isSuccess ? "polite" : "assertive"}
-      className={[
-        "rounded-[24px] border px-4 py-3 shadow-sm sm:px-5",
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
+      className={`rounded-[24px] border px-5 py-4 shadow-sm ${
         isSuccess
-          ? "border-[#08194A]/12 bg-[#F7F9FC] text-[#08194A]"
-          : "border-[#f9c80e]/45 bg-[#FFF8DB] text-[#08194A]",
-      ].join(" ")}
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : isError
+            ? "border-red-200 bg-red-50 text-red-800"
+            : "border-blue-200 bg-blue-50 text-blue-800"
+      }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <div
-            aria-hidden="true"
-            className={[
-              "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black",
-              isSuccess
-                ? "bg-[#08194A] text-white"
-                : "bg-[#f9c80e] text-[#08194A]",
-            ].join(" ")}
-          >
-            {isSuccess ? "✓" : "!"}
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-sm font-extrabold tracking-tight">{status.title}</p>
-            <p className="mt-1 text-sm text-[#08194A]/78">{status.message}</p>
-          </div>
+        <div className="min-w-0">
+          <p className="font-semibold">{status.title}</p>
+          <p className="mt-1 text-sm">{status.message}</p>
         </div>
 
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label="Dismiss status message"
-          className="shrink-0 rounded-lg border border-[#08194A]/10 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#08194A] transition hover:bg-[#F3F6FB]"
-        >
-          Dismiss
-        </button>
+        {!isLoading ? (
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Dismiss status message"
+            className="min-h-[44px] shrink-0 rounded-lg border border-current/15 bg-white/70 px-3 py-2 text-xs font-semibold transition hover:bg-white"
+          >
+            Dismiss
+          </button>
+        ) : null}
       </div>
     </div>
   )
 }
 
 export default function ExportLog({ setScreen }: ExportLogProps) {
-  const drives = useDriveHistory() || []
+  const drives = useDriveHistory() ?? []
   const [status, setStatus] = useState<StatusState>(null)
+  const [isExporting, setIsExporting] = useState(false)
+  const [exportingKind, setExportingKind] = useState<"pdf" | "csv" | null>(null)
 
   useEffect(() => {
-    if (!status) return
+    if (!status || status.type === "loading") return
 
     const timeout = window.setTimeout(() => {
       setStatus(null)
-    }, status.type === "error" ? 6500 : 4200)
+    }, status.type === "error" ? 7000 : 4500)
 
-    return () => {
-      window.clearTimeout(timeout)
-    }
+    return () => window.clearTimeout(timeout)
   }, [status])
 
   const rows = useMemo(() => {
     return drives.map((d) => {
       const totalHours = safeNumber(d.totalDurationHours)
       const dayHours = safeNumber(d.dayDurationHours)
-
-      const verifiedNightHours = safeNumber(d.verifiedNightDurationHours)
-      const estimatedNightHours = safeNumber(d.nightDurationHours)
-      const useVerifiedNight = verifiedNightHours > 0
-      const nightHours = useVerifiedNight ? verifiedNightHours : estimatedNightHours
-
-      const miles = safeNumber(d.miles)
+      const verifiedNight = safeNumber(d.verifiedNightDurationHours)
+      const estimatedNight = safeNumber(d.nightDurationHours)
+      const nightHours = verifiedNight > 0 ? verifiedNight : estimatedNight
 
       return {
         id: d.id,
@@ -172,9 +168,9 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         totalHours,
         dayHours,
         nightHours,
-        miles,
+        miles: safeNumber(d.miles),
         lighting: getLightingLabel(dayHours, nightHours),
-        nightSource: useVerifiedNight ? "Verified" : "Estimated",
+        nightSource: verifiedNight > 0 ? "Verified" : "Estimated",
       }
     })
   }, [drives])
@@ -192,26 +188,24 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
     )
   }, [rows])
 
+  const hasDrives = rows.length > 0
+
   const shareNativeFile = useCallback(
     async ({
       uri,
       title,
       text,
       dialogTitle,
-      successTitle,
-      successMessage,
     }: {
       uri: string
       title: string
       text: string
       dialogTitle: string
-      successTitle: string
-      successMessage: string
     }) => {
       const canShareResult = await Share.canShare()
 
       if (!canShareResult.value) {
-        throw new Error("Native share is not available on this device.")
+        throw new Error("Native sharing is not available on this device.")
       }
 
       await Share.share({
@@ -220,17 +214,21 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         files: [uri],
         dialogTitle,
       })
-
-      setStatus({
-        type: "success",
-        title: successTitle,
-        message: successMessage,
-      })
     },
     []
   )
 
   const exportPDF = useCallback(async () => {
+    if (!hasDrives || isExporting) return
+
+    setIsExporting(true)
+    setExportingKind("pdf")
+    setStatus({
+      type: "loading",
+      title: "Generating PDF...",
+      message: "Please wait while your drive log is prepared.",
+    })
+
     try {
       const doc = new jsPDF({ orientation: "landscape" })
 
@@ -287,19 +285,19 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         margin: { left: 14, right: 14 },
       })
 
+      const fileName = `NJDrive50_Log_${new Date().toISOString().slice(0, 10)}.pdf`
       const isNative = Capacitor.isNativePlatform()
 
       if (!isNative) {
-        doc.save("NJDrive50_Log.pdf")
+        doc.save(fileName)
         setStatus({
           type: "success",
-          title: "PDF export started",
-          message: "Your PDF file has been prepared for download.",
+          title: "PDF downloaded",
+          message: "Your drive log PDF has been saved.",
         })
         return
       }
 
-      const fileName = `NJDrive50_Log_${Date.now()}.pdf`
       const pdfArrayBuffer = doc.output("arraybuffer") as ArrayBuffer
       const pdfBase64 = toBase64FromArrayBuffer(pdfArrayBuffer)
 
@@ -319,22 +317,39 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       await shareNativeFile({
         uri: fileUri,
         title: "NJDrive50 Drive Log",
-        text: "Your supervised driving log is ready.",
+        text: "Your supervised driving log PDF is ready.",
         dialogTitle: "Share PDF",
-        successTitle: "PDF ready",
-        successMessage: "Your drive log PDF is ready to share.",
+      })
+
+      setStatus({
+        type: "success",
+        title: "PDF ready",
+        message: "Your drive log PDF is ready to share.",
       })
     } catch (error) {
       console.error("PDF export failed:", error)
       setStatus({
         type: "error",
-        title: "PDF export did not finish",
-        message: "We couldn’t generate your PDF right now. Please try again.",
+        title: "PDF export failed",
+        message: "Could not generate the PDF. Please try again.",
       })
+    } finally {
+      setIsExporting(false)
+      setExportingKind(null)
     }
-  }, [rows, totals, shareNativeFile])
+  }, [hasDrives, isExporting, rows, totals, shareNativeFile])
 
   const exportCSV = useCallback(async () => {
+    if (!hasDrives || isExporting) return
+
+    setIsExporting(true)
+    setExportingKind("csv")
+    setStatus({
+      type: "loading",
+      title: "Generating CSV...",
+      message: "Please wait while your drive log is prepared.",
+    })
+
     try {
       const header = [
         "Start Time",
@@ -360,21 +375,21 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         ].join(",")
       )
 
-      const csv = [header.join(","), ...csvRows].join("\r\n")
-      const fileName = `NJDrive50_Log_${Date.now()}.csv`
+      const csvContent = [header.join(","), ...csvRows].join("\r\n")
+      const fileName = `NJDrive50_Log_${new Date().toISOString().slice(0, 10)}.csv`
       const isNative = Capacitor.isNativePlatform()
 
       if (!isNative) {
-        downloadTextFile(csv, "NJDrive50_Log.csv", "text/csv;charset=utf-8;")
+        downloadTextFile(csvContent, fileName, "text/csv;charset=utf-8;")
         setStatus({
           type: "success",
-          title: "CSV export started",
-          message: "Your CSV file has been prepared for download.",
+          title: "CSV downloaded",
+          message: "Your drive log CSV has been saved.",
         })
         return
       }
 
-      const csvBase64 = toBase64Utf8(csv)
+      const csvBase64 = toBase64Utf8(csvContent)
 
       const result = await Filesystem.writeFile({
         path: fileName,
@@ -392,25 +407,30 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       await shareNativeFile({
         uri: fileUri,
         title: "NJDrive50 Drive Log CSV",
-        text: "Your supervised driving CSV export is ready.",
+        text: "Your supervised driving log CSV is ready.",
         dialogTitle: "Share CSV",
-        successTitle: "CSV ready",
-        successMessage: "Your drive log CSV is ready to share.",
+      })
+
+      setStatus({
+        type: "success",
+        title: "CSV ready",
+        message: "Your drive log CSV is ready to share.",
       })
     } catch (error) {
       console.error("CSV export failed:", error)
       setStatus({
         type: "error",
-        title: "CSV export did not finish",
-        message: "We couldn’t generate your CSV right now. Please try again.",
+        title: "CSV export failed",
+        message: "Could not generate the CSV. Please try again.",
       })
+    } finally {
+      setIsExporting(false)
+      setExportingKind(null)
     }
-  }, [rows, shareNativeFile])
-
-  const hasDrives = rows.length > 0
+  }, [hasDrives, isExporting, rows, shareNativeFile])
 
   return (
-    <main className="min-h-screen bg-white px-4 py-6 text-[#08194A] sm:px-6">
+    <main className="min-h-dvh bg-white px-4 py-6 text-[#08194A] sm:px-6">
       <section className="mx-auto w-full max-w-3xl space-y-6">
         {status ? (
           <StatusBanner status={status} onDismiss={() => setStatus(null)} />
@@ -567,26 +587,30 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
           <button
             type="button"
             onClick={exportPDF}
-            disabled={!hasDrives}
-            className="rounded-xl bg-[#08194A] px-6 py-3.5 font-semibold text-white shadow-md transition hover:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!hasDrives || isExporting}
+            className="min-h-[52px] rounded-xl bg-[#08194A] px-6 py-3.5 font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Export as PDF
+            {isExporting && exportingKind === "pdf"
+              ? "Generating PDF..."
+              : "Export as PDF"}
           </button>
 
           <button
             type="button"
             onClick={exportCSV}
-            disabled={!hasDrives}
-            className="rounded-xl bg-[#f9c80e] px-6 py-3.5 font-semibold text-[#08194A] shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!hasDrives || isExporting}
+            className="min-h-[52px] rounded-xl bg-[#f9c80e] px-6 py-3.5 font-semibold text-[#08194A] transition disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Export as CSV
+            {isExporting && exportingKind === "csv"
+              ? "Generating CSV..."
+              : "Export as CSV"}
           </button>
         </div>
 
         <button
           type="button"
           onClick={() => navigate("export", "history", setScreen)}
-          className="w-full rounded-xl bg-[#E9EDF5] px-6 py-3.5 font-semibold text-[#08194A] transition hover:bg-[#DCE4F2]"
+          className="min-h-[52px] w-full rounded-xl border border-[#08194A]/20 bg-white py-3.5 font-semibold text-[#08194A] transition hover:bg-[#F7F9FC]"
         >
           Back to History
         </button>

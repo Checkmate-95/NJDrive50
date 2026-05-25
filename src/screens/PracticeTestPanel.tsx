@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { practiceQuestions as QUESTIONS } from "../data/practiceQuestions"
 import {
   buildTestQuestions,
@@ -8,7 +8,7 @@ import {
 
 const PASSING_PERCENT = 80
 const QUESTION_COUNT = 23
-const LANDING_PAGE_URL = "https://your-landing-page-url.com"
+const LANDING_PAGE_URL = "https://njdrive50.com"
 
 export default function PracticeTestPanel() {
   const [testSeed, setTestSeed] = useState(0)
@@ -16,6 +16,11 @@ export default function PracticeTestPanel() {
   const [score, setScore] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
   const [showResult, setShowResult] = useState(false)
+
+  const questionHeadingRef = useRef<HTMLLegendElement | null>(null)
+  const resultHeadingRef = useRef<HTMLParagraphElement | null>(null)
+  const submitButtonRef = useRef<HTMLButtonElement | null>(null)
+  const nextButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const sessionQuestions = useMemo(() => {
     return buildTestQuestions(QUESTIONS, QUESTION_COUNT)
@@ -28,33 +33,58 @@ export default function PracticeTestPanel() {
   const answeredCount = Math.min(index, totalQuestions)
   const progressPercent = isFinished
     ? 100
-    : Math.round(((index + 1) / totalQuestions) * 100)
+    : totalQuestions > 0
+      ? Math.round(((index + 1) / totalQuestions) * 100)
+      : 0
 
   const scorePercent = useMemo(
     () => calcScorePercent(score, totalQuestions),
-    [score, totalQuestions]
+    [score, totalQuestions],
   )
 
   const passed = isPassing(scorePercent, PASSING_PERCENT)
 
   useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (showResult || !current) return
+    if (!showResult) {
+      questionHeadingRef.current?.focus()
+    }
+  }, [index, showResult])
 
-      if (e.key >= "1" && e.key <= String(current.answers.length)) {
-        setSelected(Number(e.key) - 1)
+  useEffect(() => {
+    if (showResult) {
+      resultHeadingRef.current?.focus()
+      nextButtonRef.current?.focus()
+    }
+  }, [showResult])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!current || showResult) return
+
+      const key = event.key.toLowerCase()
+
+      if (key >= "1" && key <= String(current.answers.length)) {
+        setSelected(Number(key) - 1)
+        return
       }
 
-      if (e.key.toLowerCase() >= "a" && e.key.toLowerCase() <= "z") {
-        const optionIndex = e.key.toLowerCase().charCodeAt(0) - 97
+      if (key >= "a" && key <= "d") {
+        const optionIndex = key.charCodeAt(0) - 97
         if (optionIndex >= 0 && optionIndex < current.answers.length) {
           setSelected(optionIndex)
         }
+        return
       }
 
-      if (e.key === "Enter" && selected !== null) {
-        e.preventDefault()
-        handleSubmit()
+      if (event.key === "Enter" && selected !== null) {
+        const activeTag = (document.activeElement?.tagName ?? "").toLowerCase()
+        const isNativeControl =
+          activeTag === "button" || activeTag === "input" || activeTag === "a"
+
+        if (!isNativeControl) {
+          event.preventDefault()
+          handleSubmit()
+        }
       }
     }
 
@@ -110,9 +140,9 @@ export default function PracticeTestPanel() {
                 <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
                   23-Question Test Complete
                 </p>
-                <h1 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
-                  23-Question Practice Test
-                </h1>
+                <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
+                  23-Question Practice Test Results
+                </h2>
               </div>
 
               <div
@@ -152,7 +182,7 @@ export default function PracticeTestPanel() {
             <div className="mt-4 rounded-2xl border border-[#08194A]/10 bg-[#F4F6FA] p-4 shadow-sm">
               <p className="text-sm font-semibold text-[#08194A]">
                 {passed
-                  ? "Nice work — you&apos;re in a strong range for the NJ knowledge test."
+                  ? "Nice work — you're in a strong range for the NJ knowledge test."
                   : "Good start — keep practicing until you can consistently score at or above 80%."}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-[#08194A]/72">
@@ -180,18 +210,16 @@ export default function PracticeTestPanel() {
                   <button
                     type="button"
                     onClick={handleRestart}
-                    className="w-full rounded-xl border border-white/20 bg-white/10 py-3 text-sm font-bold text-white transition hover:bg-white/15"
+                    className="w-full rounded-xl border border-white/20 bg-white/10 py-3 text-sm font-bold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
                   >
                     Restart Test
                   </button>
 
                   <a
                     href={LANDING_PAGE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center rounded-xl bg-[#f9c80e] py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] transition hover:-translate-y-[1px] hover:brightness-105"
+                    className="flex w-full items-center justify-center rounded-xl bg-[#f9c80e] py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
                   >
-                    Visit NJDrive50
+                    Start NJDrive50
                   </a>
                 </div>
               </div>
@@ -204,6 +232,10 @@ export default function PracticeTestPanel() {
 
   if (!current) return null
 
+  const radioName = `practice-question-${current.id}`
+  const legendId = `question-legend-${current.id}`
+  const resultId = `question-result-${current.id}`
+
   return (
     <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4">
       <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
@@ -215,9 +247,9 @@ export default function PracticeTestPanel() {
               <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
                 Free NJ Practice Test
               </p>
-              <h1 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
-                New Jersey Permit Test
-              </h1>
+              <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
+                New Jersey Permit Test Question
+              </h2>
             </div>
 
             <div className="rounded-full bg-[#08194A] px-3 py-1 text-xs font-bold tracking-[0.14em] text-white ring-1 ring-[#f9c80e]/35">
@@ -252,100 +284,113 @@ export default function PracticeTestPanel() {
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-[#08194A]/10 bg-[#F4F6FA] p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.16em] text-[#08194A]/55">
-              Current Question
-            </p>
-            <p className="mt-2 text-lg font-bold leading-snug text-[#08194A]">
-              {current.question}
-            </p>
-            <p className="mt-2 text-xs text-[#08194A]/55">
-              Select one answer, then check your response.
-            </p>
-          </div>
-
-          <div
-            className="mt-4 space-y-3"
-            role="radiogroup"
-            aria-label={`Question ${index + 1} answer choices`}
+          <fieldset
+            className="mt-4 rounded-2xl border border-[#08194A]/10 bg-[#F4F6FA] p-4 shadow-sm"
+            aria-describedby={showResult ? resultId : undefined}
           >
-            {current.answers.map((answer, i) => {
-              const isSelected = selected === i
-              const isCorrect = i === current.correctIndex
-              const showCorrect = showResult && isCorrect
-              const showWrong = showResult && isSelected && !isCorrect
+            <legend
+              id={legendId}
+              ref={questionHeadingRef}
+              tabIndex={-1}
+              className="w-full outline-none"
+            >
+              <span className="block text-xs uppercase tracking-[0.16em] text-[#08194A]/55">
+                Current Question
+              </span>
+              <span className="mt-2 block text-lg font-bold leading-snug text-[#08194A]">
+                {current.question}
+              </span>
+              <span className="mt-2 block text-xs text-[#08194A]/55">
+                Select one answer, then check your response.
+              </span>
+            </legend>
 
-              let classes =
-                "border-[#08194A]/15 bg-white text-[#08194A] hover:border-[#08194A]/35 hover:bg-[#F7F9FC]"
+            <div className="mt-4 space-y-3">
+              {current.answers.map((answer, i) => {
+                const isSelected = selected === i
+                const isCorrect = i === current.correctIndex
+                const showCorrect = showResult && isCorrect
+                const showWrong = showResult && isSelected && !isCorrect
 
-              if (isSelected && !showResult) {
-                classes =
-                  "border-[#f9c80e] bg-[#fff8d8] text-[#08194A] ring-2 ring-[#f9c80e]/30"
-              }
+                let classes =
+                  "border-[#08194A]/15 bg-white text-[#08194A] hover:border-[#08194A]/35 hover:bg-[#F7F9FC]"
 
-              if (showCorrect) {
-                classes =
-                  "border-[#f9c80e] bg-[#fff8d8] text-[#08194A] ring-2 ring-[#f9c80e]/30"
-              } else if (showWrong) {
-                classes = "border-red-300 bg-red-50 text-red-700"
-              }
+                if (isSelected && !showResult) {
+                  classes =
+                    "border-[#f9c80e] bg-[#fff8d8] text-[#08194A] ring-2 ring-[#f9c80e]/30"
+                }
 
-              return (
-                <button
-                  key={`${current.id}-${i}`}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  onClick={() => handleSelect(i)}
-                  disabled={showResult}
-                  className={`w-full rounded-2xl border-2 p-4 text-left transition ${classes} ${
-                    showResult ? "cursor-default" : "active:scale-[0.99]"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${
-                        showCorrect
-                          ? "bg-[#08194A] text-[#f9c80e]"
-                          : showWrong
-                            ? "bg-red-100 text-red-700"
-                            : isSelected
-                              ? "bg-[#08194A] text-[#f9c80e]"
-                              : "bg-[#F4F6FA] text-[#08194A]"
-                      }`}
-                    >
-                      {String.fromCharCode(65 + i)}
-                    </div>
+                if (showCorrect) {
+                  classes =
+                    "border-[#f9c80e] bg-[#fff8d8] text-[#08194A] ring-2 ring-[#f9c80e]/30"
+                } else if (showWrong) {
+                  classes = "border-red-300 bg-red-50 text-red-700"
+                }
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold leading-relaxed">
-                        {answer}
-                      </p>
+                return (
+                  <label
+                    key={`${current.id}-${i}`}
+                    className={`flex cursor-pointer rounded-2xl border-2 p-4 transition ${classes} ${
+                      showResult ? "cursor-default" : "active:scale-[0.99]"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={radioName}
+                      value={i}
+                      checked={isSelected}
+                      onChange={() => handleSelect(i)}
+                      disabled={showResult}
+                      className="sr-only"
+                    />
 
-                      {showCorrect && (
-                        <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/65">
-                          Correct answer
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+                          showCorrect
+                            ? "bg-[#08194A] text-[#f9c80e]"
+                            : showWrong
+                              ? "bg-red-100 text-red-700"
+                              : isSelected
+                                ? "bg-[#08194A] text-[#f9c80e]"
+                                : "bg-[#F4F6FA] text-[#08194A]"
+                        }`}
+                        aria-hidden="true"
+                      >
+                        {String.fromCharCode(65 + i)}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold leading-relaxed">
+                          {answer}
                         </p>
-                      )}
 
-                      {showWrong && (
-                        <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-red-600">
-                          Your selection
-                        </p>
-                      )}
+                        {showCorrect && (
+                          <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/65">
+                            Correct answer
+                          </p>
+                        )}
+
+                        {showWrong && (
+                          <p className="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-red-600">
+                            Your selection
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+                  </label>
+                )
+              })}
+            </div>
+          </fieldset>
 
           {!showResult && (
             <button
+              ref={submitButtonRef}
               type="button"
               onClick={handleSubmit}
               disabled={selected === null}
-              className={`mt-5 w-full rounded-xl py-3 font-bold transition ${
+              className={`mt-5 w-full rounded-xl py-3 font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2 ${
                 selected === null
                   ? "cursor-not-allowed bg-gray-300 text-gray-600"
                   : "bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.22)] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
@@ -357,6 +402,7 @@ export default function PracticeTestPanel() {
 
           {showResult && (
             <div
+              id={resultId}
               className="mt-5 overflow-hidden rounded-2xl border border-[#08194A]/10 bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)]"
               role="status"
               aria-live="polite"
@@ -365,7 +411,11 @@ export default function PracticeTestPanel() {
 
               <div className="p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-lg font-extrabold">
+                  <p
+                    ref={resultHeadingRef}
+                    tabIndex={-1}
+                    className="text-lg font-extrabold outline-none"
+                  >
                     {selected === current.correctIndex ? "Correct!" : "Not quite."}
                   </p>
 
@@ -386,9 +436,10 @@ export default function PracticeTestPanel() {
 
                 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button
+                    ref={nextButtonRef}
                     type="button"
                     onClick={handleNext}
-                    className="w-full rounded-xl bg-[#f9c80e] py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] transition hover:-translate-y-[1px] hover:brightness-105"
+                    className="w-full rounded-xl bg-[#f9c80e] py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
                   >
                     {index === totalQuestions - 1
                       ? "Finish Practice Test"
@@ -398,7 +449,7 @@ export default function PracticeTestPanel() {
                   <button
                     type="button"
                     onClick={handleRestart}
-                    className="w-full rounded-xl border border-white/20 bg-white/10 py-3 text-sm font-bold text-white transition hover:bg-white/15"
+                    className="w-full rounded-xl border border-white/20 bg-white/10 py-3 text-sm font-bold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
                   >
                     Restart Test
                   </button>
@@ -410,11 +461,9 @@ export default function PracticeTestPanel() {
           <div className="mt-4 text-center">
             <a
               href={LANDING_PAGE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
               className="text-sm font-semibold text-[#08194A] underline underline-offset-4"
             >
-              Learn more about NJDrive50
+              Explore NJDrive50 driving hour tracking
             </a>
           </div>
         </div>

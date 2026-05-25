@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async"
-import { useState } from "react"
-import { useNav } from "../state/navStore"
+import { Link, useNavigate } from "react-router-dom"
+import { useMemo, useState } from "react"
 
 type BillingCycle = "monthly" | "yearly"
 
@@ -10,7 +10,8 @@ type FeatureRow = {
   yearly: boolean
 }
 
-type PlanCardProps = {
+type Plan = {
+  billingCycle: BillingCycle
   name: string
   badge?: string
   description: string
@@ -21,6 +22,9 @@ type PlanCardProps = {
   features: string[]
   cta: string
   featured?: boolean
+}
+
+type PlanCardProps = Plan & {
   onSelect: () => void
 }
 
@@ -86,7 +90,11 @@ function PlanCard({
 
       <div className="mt-6 flex items-end gap-2">
         <span className="text-4xl font-extrabold tracking-tight">{price}</span>
-        <span className={`pb-1 text-sm ${featured ? "text-white/60" : "text-[#08194A]/55"}`}>
+        <span
+          className={`pb-1 text-sm ${
+            featured ? "text-white/60" : "text-[#08194A]/55"
+          }`}
+        >
           {priceSuffix}
         </span>
       </div>
@@ -95,7 +103,11 @@ function PlanCard({
         {helperText}
       </p>
 
-      <p className={`mt-2 text-xs leading-5 ${featured ? "text-white/56" : "text-[#08194A]/50"}`}>
+      <p
+        className={`mt-2 text-xs leading-5 ${
+          featured ? "text-white/56" : "text-[#08194A]/50"
+        }`}
+      >
         {trustText}
       </p>
 
@@ -139,10 +151,12 @@ function PlanCard({
 }
 
 export default function PricingPage() {
-  const { goBack, setScreen } = useNav()
+  const navigate = useNavigate()
   const [billing, setBilling] = useState<BillingCycle>("yearly")
 
   const PAGE_URL = "https://njdrive50.com/pricing"
+  const PRACTICE_TEST_PATH = "/practice-test"
+
   const metaTitle =
     "NJDrive50 Pricing | New Jersey Driving Log App Free Trial, Monthly & Annual Plans"
   const metaDescription =
@@ -207,17 +221,22 @@ export default function PricingPage() {
     })),
   }
 
-  const handleStartTrial = (cycle: BillingCycle) => {
-    setBilling(cycle)
-
-    // Temporary placeholder action:
-    // after payment/trial success, send them to the intro screen first
-    setScreen("intro")
+  const webPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: metaTitle,
+    url: PAGE_URL,
+    description: metaDescription,
   }
 
-  const primaryPlan =
+  const handleStartTrial = (cycle: BillingCycle) => {
+    navigate(`/start-trial?billing=${cycle}`)
+  }
+
+  const primaryPlan: Plan =
     billing === "yearly"
       ? {
+          billingCycle: "yearly",
           name: "Annual",
           badge: "Best Value",
           description:
@@ -237,6 +256,7 @@ export default function PricingPage() {
           featured: true,
         }
       : {
+          billingCycle: "monthly",
           name: "Monthly",
           badge: "Most Flexible",
           description:
@@ -256,9 +276,10 @@ export default function PricingPage() {
           featured: true,
         }
 
-  const secondaryPlan =
+  const secondaryPlan: Plan =
     billing === "yearly"
       ? {
+          billingCycle: "monthly",
           name: "Monthly",
           badge: "Flexible",
           description:
@@ -278,6 +299,7 @@ export default function PricingPage() {
           featured: false,
         }
       : {
+          billingCycle: "yearly",
           name: "Annual",
           badge: "Save More",
           description:
@@ -297,12 +319,15 @@ export default function PricingPage() {
           featured: false,
         }
 
+  const plans = useMemo(() => [secondaryPlan, primaryPlan], [secondaryPlan, primaryPlan])
+
   return (
     <>
       <Helmet>
         <title>{metaTitle}</title>
         <meta name="description" content={metaDescription} />
         <link rel="canonical" href={PAGE_URL} />
+        <script type="application/ld+json">{JSON.stringify(webPageSchema)}</script>
         <script type="application/ld+json">{JSON.stringify(faqPageSchema)}</script>
       </Helmet>
 
@@ -311,20 +336,19 @@ export default function PricingPage() {
           <header className="rounded-[28px] border border-white/30 bg-white/95 px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md sm:px-6 sm:py-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <button
-                  type="button"
-                  onClick={() => goBack("home")}
+                <Link
+                  to="/"
                   className="inline-flex items-center rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#08194A]/70 transition hover:bg-[#EEF3FA] hover:text-[#08194A]"
                 >
                   ← Back
-                </button>
+                </Link>
 
                 <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.18em] text-[#08194A]/45">
                   Pricing
                 </p>
 
                 <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
-                  Simple pricing for New Jersey families
+                  NJDrive50 pricing for New Jersey families
                 </h1>
 
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-[#08194A]/65 sm:text-base">
@@ -336,6 +360,17 @@ export default function PricingPage() {
                 <p className="mt-3 text-sm font-medium text-[#08194A]/62">
                   Start free, choose monthly flexibility, or save more with annual billing.
                 </p>
+
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-[#08194A]/62">
+                  Want to study first? Try the{" "}
+                  <Link
+                    to={PRACTICE_TEST_PATH}
+                    className="font-semibold text-[#08194A] underline underline-offset-4"
+                  >
+                    free New Jersey permit practice test
+                  </Link>{" "}
+                  before you pick a plan.
+                </p>
               </div>
 
               <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-1">
@@ -343,6 +378,7 @@ export default function PricingPage() {
                   type="button"
                   onClick={() => setBilling("monthly")}
                   aria-label="Switch pricing display to monthly billing"
+                  aria-pressed={billing === "monthly"}
                   className={`min-h-[44px] rounded-xl px-4 py-2 text-sm font-bold transition ${
                     billing === "monthly"
                       ? "bg-white text-[#08194A] shadow-[0_6px_16px_rgba(0,0,0,0.08)]"
@@ -356,6 +392,7 @@ export default function PricingPage() {
                   type="button"
                   onClick={() => setBilling("yearly")}
                   aria-label="Switch pricing display to yearly billing"
+                  aria-pressed={billing === "yearly"}
                   className={`min-h-[44px] rounded-xl px-4 py-2 text-sm font-bold transition ${
                     billing === "yearly"
                       ? "bg-[#08194A] text-white shadow-[0_10px_24px_rgba(8,25,74,0.18)]"
@@ -370,8 +407,13 @@ export default function PricingPage() {
 
           <main className="mt-6 space-y-6">
             <section className="grid gap-6 lg:grid-cols-2">
-              <PlanCard {...secondaryPlan} onSelect={() => handleStartTrial("monthly")} />
-              <PlanCard {...primaryPlan} onSelect={() => handleStartTrial("yearly")} />
+              {plans.map((plan) => (
+                <PlanCard
+                  key={`${plan.billingCycle}-${plan.name}`}
+                  {...plan}
+                  onSelect={() => handleStartTrial(plan.billingCycle)}
+                />
+              ))}
             </section>
 
             <section className="rounded-[28px] border border-[#08194A]/10 bg-white px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:px-6 sm:py-6">

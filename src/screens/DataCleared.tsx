@@ -5,15 +5,16 @@ export default function DataCleared() {
   const { setScreen } = useNav()
 
   return (
-    <main className="min-h-screen bg-white text-[#08194A] flex flex-col items-center justify-center p-6 gap-6">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-white p-6 text-[#08194A]">
       <CheckCircleIcon className="h-16 w-16 text-green-500" />
       <h1 className="text-2xl font-extrabold">Data Cleared</h1>
-      <p className="text-sm text-[#08194A]/70 text-center max-w-sm">
+      <p className="max-w-sm text-center text-sm text-[#08194A]/70">
         All app data has been removed. You can start fresh from the beginning.
       </p>
       <button
+        type="button"
         onClick={() => setScreen("intro")}
-        className="w-full max-w-xs bg-[#08194A] text-white py-3 rounded-xl font-semibold hover:bg-[#0A1E5E] transition"
+        className="w-full max-w-xs rounded-xl bg-[#08194A] py-3 font-semibold text-white transition hover:bg-[#0A1E5E]"
       >
         Get Started
       </button>

@@ -1,9 +1,4 @@
-import {
-  useMemo,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react"
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react"
 import type { Screen } from "../App"
 import { computeDriveScoreV2 } from "../utils/driveLogic"
 import { useDriveHistory, type DriveEntry } from "../state/driveStore"
@@ -244,8 +239,8 @@ export default function DriveSummaryContent({
       : "NO DRIVES"
 
   const handleStartNewDrive = () => {
-    navigate("summary", "startNew", setScreen)
     hardReset()
+    navigate("summary", "startNew", setScreen)
   }
 
   const handleContinueDrive = () => {
@@ -353,7 +348,7 @@ export default function DriveSummaryContent({
           <div className="mt-5 rounded-[28px] border border-[#0A1E5E]/10 bg-[#F7F9FC] p-4 shadow-sm sm:p-5">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.12em] leading-tight text-[#0A1E5E]/55">
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
                   Total<br />Hours
                 </p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
@@ -367,7 +362,7 @@ export default function DriveSummaryContent({
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.12em] leading-tight text-[#0A1E5E]/55">
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
                   Day<br />Hours
                 </p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
@@ -381,7 +376,7 @@ export default function DriveSummaryContent({
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.12em] leading-tight text-[#0A1E5E]/55">
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
                   Night<br />Hours
                 </p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
@@ -395,7 +390,7 @@ export default function DriveSummaryContent({
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.12em] leading-tight text-[#0A1E5E]/55">
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
                   Night<br />Remain
                 </p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
@@ -409,7 +404,7 @@ export default function DriveSummaryContent({
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.12em] leading-tight text-[#0A1E5E]/55">
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
                   Total<br />Remain
                 </p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
@@ -423,7 +418,7 @@ export default function DriveSummaryContent({
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.12em] leading-tight text-[#0A1E5E]/55">
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
                   Last<br />Drive
                 </p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
@@ -439,7 +434,7 @@ export default function DriveSummaryContent({
               <div className="col-span-2 rounded-2xl border border-[#0A1E5E]/10 bg-white p-4 shadow-sm sm:col-span-3">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.16em] leading-tight text-[#0A1E5E]/55">
+                    <p className="text-[11px] leading-tight tracking-[0.16em] text-[#0A1E5E]/55 uppercase">
                       Total<br />Miles
                       <span className="ml-1.5 rounded-full border border-[#0A1E5E]/10 bg-[#F4F6FA] px-1.5 py-0.5 text-[9px] font-bold tracking-[0.1em] text-[#0A1E5E]/45">
                         INFO
@@ -453,7 +448,7 @@ export default function DriveSummaryContent({
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[11px] uppercase tracking-[0.16em] leading-tight text-[#0A1E5E]/55">
+                    <p className="text-[11px] leading-tight tracking-[0.16em] text-[#0A1E5E]/55 uppercase">
                       Last<br />Drive<br />Miles
                     </p>
                     <p className="mt-2 text-xl font-black leading-none tracking-tight text-[#08194A] tabular-nums sm:text-2xl">

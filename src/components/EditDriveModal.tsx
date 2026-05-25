@@ -1,5 +1,4 @@
-// src/components/EditDriveModal.tsx
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import {
   type DriveEntry,
   updateDriveInHistory,
@@ -12,83 +11,209 @@ type Props = {
   onSaved: (entry: DriveEntry) => void
 }
 
+type ValidationErrors = {
+  start?: string
+  end?: string
+  miles?: string
+  form?: string
+}
+
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'area[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  'iframe',
+  'object',
+  'embed',
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
+].join(",")
+
 function toLocalInputValue(iso: string) {
-  const d = new Date(iso)
-  const pad = (n: number) => n.toString().padStart(2, "0")
-  const yyyy = d.getFullYear()
-  const mm = pad(d.getMonth() + 1)
-  const dd = pad(d.getDate())
-  const hh = pad(d.getHours())
-  const min = pad(d.getMinutes())
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}`
+  const date = new Date(iso)
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+  return local.toISOString().slice(0, 16)
+}
+
+function parseLocalDateTime(value: string) {
+  if (!value) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 function parseMilesInput(value: string) {
+  if (value.trim() === "") return null
   const parsed = Number.parseFloat(value)
-  return Number.isFinite(parsed) ? parsed : 0
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const startInputRef = useRef<HTMLInputElement | null>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+
+  const titleId = useId()
+  const descriptionId = useId()
+  const formErrorId = useId()
+  const startErrorId = useId()
+  const endErrorId = useId()
+  const milesErrorId = useId()
+
   const [startInput, setStartInput] = useState(toLocalInputValue(entry.startTime))
   const [endInput, setEndInput] = useState(toLocalInputValue(entry.endTime))
   const [miles, setMiles] = useState(String(entry.miles ?? ""))
+  const [errors, setErrors] = useState<ValidationErrors>({})
 
   useEffect(() => {
     setStartInput(toLocalInputValue(entry.startTime))
     setEndInput(toLocalInputValue(entry.endTime))
     setMiles(String(entry.miles ?? ""))
+    setErrors({})
   }, [entry])
 
   useEffect(() => {
     if (!open) return
 
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose()
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null
+
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    const focusTimer = window.setTimeout(() => {
+      startInputRef.current?.focus()
+    }, 0)
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault()
+        onClose()
+        return
+      }
+
+      if (e.key !== "Tab") return
+
+      const dialog = dialogRef.current
+      if (!dialog) return
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter(
+        (el) =>
+          !el.hasAttribute("disabled") &&
+          el.getAttribute("aria-hidden") !== "true" &&
+          el.tabIndex !== -1
+      )
+
+      if (focusable.length === 0) {
+        e.preventDefault()
+        dialog.focus()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement as HTMLElement | null
+
+      if (e.shiftKey) {
+        if (active === first || active === dialog) {
+          e.preventDefault()
+          last.focus()
+        }
+        return
+      }
+
+      if (active === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
+    document.addEventListener("keydown", onKeyDown)
+
+    return () => {
+      window.clearTimeout(focusTimer)
+      document.removeEventListener("keydown", onKeyDown)
+      document.body.style.overflow = originalOverflow
+      previouslyFocusedRef.current?.focus?.()
+    }
   }, [open, onClose])
 
   const computedDuration = useMemo(() => {
-    const start = new Date(startInput)
-    const end = new Date(endInput)
+    const start = parseLocalDateTime(startInput)
+    const end = parseLocalDateTime(endInput)
 
-    if (
-      Number.isNaN(start.getTime()) ||
-      Number.isNaN(end.getTime()) ||
-      end <= start
-    ) {
-      return null
-    }
+    if (!start || !end || end <= start) return null
 
     return (end.getTime() - start.getTime()) / (1000 * 60 * 60)
   }, [startInput, endInput])
 
   if (!open) return null
 
-  function handleSave() {
-    const start = new Date(startInput)
-    const end = new Date(endInput)
+  function validateForm(): { ok: true; start: Date; end: Date; milesValue: number } | { ok: false } {
+    const nextErrors: ValidationErrors = {}
 
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
-      alert("End time must be after start time.")
-      return
+    const start = parseLocalDateTime(startInput)
+    const end = parseLocalDateTime(endInput)
+    const milesValue = parseMilesInput(miles)
+
+    if (!start) {
+      nextErrors.start = "Enter a valid start time."
     }
 
-    const totalDurationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+    if (!end) {
+      nextErrors.end = "Enter a valid end time."
+    }
+
+    if (start && end && end <= start) {
+      nextErrors.end = "End time must be after start time."
+    }
+
+    if (milesValue === null) {
+      nextErrors.miles = "Enter a valid mileage."
+    } else if (milesValue < 0) {
+      nextErrors.miles = "Miles cannot be negative."
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      nextErrors.form = "Please fix the highlighted fields before saving."
+      setErrors(nextErrors)
+      return { ok: false }
+    }
+
+    setErrors({})
+    return {
+      ok: true,
+      start: start!,
+      end: end!,
+      milesValue: milesValue!,
+    }
+  }
+
+  function handleSave() {
+    const result = validateForm()
+    if (!result.ok) return
+
+    const totalDurationHours =
+      (result.end.getTime() - result.start.getTime()) / (1000 * 60 * 60)
 
     const updated: DriveEntry = {
       ...entry,
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
+      startTime: result.start.toISOString(),
+      endTime: result.end.toISOString(),
       totalDurationHours,
-      miles: parseMilesInput(miles),
+      miles: result.milesValue,
     }
 
     updateDriveInHistory(updated)
     onSaved(updated)
   }
+
+  const startDescribedBy = errors.start ? startErrorId : undefined
+  const endDescribedBy = errors.end ? endErrorId : undefined
+  const milesDescribedBy = errors.miles ? milesErrorId : undefined
 
   return (
     <div
@@ -96,11 +221,13 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="edit-drive-title"
-        aria-describedby="edit-drive-description"
-        className="w-full max-w-lg rounded-3xl border border-[#08194A]/10 bg-white p-5 text-[#08194A] shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6"
+        aria-labelledby={titleId}
+        aria-describedby={`${descriptionId}${errors.form ? ` ${formErrorId}` : ""}`}
+        tabIndex={-1}
+        className="w-full max-w-lg rounded-3xl border border-[#08194A]/10 bg-white p-5 text-[#08194A] shadow-[0_12px_30px_rgba(0,0,0,0.06)] outline-none sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -110,14 +237,14 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
             </div>
 
             <h2
-              id="edit-drive-title"
+              id={titleId}
               className="mt-3 text-2xl font-extrabold tracking-tight text-[#08194A]"
             >
               Update Drive Log
             </h2>
 
             <p
-              id="edit-drive-description"
+              id={descriptionId}
               className="mt-2 max-w-md text-sm leading-6 text-[#08194A]/65"
             >
               Adjust the saved time range and mileage for this drive entry, then
@@ -135,6 +262,17 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
           </button>
         </div>
 
+        {errors.form && (
+          <div
+            id={formErrorId}
+            role="alert"
+            aria-live="assertive"
+            className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
+          >
+            {errors.form}
+          </div>
+        )}
+
         <div className="mt-6 grid grid-cols-1 gap-4">
           <div>
             <label
@@ -144,12 +282,24 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
               Start Time
             </label>
             <input
+              ref={startInputRef}
               id="edit-drive-start"
               type="datetime-local"
-              className="min-h-[48px] w-full rounded-2xl border border-[#08194A]/10 bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:border-[#08194A]/20 focus:bg-white focus:ring-2 focus:ring-[#08194A]/8"
+              aria-invalid={errors.start ? "true" : undefined}
+              aria-describedby={startDescribedBy}
+              className={`min-h-[48px] w-full rounded-2xl bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:bg-white focus:ring-2 ${
+                errors.start
+                  ? "border border-red-300 focus:border-red-400 focus:ring-red-100"
+                  : "border border-[#08194A]/10 focus:border-[#08194A]/20 focus:ring-[#08194A]/8"
+              }`}
               value={startInput}
               onChange={(e) => setStartInput(e.target.value)}
             />
+            {errors.start && (
+              <p id={startErrorId} className="mt-2 text-sm text-red-700">
+                {errors.start}
+              </p>
+            )}
           </div>
 
           <div>
@@ -162,10 +312,21 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
             <input
               id="edit-drive-end"
               type="datetime-local"
-              className="min-h-[48px] w-full rounded-2xl border border-[#08194A]/10 bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:border-[#08194A]/20 focus:bg-white focus:ring-2 focus:ring-[#08194A]/8"
+              aria-invalid={errors.end ? "true" : undefined}
+              aria-describedby={endDescribedBy}
+              className={`min-h-[48px] w-full rounded-2xl bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:bg-white focus:ring-2 ${
+                errors.end
+                  ? "border border-red-300 focus:border-red-400 focus:ring-red-100"
+                  : "border border-[#08194A]/10 focus:border-[#08194A]/20 focus:ring-[#08194A]/8"
+              }`}
               value={endInput}
               onChange={(e) => setEndInput(e.target.value)}
             />
+            {errors.end && (
+              <p id={endErrorId} className="mt-2 text-sm text-red-700">
+                {errors.end}
+              </p>
+            )}
           </div>
 
           <div>
@@ -181,10 +342,21 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
               inputMode="decimal"
               step="0.01"
               min="0"
-              className="min-h-[48px] w-full rounded-2xl border border-[#08194A]/10 bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:border-[#08194A]/20 focus:bg-white focus:ring-2 focus:ring-[#08194A]/8"
+              aria-invalid={errors.miles ? "true" : undefined}
+              aria-describedby={milesDescribedBy}
+              className={`min-h-[48px] w-full rounded-2xl bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:bg-white focus:ring-2 ${
+                errors.miles
+                  ? "border border-red-300 focus:border-red-400 focus:ring-red-100"
+                  : "border border-[#08194A]/10 focus:border-[#08194A]/20 focus:ring-[#08194A]/8"
+              }`}
               value={miles}
               onChange={(e) => setMiles(e.target.value)}
             />
+            {errors.miles && (
+              <p id={milesErrorId} className="mt-2 text-sm text-red-700">
+                {errors.miles}
+              </p>
+            )}
           </div>
         </div>
 

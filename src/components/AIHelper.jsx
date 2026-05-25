@@ -1,7 +1,6 @@
 import { useState } from "react"
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001"
-const API_TOKEN = import.meta.env.VITE_API_BEARER_TOKEN ?? ""
 
 export default function AIHelper() {
   const [prompt, setPrompt] = useState("")
@@ -9,30 +8,26 @@ export default function AIHelper() {
   const [loading, setLoading] = useState(false)
 
   const sendPrompt = async () => {
-    if (!prompt.trim()) return
+    const cleanPrompt = prompt.trim()
+    if (!cleanPrompt || loading) return
 
     setLoading(true)
     setResponse("")
 
     try {
-      const headers = {
-        "Content-Type": "application/json",
-      }
-
-      if (API_TOKEN) {
-        headers.Authorization = `Bearer ${API_TOKEN}`
-      }
-
       const res = await fetch(`${API_BASE}/api/njdrive50-ai`, {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          prompt: prompt.trim(),
+          prompt: cleanPrompt,
           mode: "faq",
         }),
       })
 
       let data = null
+
       try {
         data = await res.json()
       } catch {

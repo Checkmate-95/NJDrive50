@@ -266,7 +266,13 @@ export default function App() {
   return (
     <AppShell setScreen={setScreenCompat} active={safeScreen}>
       <MapProvider>
-        <ErrorBoundary key={safeScreen} onReset={() => setScreen("home")}>
+        <ErrorBoundary
+          key={safeScreen}
+          onReloadApp={() => {
+            setScreen("landing")
+            window.location.reload()
+          }}
+        >
           <Suspense fallback={<ScreenLoader />}>{renderScreen()}</Suspense>
         </ErrorBoundary>
       </MapProvider>

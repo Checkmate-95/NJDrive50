@@ -12,10 +12,7 @@ type Coord = {
 }
 
 type TodaysDriveProps = {
-  drive: (DriveEntry & {
-    isPreview?: boolean
-    milesSource?: "routes-api" | "gps-accumulated"
-  }) | null
+  drive: (DriveEntry & { isPreview?: boolean }) | null
 }
 
 function formatHours(hours?: number): string {
@@ -40,8 +37,7 @@ function getLightingLabel(
 }
 
 function getMapTimeOfDay(nightHours: number): "Day" | "Night" {
-  if (nightHours > 0) return "Night"
-  return "Day"
+  return nightHours > 0 ? "Night" : "Day"
 }
 
 function normalizeMiles(value: unknown): number {
@@ -52,12 +48,15 @@ function normalizeMiles(value: unknown): number {
 
 function normalizeRoute(value: unknown): Coord[] {
   if (!Array.isArray(value)) return []
+
   return value.filter(
     (coord): coord is Coord =>
       !!coord &&
       typeof coord === "object" &&
       typeof (coord as Coord).lat === "number" &&
-      typeof (coord as Coord).lng === "number"
+      typeof (coord as Coord).lng === "number" &&
+      Number.isFinite((coord as Coord).lat) &&
+      Number.isFinite((coord as Coord).lng)
   )
 }
 
@@ -252,6 +251,11 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
                 (GPS est.)
               </span>
             )}
+            {milesSource === "routes-api" && (
+              <span className="ml-1 text-[10px] text-[#0A1E5E]/45">
+                (Route)
+              </span>
+            )}
           </p>
 
           <p>
@@ -329,4 +333,3 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
     </div>
   )
 }
-

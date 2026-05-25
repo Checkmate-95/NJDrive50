@@ -1,7 +1,7 @@
 // src/screens/DriveHistoryContent.tsx
 import { useMemo, useState } from "react"
 import {
-  getDriveHistory,
+  useDriveHistory,
   type DriveEntry,
   deleteDriveEntry,
 } from "../state/driveStore"
@@ -110,9 +110,8 @@ const EstimatedBadge = () => (
 export default function DriveHistoryContent() {
   const { goBack, setScreen } = useNav()
 
-  const [drives, setDrives] = useState<DriveEntry[]>(() =>
-    getDriveHistory().slice().reverse()
-  )
+  const history = useDriveHistory() || []
+  const drives = useMemo(() => history.slice().reverse(), [history])
 
   const [editDrive, setEditDrive] = useState<DriveEntry | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -154,7 +153,6 @@ export default function DriveHistoryContent() {
   }
 
   function handleEditSaved(updated: DriveEntry) {
-    setDrives((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
     setEditDrive(updated)
     handleCloseEdit()
   }
@@ -163,7 +161,6 @@ export default function DriveHistoryContent() {
     const confirmDelete = window.confirm("Delete this drive entry?")
     if (!confirmDelete) return
     deleteDriveEntry(id)
-    setDrives((prev) => prev.filter((d) => d.id !== id))
   }
 
   function handleExportLogs() {
@@ -255,8 +252,8 @@ export default function DriveHistoryContent() {
                           lighting === "Night Drive"
                             ? "bg-[#f9c80e]"
                             : lighting === "Mixed Drive"
-                            ? "bg-[#0A1E5E]"
-                            : "bg-gray-400"
+                              ? "bg-[#0A1E5E]"
+                              : "bg-gray-400"
                         }`}
                       />
 

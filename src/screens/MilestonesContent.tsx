@@ -44,7 +44,11 @@ export default function MilestonesContent() {
       (acc, entry: DriveEntry) => {
         acc.totalHours += safeNumber(entry.totalDurationHours)
         acc.dayHours += safeNumber(entry.dayDurationHours)
-        acc.nightHours += safeNumber(entry.nightDurationHours)
+
+        const verifiedNight = safeNumber(entry.verifiedNightDurationHours)
+        const estimatedNight = safeNumber(entry.nightDurationHours)
+        acc.nightHours += verifiedNight > 0 ? verifiedNight : estimatedNight
+
         return acc
       },
       { totalHours: 0, dayHours: 0, nightHours: 0 }
@@ -69,9 +73,19 @@ export default function MilestonesContent() {
   const milestones: MilestoneItem[] = [
     { label: "First 10 Hours", requirement: 10, value: totalHours, kind: "total" },
     { label: "20 Hours Logged", requirement: 20, value: totalHours, kind: "total" },
-    { label: "Night Driving", requirement: REQUIRED_NIGHT_HOURS, value: nightHours, kind: "night" },
+    {
+      label: "Night Driving",
+      requirement: REQUIRED_NIGHT_HOURS,
+      value: nightHours,
+      kind: "night",
+    },
     { label: "40 Hours Logged", requirement: 40, value: totalHours, kind: "total" },
-    { label: "Full 50 Hours", requirement: REQUIRED_TOTAL_HOURS, value: totalHours, kind: "total" },
+    {
+      label: "Full 50 Hours",
+      requirement: REQUIRED_TOTAL_HOURS,
+      value: totalHours,
+      kind: "total",
+    },
   ]
 
   const complianceMessage = isFullyCompliant
@@ -269,8 +283,8 @@ export default function MilestonesContent() {
           </div>
 
           <p className="mt-4 text-center text-xs text-[#08194A]/60">
-            New Jersey requires 50 supervised hours, including 10 night hours,
-            for eligible under-21 permit holders. [web:713][web:962]
+            New Jersey supervised-driving progress is tracked here using 50 total
+            hours and 10 night hours.
           </p>
         </div>
       </div>

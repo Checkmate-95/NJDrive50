@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useMemo,
   useState,
   type Dispatch,
@@ -72,9 +71,9 @@ export default function DriveSummaryContent({
   const teenPhoto = useTeenPhoto()
 
   const activeSession = useActiveDriveStore((s) => s.session)
+  const activeDurationSeconds = useActiveDriveStore((s) => s.getElapsedSeconds())
   const hardReset = useActiveDriveStore((s) => s.hardReset)
 
-  const [activeDurationSeconds, setActiveDurationSeconds] = useState(0)
   const [teenImgFailed, setTeenImgFailed] = useState(false)
   const [showScoreHelp, setShowScoreHelp] = useState(false)
 
@@ -87,19 +86,6 @@ export default function DriveSummaryContent({
 
   const hasActiveDrive = !!activeSession?.isActive
   const hasLastDrive = !!lastDrive
-
-  useEffect(() => {
-    const readElapsed = () =>
-      useActiveDriveStore.getState().getElapsedSeconds()
-
-    setActiveDurationSeconds(readElapsed())
-
-    const unsub = useActiveDriveStore.subscribe(() => {
-      setActiveDurationSeconds(readElapsed())
-    })
-
-    return () => unsub()
-  }, [])
 
   const {
     totalHours,

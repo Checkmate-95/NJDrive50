@@ -1,3 +1,4 @@
+// src/screens/ActiveDriveContent.tsx
 import { useEffect, useRef, useState, useCallback } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import type { Screen } from "../App"
@@ -24,10 +25,7 @@ type ActiveDriveContentProps = {
   setCurrentDrive: Dispatch<SetStateAction<DriveEntry | null>>
 }
 
-type MilesSource = "routes-api" | "gps-accumulated"
-
-type PreviewDriveEntry = DriveEntry & {
-  milesSource?: MilesSource
+type DriveSnapshot = DriveEntry & {
   isPreview?: boolean
 }
 
@@ -127,8 +125,7 @@ function ActiveDriveContent({
   const [showWeatherHelp, setShowWeatherHelp] = useState(false)
 
   const gpsRef = useRef<number | null>(null)
-  const frozenSnapshotRef =
-    useRef<Promise<PreviewDriveEntry | null> | null>(null)
+  const frozenSnapshotRef = useRef<Promise<DriveSnapshot | null> | null>(null)
   const isSavingRef = useRef(false)
   const weatherHelpRef = useRef<HTMLDivElement | null>(null)
   const wasRunningBeforeStopRef = useRef(false)
@@ -260,7 +257,10 @@ function ActiveDriveContent({
   }, [])
 
   const buildDriveSnapshot = useCallback(
-    async (opts?: { isPreview?: boolean; signal?: AbortSignal }): Promise<PreviewDriveEntry | null> => {
+    async (opts?: {
+      isPreview?: boolean
+      signal?: AbortSignal
+    }): Promise<DriveSnapshot | null> => {
       const state = useActiveDriveStore.getState()
       const sessionSnapshot = state.session
 
@@ -272,8 +272,7 @@ function ActiveDriveContent({
 
       const freshState = useActiveDriveStore.getState()
       const fresh = freshState.session
-      const liveMode =
-        freshState.getCurrentMode() ?? fresh.currentMode ?? "day"
+      const liveMode = freshState.getCurrentMode() ?? fresh.currentMode ?? "day"
 
       const currentEndCoord = await requestAndGetLocation()
       if (opts?.signal?.aborted) return null
@@ -300,10 +299,13 @@ function ActiveDriveContent({
         }
       }
 
-      const normalizedTotalMs = Math.max(finalElapsedMs, finalDayMs + finalNightMs)
+      const normalizedTotalMs = Math.max(
+        finalElapsedMs,
+        finalDayMs + finalNightMs
+      )
 
       let accurateMiles = safeNumber(fresh.liveMiles)
-      let milesSource: MilesSource = "gps-accumulated"
+      let milesSource: DriveEntry["milesSource"] = "gps-accumulated"
 
       if (fresh.startCoord && currentEndCoord) {
         const routeMiles = await getAccurateMileage(
@@ -334,6 +336,7 @@ function ActiveDriveContent({
 
       let dayHours = finalDayMs / 3600000
       let nightHours = finalNightMs / 3600000
+      let verifiedNightDurationHours: number | undefined
       let nightCalcMode: NightCalcMode | undefined = "estimated"
 
       const onboarding = loadOnboardingData()
@@ -350,6 +353,7 @@ function ActiveDriveContent({
 
         dayHours = split.dayHours
         nightHours = split.nightHours
+        verifiedNightDurationHours = split.nightHours
         nightCalcMode = "verified"
       }
 
@@ -360,7 +364,7 @@ function ActiveDriveContent({
         totalDurationHours: normalizedTotalMs / 3600000,
         dayDurationHours: dayHours,
         nightDurationHours: nightHours,
-        verifiedNightDurationHours: nightHours,
+        verifiedNightDurationHours,
         nightCalcMode,
         source: "timer",
         miles: safeNumber(accurateMiles),
@@ -609,14 +613,10 @@ function ActiveDriveContent({
 
       if (!finalizedDrive) return
 
-      const {
-        isPreview: _stripped,
-        milesSource: _src,
-        ...driveToSave
-      } = finalizedDrive
+      const { isPreview: _stripped, ...driveToSave } = finalizedDrive
 
       saveDrive(driveToSave)
-      setCurrentDrive(driveToSave as DriveEntry)
+      setCurrentDrive(driveToSave)
       setShowStopConfirm(false)
 
       navigate("active", "confirm", setScreen)
@@ -644,7 +644,7 @@ function ActiveDriveContent({
       const previewDrive = await startFrozenSnapshot({ isPreview: true })
       if (!previewDrive) return
 
-      setCurrentDrive(previewDrive as DriveEntry)
+      setCurrentDrive(previewDrive)
       navigate("active", "summary", setScreen)
     } finally {
       setIsPreviewing(false)

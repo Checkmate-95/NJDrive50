@@ -39,6 +39,7 @@ export type ReminderType = keyof ReminderPreferences
 const REMINDER_PREFS_KEY = "njdrive50_reminder_prefs"
 const ONBOARDING_DATA_KEY = "njdrive50_onboarding_data"
 const REMINDER_SCHEDULE_KEY = "njdrive50_reminder_schedule"
+const REMINDER_SCHEDULE_EVENT = "njdrive50-reminder-schedule-change"
 
 const defaultReminderPreferences: ReminderPreferences = {
   weeklyHoursReminder: true,
@@ -99,6 +100,12 @@ function safeSetItem(key: string, value: string): boolean {
     return true
   } catch {
     return false
+  }
+}
+
+function emitReminderScheduleChange() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(REMINDER_SCHEDULE_EVENT))
   }
 }
 
@@ -280,7 +287,11 @@ function loadReminderSchedule(): ReminderSchedule {
 }
 
 function saveReminderSchedule(schedule: ReminderSchedule): boolean {
-  return safeSetItem(REMINDER_SCHEDULE_KEY, JSON.stringify(schedule))
+  const saved = safeSetItem(REMINDER_SCHEDULE_KEY, JSON.stringify(schedule))
+  if (saved) {
+    emitReminderScheduleChange()
+  }
+  return saved
 }
 
 export function scheduleReminder(

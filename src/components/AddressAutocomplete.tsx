@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react"
 
 interface Props {
-  value: string;
-  onChange: (value: string) => void;
-  onPlaceSelect?: (place: google.maps.places.PlaceResult) => void;
-  placeholder?: string;
-  className?: string;
+  value: string
+  onChange: (value: string) => void
+  onPlaceSelect?: (place: google.maps.places.PlaceResult) => void
+  placeholder?: string
+  className?: string
 }
 
 export default function AddressAutocomplete({
@@ -13,43 +13,58 @@ export default function AddressAutocomplete({
   onChange,
   onPlaceSelect,
   placeholder,
-  className
+  className,
 }: Props) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const autoRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const autoRef = useRef<google.maps.places.Autocomplete | null>(null)
+  const listenerRef = useRef<google.maps.MapsEventListener | null>(null)
+  const onChangeRef = useRef(onChange)
+  const onPlaceSelectRef = useRef(onPlaceSelect)
 
   useEffect(() => {
-    if (!inputRef.current) return;
-    if (autoRef.current) return; // ✅ prevents re-initializing
+    onChangeRef.current = onChange
+  }, [onChange])
 
-    autoRef.current = new google.maps.places.Autocomplete(inputRef.current, {
+  useEffect(() => {
+    onPlaceSelectRef.current = onPlaceSelect
+  }, [onPlaceSelect])
+
+  useEffect(() => {
+    if (!inputRef.current) return
+    if (autoRef.current) return
+
+    const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
       fields: [
         "formatted_address",
         "address_components",
         "geometry",
         "name",
-        "place_id"
+        "place_id",
       ],
-      types: ["address"]
-    });
+      types: ["address"],
+    })
 
-    // ✅ Android-safe listener with slight delay
-    autoRef.current.addListener("place_changed", () => {
-      setTimeout(() => {
-        const place = autoRef.current?.getPlace();
+    autoRef.current = autocomplete
 
-        // Update the text field
-        if (place?.formatted_address) {
-          onChange(place.formatted_address);
+    listenerRef.current = autocomplete.addListener("place_changed", () => {
+      window.setTimeout(() => {
+        const place = autoRef.current?.getPlace()
+        if (!place) return
+
+        if (place.formatted_address) {
+          onChangeRef.current(place.formatted_address)
         }
 
-        // Send full place object to parent
-        if (place && onPlaceSelect) {
-          onPlaceSelect(place);
-        }
-      }, 200); // ⏱ ensures geometry + components are ready
-    });
-  }, []);
+        onPlaceSelectRef.current?.(place)
+      }, 200)
+    })
+
+    return () => {
+      listenerRef.current?.remove()
+      listenerRef.current = null
+      autoRef.current = null
+    }
+  }, [])
 
   return (
     <input
@@ -65,5 +80,5 @@ export default function AddressAutocomplete({
       enterKeyHint="done"
       className={className}
     />
-  );
+  )
 }

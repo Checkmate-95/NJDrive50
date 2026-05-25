@@ -1,7 +1,7 @@
 // src/screens/DMVBundle.tsx
 // Cross-platform PDF download:
-//   Android/iOS → Capacitor Filesystem + Share (native share sheet)
-//   Desktop/browser → jsPDF doc.save() blob download
+// Android/iOS -> Capacitor Filesystem + Share (native share sheet)
+// Desktop/browser -> jsPDF doc.save() blob download
 
 import { useDriveHistory, type DriveEntry } from "../state/driveStore"
 import jsPDF from "jspdf"
@@ -54,8 +54,16 @@ function getLightingLabel(dayHours: number, nightHours: number) {
 }
 
 function toBase64Utf8(text: string) {
-  const bytes = new Uint8Array(new TextEncoder().encode(text))
-  return btoa(String.fromCharCode(...bytes))
+  const bytes = new TextEncoder().encode(text)
+  let binary = ""
+  const chunkSize = 0x8000
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize)
+    binary += String.fromCharCode(...chunk)
+  }
+
+  return btoa(binary)
 }
 
 function getNightData(d: DriveEntry) {
@@ -72,9 +80,6 @@ function getNightData(d: DriveEntry) {
   }
 }
 
-// ─── Cross-platform PDF save ─────────────────────────────────────────────────
-// Android/iOS: writes blob to Cache dir then opens native share sheet
-// Desktop/browser: standard jsPDF doc.save() download
 async function savePDF(doc: jsPDF, filename: string): Promise<void> {
   if (Capacitor.isNativePlatform()) {
     try {
@@ -97,18 +102,32 @@ async function savePDF(doc: jsPDF, filename: string): Promise<void> {
         files: [uri],
         dialogTitle: "Save or share your PDF",
       })
+      return
     } catch (err) {
-      console.error("Native PDF save failed, falling back to blob URL:", err)
-      const blob = doc.output("blob")
-      const url = URL.createObjectURL(blob)
-      window.open(url, "_blank")
+      console.error("Native PDF save failed, falling back to browser preview:", err)
     }
-  } else {
+  }
+
+  try {
+    const blob = doc.output("blob")
+    const url = URL.createObjectURL(blob)
+    const newWindow = window.open(url, "_blank", "noopener,noreferrer")
+
+    if (!newWindow) {
+      doc.save(filename)
+      URL.revokeObjectURL(url)
+      return
+    }
+
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url)
+    }, 60_000)
+  } catch (err) {
+    console.error("Blob preview failed, falling back to direct save:", err)
     doc.save(filename)
   }
 }
 
-// ─── Open external URL ───────────────────────────────────────────────────────
 function openExternal(url: string) {
   window.open(url, "_blank", "noopener,noreferrer")
 }
@@ -205,7 +224,7 @@ export default function DMVBundle() {
     return 26
   }
 
-  const generateDrivingLogPDF = async () => {
+  const createDrivingLogPDF = () => {
     const doc = new jsPDF()
 
     let y = addDocHeader(
@@ -221,9 +240,7 @@ export default function DMVBundle() {
     doc.text(`Night Hours: ${nightHours.toFixed(2)}`, 14, y + 16)
 
     const tableData = drives.map((d) => {
-      const safeStart = d?.startTime
-        ? new Date(d.startTime).toLocaleString()
-        : ""
+      const safeStart = d?.startTime ? new Date(d.startTime).toLocaleString() : ""
       const safeEnd = d?.endTime ? new Date(d.endTime).toLocaleString() : ""
       const safeTotalHours = safeNumber(d?.totalDurationHours)
       const safeDayHours = safeNumber(d?.dayDurationHours)
@@ -268,10 +285,15 @@ export default function DMVBundle() {
       Math.min(lastY + 12, 280)
     )
 
+    return doc
+  }
+
+  const generateDrivingLogPDF = async () => {
+    const doc = createDrivingLogPDF()
     await savePDF(doc, "NJDrive50_Driving_Log.pdf")
   }
 
-  const generateParentSummarySheet = async () => {
+  const createParentSummarySheet = () => {
     const doc = new jsPDF()
 
     let y = addDocHeader(
@@ -300,10 +322,15 @@ export default function DMVBundle() {
     doc.text("Signature: ____________________________", 14, y + 88)
     doc.text("Date: ____________________", 14, y + 98)
 
+    return doc
+  }
+
+  const generateParentSummarySheet = async () => {
+    const doc = createParentSummarySheet()
     await savePDF(doc, "Parent_Guardian_Summary_NJDrive50.pdf")
   }
 
-  const generateRoadTestChecklist = async () => {
+  const createRoadTestChecklist = () => {
     const doc = new jsPDF()
     const left = 14
     const indent = 20
@@ -382,10 +409,15 @@ export default function DMVBundle() {
     )
     doc.text(footer, left, y)
 
+    return doc
+  }
+
+  const generateRoadTestChecklist = async () => {
+    const doc = createRoadTestChecklist()
     await savePDF(doc, "Road_Test_Checklist_NJDrive50.pdf")
   }
 
-  const generateMVCWhatToBring = async () => {
+  const createMVCWhatToBring = () => {
     const doc = new jsPDF()
     const left = 14
     let y = 20
@@ -439,10 +471,15 @@ export default function DMVBundle() {
     y += 8
     doc.text(`- First driver license: ${OFFICIAL_FIRST_LICENSE_URL}`, 20, y)
 
+    return doc
+  }
+
+  const generateMVCWhatToBring = async () => {
+    const doc = createMVCWhatToBring()
     await savePDF(doc, "MVC_What_To_Bring_NJDrive50.pdf")
   }
 
-  const generateSixPointID = async () => {
+  const createSixPointID = () => {
     const doc = new jsPDF()
     const left = 14
     const indent = 20
@@ -524,6 +561,11 @@ export default function DMVBundle() {
     )
     doc.text(footer, left, y)
 
+    return doc
+  }
+
+  const generateSixPointID = async () => {
+    const doc = createSixPointID()
     await savePDF(doc, "6_Point_ID_Checklist_NJDrive50.pdf")
   }
 
@@ -538,11 +580,28 @@ export default function DMVBundle() {
     await generateRoadTestChecklist()
   }
 
-  const generateFullBundle = async () => {
+  const openOfficialMVCBundle = () => {
+    downloadOfficialBACSD()
+    openSixPointGuide()
+    openRealIdSelector()
+    openFirstLicenseGuide()
+  }
+
+  const openBundleActions = async () => {
+    if (Capacitor.isNativePlatform()) {
+      alert(
+        "For the smoothest mobile experience, use the individual download buttons below. The official NJ MVC links will open now."
+      )
+      openOfficialMVCBundle()
+      return
+    }
+
     await generateDrivingLogPDF()
     await generateParentSummarySheet()
-    await generatePermitPacket()
-    downloadOfficialBACSD()
+    await generateMVCWhatToBring()
+    await generateSixPointID()
+    await generateRoadTestChecklist()
+    openOfficialMVCBundle()
   }
 
   const generateShareLink = async () => {
@@ -590,7 +649,7 @@ export default function DMVBundle() {
         )} night hrs remaining`
 
   return (
-    <main className="min-h-screen bg-[#F7F9FC] px-4 py-6 text-[#08194A] sm:px-6">
+    <main className="min-h-dvh bg-[#F7F9FC] px-4 py-6 text-[#08194A] sm:px-6">
       <div className="mx-auto w-full max-w-4xl space-y-6">
         <header className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -619,10 +678,12 @@ export default function DMVBundle() {
 
             <button
               type="button"
-              onClick={generateFullBundle}
+              onClick={() => {
+                void openBundleActions()
+              }}
               className="inline-flex shrink-0 items-center rounded-2xl bg-[#08194A] px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
             >
-              Download Full Bundle
+              Open Full Bundle
             </button>
           </div>
         </header>
@@ -750,13 +811,17 @@ export default function DMVBundle() {
                   title="Permit Packet"
                   description="Download the road test checklist, 6-point ID checklist, and MVC document-prep packet together."
                   actionLabel="Download Permit Packet"
-                  onClick={generatePermitPacket}
+                  onClick={() => {
+                    void generatePermitPacket()
+                  }}
                 />
                 <BundleCard
                   title="Driving Log PDF"
                   description="A saved-session reference log with totals, night-source labeling, and drive details. Helpful for records, but not a replacement for the official BA-CSD."
                   actionLabel="Download Driving Log"
-                  onClick={generateDrivingLogPDF}
+                  onClick={() => {
+                    void generateDrivingLogPDF()
+                  }}
                 />
               </div>
             </div>
@@ -774,13 +839,17 @@ export default function DMVBundle() {
                   title="Parent/Guardian Summary Sheet"
                   description="Create a printable support sheet summarizing hours before completing the official MVC certification form."
                   actionLabel="Generate Summary Sheet"
-                  onClick={generateParentSummarySheet}
+                  onClick={() => {
+                    void generateParentSummarySheet()
+                  }}
                 />
                 <BundleCard
                   title="What to Bring to MVC"
                   description="A parent-friendly overview of documents and links to verify requirements before the MVC visit."
                   actionLabel="Generate Packet"
-                  onClick={generateMVCWhatToBring}
+                  onClick={() => {
+                    void generateMVCWhatToBring()
+                  }}
                 />
               </div>
             </div>
@@ -798,13 +867,17 @@ export default function DMVBundle() {
                   title="Road Test Readiness Checklist"
                   description="Review vehicle readiness, required documents, and key skills before the road test appointment."
                   actionLabel="Generate Checklist"
-                  onClick={generateRoadTestChecklist}
+                  onClick={() => {
+                    void generateRoadTestChecklist()
+                  }}
                 />
                 <BundleCard
                   title="6-Point ID Checklist"
                   description="Generate a planning checklist for ID and address prep before your MVC appointment."
                   actionLabel="Generate Checklist"
-                  onClick={generateSixPointID}
+                  onClick={() => {
+                    void generateSixPointID()
+                  }}
                 />
               </div>
             </div>
@@ -821,7 +894,9 @@ export default function DMVBundle() {
                 title="Share Records with Instructor or Reviewer"
                 description="Generate a read-only share link you can send to an instructor or approved reviewer. On mobile, opens the native share sheet."
                 actionLabel="Copy Share Link"
-                onClick={generateShareLink}
+                onClick={() => {
+                  void generateShareLink()
+                }}
               />
             </div>
           </div>

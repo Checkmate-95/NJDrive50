@@ -1,10 +1,11 @@
 // src/screens/DMVAppointmentPrep.tsx
+import type { ReactNode } from "react"
 import { loadOnboardingData } from "../../core/ReminderEngine"
 import { useNav } from "../state/navStore"
 
 type PrepCardProps = {
   title: string
-  children: React.ReactNode
+  children: ReactNode
 }
 
 function PrepCard({ title, children }: PrepCardProps) {
@@ -20,7 +21,7 @@ function PrepCard({ title, children }: PrepCardProps) {
   )
 }
 
-function PrepList({ items }: { items: React.ReactNode[] }) {
+function PrepList({ items }: { items: ReactNode[] }) {
   return (
     <ul className="space-y-2">
       {items.map((item, index) => (
@@ -41,7 +42,7 @@ export default function DMVAppointmentPrep() {
   const teenName = onboarding?.teenName || "Teen Driver"
 
   return (
-    <main className="min-h-screen bg-[#F7F9FC] px-4 py-6 text-[#08194A] sm:px-6">
+    <main className="min-h-dvh bg-[#F7F9FC] px-4 py-6 text-[#08194A] sm:px-6">
       <div className="mx-auto w-full max-w-3xl space-y-6">
         <header className="rounded-3xl border border-[#08194A]/10 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6">
           <button

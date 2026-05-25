@@ -1,5 +1,5 @@
 // src/screens/ActiveDriveContent.tsx
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback, useId } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import type { Screen } from "../App"
 import { SunIcon, MoonIcon } from "@heroicons/react/24/solid"
@@ -31,6 +31,7 @@ type DriveSnapshot = DriveEntry & {
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
 const GPS_POLL_INTERVAL_MS = 20000
+const ROUTE_TIMEOUT_MS = 8000
 
 const safeNumber = (value: unknown) => {
   const num = Number(value)
@@ -64,6 +65,46 @@ function makeDriveId() {
   return `drive-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+function composeAbortSignal(
+  external?: AbortSignal,
+  timeoutMs = ROUTE_TIMEOUT_MS
+): { signal: AbortSignal; cleanup: () => void } {
+  const AbortSignalCtor = globalThis.AbortSignal as
+    | (typeof AbortSignal & {
+        timeout?: (ms: number) => AbortSignal
+        any?: (signals: AbortSignal[]) => AbortSignal
+      })
+    | undefined
+
+  if (
+    AbortSignalCtor &&
+    typeof AbortSignalCtor.timeout === "function" &&
+    typeof AbortSignalCtor.any === "function"
+  ) {
+    const timeoutSignal = AbortSignalCtor.timeout(timeoutMs)
+    return {
+      signal: external
+        ? AbortSignalCtor.any([external, timeoutSignal])
+        : timeoutSignal,
+      cleanup: () => {},
+    }
+  }
+
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
+
+  const abortHandler = () => controller.abort()
+  external?.addEventListener("abort", abortHandler, { once: true })
+
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      window.clearTimeout(timeoutId)
+      external?.removeEventListener("abort", abortHandler)
+    },
+  }
+}
+
 async function getAccurateMileage(
   start: RouteCoord,
   end: RouteCoord,
@@ -72,11 +113,7 @@ async function getAccurateMileage(
   try {
     if (!API_BASE_URL) return null
 
-    const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), 8000)
-
-    const abortHandler = () => controller.abort()
-    signal?.addEventListener("abort", abortHandler, { once: true })
+    const { signal: requestSignal, cleanup } = composeAbortSignal(signal)
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
@@ -84,7 +121,7 @@ async function getAccurateMileage(
         headers: {
           "Content-Type": "application/json",
         },
-        signal: controller.signal,
+        signal: requestSignal,
         body: JSON.stringify({
           origin: {
             location: { latLng: { latitude: start.lat, longitude: start.lng } },
@@ -106,8 +143,7 @@ async function getAccurateMileage(
 
       return meters / 1609.34
     } finally {
-      window.clearTimeout(timeoutId)
-      signal?.removeEventListener("abort", abortHandler)
+      cleanup()
     }
   } catch {
     return null
@@ -122,6 +158,7 @@ function ActiveDriveContent({
   const [showStopConfirm, setShowStopConfirm] = useState(false)
   const [isStopping, setIsStopping] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
+  const [isPreparingStop, setIsPreparingStop] = useState(false)
   const [showWeatherHelp, setShowWeatherHelp] = useState(false)
 
   const gpsRef = useRef<number | null>(null)
@@ -132,6 +169,8 @@ function ActiveDriveContent({
   const inflightLocationRef = useRef<Promise<RouteCoord | null> | null>(null)
   const activeSnapshotAbortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(true)
+  const weatherHelpButtonId = useId()
+  const weatherHelpPanelId = useId()
 
   const {
     session,
@@ -435,9 +474,10 @@ function ActiveDriveContent({
 
   const isRunning = session.isRunning
   const hasActiveDrive = session.isActive
-  const saveDisabled = !hasActiveDrive || displayedMs < 10000 || isStopping
+  const saveDisabled =
+    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreparingStop
   const previewDisabled =
-    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing
+    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing || isPreparingStop
 
   const effectiveMode: DriveMode | null = hasActiveDrive
     ? getCurrentMode()
@@ -537,7 +577,7 @@ function ActiveDriveContent({
   }, [showWeatherHelp])
 
   const handlePress = async () => {
-    if (isStopping || isPreviewing) return
+    if (isStopping || isPreviewing || isPreparingStop) return
 
     if (session.isRunning) {
       pauseDrive()
@@ -574,7 +614,7 @@ function ActiveDriveContent({
     }
   }
 
-  const handleStopRequest = () => {
+  const handleStopRequest = async () => {
     if (saveDisabled) return
 
     wasRunningBeforeStopRef.current = session.isRunning
@@ -583,8 +623,16 @@ function ActiveDriveContent({
       pauseDrive()
     }
 
-    startFrozenSnapshot({ isPreview: false })
+    setIsPreparingStop(true)
     setShowStopConfirm(true)
+
+    try {
+      await startFrozenSnapshot({ isPreview: false })
+    } finally {
+      if (mountedRef.current) {
+        setIsPreparingStop(false)
+      }
+    }
   }
 
   const handleCancelStop = () => {
@@ -592,6 +640,7 @@ function ActiveDriveContent({
     activeSnapshotAbortRef.current = null
     frozenSnapshotRef.current = null
     setShowStopConfirm(false)
+    setIsPreparingStop(false)
 
     if (wasRunningBeforeStopRef.current) {
       resumeDrive()
@@ -599,7 +648,7 @@ function ActiveDriveContent({
   }
 
   const handleSaveDrive = async () => {
-    if (isSavingRef.current) return
+    if (isSavingRef.current || isPreparingStop) return
 
     isSavingRef.current = true
     setIsStopping(true)
@@ -629,6 +678,7 @@ function ActiveDriveContent({
     } finally {
       isSavingRef.current = false
       setIsStopping(false)
+      setIsPreparingStop(false)
       frozenSnapshotRef.current = null
       activeSnapshotAbortRef.current = null
       wasRunningBeforeStopRef.current = false
@@ -871,9 +921,11 @@ function ActiveDriveContent({
                     </p>
 
                     <button
+                      id={weatherHelpButtonId}
                       type="button"
                       aria-label="Weather conditions help"
                       aria-expanded={showWeatherHelp}
+                      aria-controls={weatherHelpPanelId}
                       onClick={() => setShowWeatherHelp((prev) => !prev)}
                       className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-[#0A1E5E]/50 transition hover:bg-[#0A1E5E]/5 hover:text-[#0A1E5E]/80"
                     >
@@ -882,8 +934,8 @@ function ActiveDriveContent({
 
                     {showWeatherHelp && (
                       <div
-                        role="dialog"
-                        aria-label="Weather help"
+                        id={weatherHelpPanelId}
+                        aria-labelledby={weatherHelpButtonId}
                         className="absolute left-1/2 top-full z-20 mt-2 w-64 max-w-[80vw] -translate-x-1/2 rounded-lg bg-white p-3 text-left text-xs text-[#08194A] shadow-lg ring-1 ring-black/10"
                       >
                         <p className="font-semibold text-[#0A1E5E]">
@@ -942,9 +994,9 @@ function ActiveDriveContent({
                 <button
                   type="button"
                   onClick={handlePress}
-                  disabled={isStopping || isPreviewing}
+                  disabled={isStopping || isPreviewing || isPreparingStop}
                   className={`w-full rounded-xl py-3 font-bold transition shadow-md ${
-                    isStopping || isPreviewing
+                    isStopping || isPreviewing || isPreparingStop
                       ? "cursor-not-allowed bg-gray-300 text-gray-600"
                       : isRunning
                         ? "bg-red-600 text-white hover:bg-red-700"
@@ -962,7 +1014,9 @@ function ActiveDriveContent({
 
                 <button
                   type="button"
-                  onClick={handleStopRequest}
+                  onClick={() => {
+                    void handleStopRequest()
+                  }}
                   disabled={saveDisabled}
                   className={`w-full rounded-xl py-3 font-bold transition ${
                     saveDisabled
@@ -970,7 +1024,7 @@ function ActiveDriveContent({
                       : "bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.22)] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
                   }`}
                 >
-                  Stop Drive
+                  {isPreparingStop ? "Preparing..." : "Stop Drive"}
                 </button>
               </div>
 
@@ -987,6 +1041,12 @@ function ActiveDriveContent({
                     and lighting conditions.
                   </p>
 
+                  {isPreparingStop && (
+                    <p className="mt-2 text-sm font-semibold text-[#0A1E5E]">
+                      Preparing final snapshot...
+                    </p>
+                  )}
+
                   <div className="mt-4 grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
                     <button
                       type="button"
@@ -1000,9 +1060,9 @@ function ActiveDriveContent({
                     <button
                       type="button"
                       onClick={handleSaveDrive}
-                      disabled={isStopping}
+                      disabled={isStopping || isPreparingStop}
                       className={`w-full rounded-xl py-3 font-bold transition ${
-                        isStopping
+                        isStopping || isPreparingStop
                           ? "cursor-not-allowed bg-gray-300 text-gray-500"
                           : "bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.22)] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
                       }`}

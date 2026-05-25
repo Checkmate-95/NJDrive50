@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type FormEvent,
   type KeyboardEvent,
 } from "react"
 import { useNav } from "../state/navStore"
@@ -16,30 +17,29 @@ const QUICK_PROMPTS = [
 const API_URL =
   import.meta.env.VITE_AI_HELPER_API_URL || "/api/njdrive50-ai"
 
-const srOnly: CSSProperties = {
-  position: "absolute",
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-}
-
 export default function AIHelperScreen() {
   const { goBack } = useNav()
 
   const [prompt, setPrompt] = useState("")
   const [response, setResponse] = useState("")
   const [loading, setLoading] = useState(false)
+  const [isPromptFocused, setIsPromptFocused] = useState(false)
 
   const responseRef = useRef<HTMLDivElement | null>(null)
+  const promptRef = useRef<HTMLTextAreaElement | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const canSend = !!prompt.trim() && !loading
-  const canClear = !!prompt.trim() && !loading
+  const trimmedPrompt = prompt.trim()
+  const canSend = !!trimmedPrompt && !loading
+  const canClear = (!!prompt || !!response) && !loading
+
+  const cardStyle: CSSProperties = {
+    background: "#FFFFFF",
+    border: "1px solid #DCE4EE",
+    borderRadius: 20,
+    padding: 20,
+    boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
+  }
 
   const sendPrompt = async () => {
     if (!canSend) return
@@ -55,7 +55,7 @@ export default function AIHelperScreen() {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), mode: "faq" }),
+        body: JSON.stringify({ prompt: trimmedPrompt, mode: "faq" }),
         signal: controller.signal,
       })
 
@@ -65,7 +65,11 @@ export default function AIHelperScreen() {
         throw new Error(data?.error || `Server error: ${res.status}`)
       }
 
-      setResponse(data?.output ?? "No response received.")
+      setResponse(
+        typeof data?.output === "string" && data.output.trim()
+          ? data.output
+          : "No response received."
+      )
     } catch (error) {
       if ((error as Error)?.name === "AbortError") return
 
@@ -82,9 +86,19 @@ export default function AIHelperScreen() {
     }
   }
 
-  const clearPrompt = () => {
+  const clearAll = () => {
     if (!canClear) return
+    abortRef.current?.abort()
+    abortRef.current = null
     setPrompt("")
+    setResponse("")
+    setLoading(false)
+    promptRef.current?.focus()
+  }
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    void sendPrompt()
   }
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -124,10 +138,6 @@ export default function AIHelperScreen() {
           gap: 16,
         }}
       >
-        <div aria-live="polite" style={srOnly}>
-          {loading ? "Generating AI response." : response ? "AI response ready." : ""}
-        </div>
-
         <button
           type="button"
           onClick={() => goBack()}
@@ -146,15 +156,7 @@ export default function AIHelperScreen() {
           ← Close
         </button>
 
-        <div
-          style={{
-            background: "#FFFFFF",
-            border: "1px solid #DCE4EE",
-            borderRadius: 20,
-            padding: 20,
-            boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-          }}
-        >
+        <div style={cardStyle}>
           <div
             style={{
               display: "inline-block",
@@ -200,15 +202,7 @@ export default function AIHelperScreen() {
           </p>
         </div>
 
-        <div
-          style={{
-            background: "#FFFFFF",
-            border: "1px solid #DCE4EE",
-            borderRadius: 20,
-            padding: 20,
-            boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-          }}
-        >
+        <form onSubmit={handleSubmit} style={cardStyle}>
           <div
             style={{
               fontSize: 16,
@@ -246,12 +240,17 @@ export default function AIHelperScreen() {
           <div
             style={{
               marginTop: 14,
-              border: "2px solid #B8C7DC",
+              border: isPromptFocused
+                ? "2px solid #08194A"
+                : "2px solid #B8C7DC",
               borderRadius: 18,
-              background: "#F8FBFF",
-              boxShadow:
-                "inset 0 1px 2px rgba(8, 25, 74, 0.05), 0 6px 18px rgba(8, 25, 74, 0.04)",
+              background: isPromptFocused ? "#F3F8FF" : "#F8FBFF",
+              boxShadow: isPromptFocused
+                ? "0 0 0 4px rgba(8, 25, 74, 0.12), inset 0 1px 2px rgba(8, 25, 74, 0.05)"
+                : "inset 0 1px 2px rgba(8, 25, 74, 0.05), 0 6px 18px rgba(8, 25, 74, 0.04)",
               padding: 12,
+              transition:
+                "border-color 180ms ease, background 180ms ease, box-shadow 180ms ease",
             }}
           >
             <label
@@ -269,10 +268,13 @@ export default function AIHelperScreen() {
             </label>
 
             <textarea
+              ref={promptRef}
               id="ai-helper-prompt"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyDown}
+              onFocus={() => setIsPromptFocused(true)}
+              onBlur={() => setIsPromptFocused(false)}
               maxLength={3000}
               placeholder="Example: My teen is getting close to the road test. What should I check before we schedule it, and what paperwork should we bring?"
               style={{
@@ -280,7 +282,9 @@ export default function AIHelperScreen() {
                 minHeight: 170,
                 padding: 16,
                 borderRadius: 14,
-                border: "2px solid #7C93B3",
+                border: isPromptFocused
+                  ? "2px solid #08194A"
+                  : "2px solid #7C93B3",
                 background: "#FFFFFF",
                 color: "#0F172A",
                 fontSize: 16,
@@ -289,24 +293,8 @@ export default function AIHelperScreen() {
                 resize: "vertical",
                 outline: "none",
                 boxShadow: "inset 0 1px 3px rgba(15, 23, 42, 0.06)",
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.border = "2px solid #08194A"
-                e.currentTarget.style.boxShadow =
-                  "0 0 0 4px rgba(8, 25, 74, 0.12), inset 0 1px 3px rgba(15, 23, 42, 0.05)"
-                if (e.currentTarget.parentElement) {
-                  e.currentTarget.parentElement.style.border = "2px solid #08194A"
-                  e.currentTarget.parentElement.style.background = "#F3F8FF"
-                }
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.border = "2px solid #7C93B3"
-                e.currentTarget.style.boxShadow =
-                  "inset 0 1px 3px rgba(15, 23, 42, 0.06)"
-                if (e.currentTarget.parentElement) {
-                  e.currentTarget.parentElement.style.border = "2px solid #B8C7DC"
-                  e.currentTarget.parentElement.style.background = "#F8FBFF"
-                }
+                transition:
+                  "border-color 180ms ease, box-shadow 180ms ease, background 180ms ease",
               }}
             />
 
@@ -324,7 +312,7 @@ export default function AIHelperScreen() {
                 Ask anything about permits, hours, paperwork, or the road test.
               </div>
               <div style={{ fontSize: 12, color: "#64748B", fontWeight: 700 }}>
-                {prompt.trim().length} / 3000 characters
+                {trimmedPrompt.length} / 3000 characters
               </div>
             </div>
           </div>
@@ -337,7 +325,7 @@ export default function AIHelperScreen() {
               lineHeight: 1.5,
             }}
           >
-            Long questions may take a little longer to answer.
+            Press Ctrl + Enter on Windows or Cmd + Enter on Mac to send quickly.
           </div>
 
           <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 10 }}>
@@ -345,7 +333,10 @@ export default function AIHelperScreen() {
               <button
                 key={item}
                 type="button"
-                onClick={() => setPrompt(item)}
+                onClick={() => {
+                  setPrompt(item)
+                  promptRef.current?.focus()
+                }}
                 disabled={loading}
                 style={{
                   background: "#FFF8DB",
@@ -381,7 +372,7 @@ export default function AIHelperScreen() {
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <button
                 type="button"
-                onClick={clearPrompt}
+                onClick={clearAll}
                 disabled={!canClear}
                 style={{
                   background: "#FFFFFF",
@@ -399,10 +390,7 @@ export default function AIHelperScreen() {
               </button>
 
               <button
-                type="button"
-                onClick={() => {
-                  void sendPrompt()
-                }}
+                type="submit"
                 disabled={!canSend}
                 style={{
                   background: canSend ? "#08194A" : "#94A3B8",
@@ -420,7 +408,7 @@ export default function AIHelperScreen() {
               </button>
             </div>
           </div>
-        </div>
+        </form>
 
         <div
           ref={responseRef}

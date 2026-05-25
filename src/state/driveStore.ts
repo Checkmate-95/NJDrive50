@@ -6,10 +6,6 @@ import {
 
 import type { SolarWindow } from "../engine/solarEngine"
 
-/* -------------------------------------------------------
-   SOLAR + ACTIVE DRIVE STATE
-------------------------------------------------------- */
-
 export type SolarState = {
   solarWindow: SolarWindow | null
   isNightEligible: boolean | null
@@ -22,7 +18,7 @@ export type DriveState = {
   solar: SolarState
 }
 
-const EMPTY_DRIVE_STATE: DriveState = {
+let driveState: DriveState = {
   latitude: null,
   longitude: null,
   currentDriveStart: null,
@@ -32,20 +28,10 @@ const EMPTY_DRIVE_STATE: DriveState = {
   },
 }
 
-let driveState: DriveState = EMPTY_DRIVE_STATE
-
 const DRIVE_STATE_EVENT = "njdrive50-drive-state-change"
-
-function isBrowser() {
-  return typeof window !== "undefined"
-}
 
 export function getDriveState(): DriveState {
   return driveState
-}
-
-function getDriveStateServerSnapshot(): DriveState {
-  return EMPTY_DRIVE_STATE
 }
 
 export function updateSolarForDrive(
@@ -53,15 +39,6 @@ export function updateSolarForDrive(
   longitude: number,
   startTime: Date
 ): void {
-  if (
-    !Number.isFinite(latitude) ||
-    !Number.isFinite(longitude) ||
-    !(startTime instanceof Date) ||
-    Number.isNaN(startTime.getTime())
-  ) {
-    return
-  }
-
   const solarWindow = getSolarWindowForDate(latitude, longitude, startTime)
   const isNightEligible = isNightDrive(startTime, solarWindow)
 
@@ -76,38 +53,27 @@ export function updateSolarForDrive(
     },
   }
 
-  if (isBrowser()) {
-    window.dispatchEvent(new Event(DRIVE_STATE_EVENT))
-  }
+  window.dispatchEvent(new Event(DRIVE_STATE_EVENT))
 }
 
 function subscribeDriveState(listener: () => void) {
-  if (!isBrowser()) {
-    return () => {}
-  }
-
   const onChange = () => listener()
   window.addEventListener(DRIVE_STATE_EVENT, onChange)
-
-  return () => {
-    window.removeEventListener(DRIVE_STATE_EVENT, onChange)
-  }
+  return () => window.removeEventListener(DRIVE_STATE_EVENT, onChange)
 }
 
 export function useDriveState() {
   return useSyncExternalStore(
     subscribeDriveState,
     getDriveState,
-    getDriveStateServerSnapshot
+    getDriveState
   )
 }
 
-/* -------------------------------------------------------
-   DRIVE HISTORY (PERSISTENT + REACTIVE)
-------------------------------------------------------- */
-
 const DRIVE_HISTORY_STORAGE_KEY = "njdrive50_history"
 const DRIVE_HISTORY_EVENT = "njdrive50-history-change"
+const DRIVE_BLOB_DB = "njdrive50-drive-blobs"
+const DRIVE_BLOB_STORE = "payloads"
 
 export type RouteCoord = {
   lat: number
@@ -122,42 +88,82 @@ export type DriveEntry = {
   id: string
   startTime: string
   endTime: string
-
   totalDurationHours: number
   dayDurationHours: number
   nightDurationHours: number
   verifiedNightDurationHours?: number
   nightCalcMode?: NightCalcMode
   source?: DriveSource
-
   miles: number
   milesSource?: MilesSource
-
   startLatitude?: number | null
   startLongitude?: number | null
-
   weather?: string | null
   notes?: string
   teenPhoto?: string
   routeCoords?: RouteCoord[]
 }
 
+export type DriveBlobPayload = {
+  teenPhoto?: string
+  routeCoords?: RouteCoord[]
+}
+
+export type PersistedDriveEntry = Omit<DriveEntry, "teenPhoto" | "routeCoords"> & {
+  hasTeenPhoto?: boolean
+  hasRouteCoords?: boolean
+}
+
 let driveHistory: DriveEntry[] = []
 let cachedSnapshot: DriveEntry[] = []
 
-function trimString(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : undefined
+function openDriveBlobDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DRIVE_BLOB_DB, 1)
+
+    request.onupgradeneeded = () => {
+      const db = request.result
+      if (!db.objectStoreNames.contains(DRIVE_BLOB_STORE)) {
+        db.createObjectStore(DRIVE_BLOB_STORE)
+      }
+    }
+
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
 }
 
-function parseValidDateString(value: unknown): string | null {
-  if (typeof value !== "string") return null
-  const trimmed = value.trim()
-  if (!trimmed) return null
+async function saveDriveBlobPayload(id: string, payload: DriveBlobPayload): Promise<void> {
+  const db = await openDriveBlobDb()
 
-  const timestamp = Date.parse(trimmed)
-  return Number.isFinite(timestamp) ? trimmed : null
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(DRIVE_BLOB_STORE, "readwrite")
+    tx.objectStore(DRIVE_BLOB_STORE).put(payload, id)
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+}
+
+async function loadDriveBlobPayload(id: string): Promise<DriveBlobPayload | undefined> {
+  const db = await openDriveBlobDb()
+
+  return await new Promise<DriveBlobPayload | undefined>((resolve, reject) => {
+    const tx = db.transaction(DRIVE_BLOB_STORE, "readonly")
+    const request = tx.objectStore(DRIVE_BLOB_STORE).get(id)
+    request.onsuccess = () => resolve(request.result as DriveBlobPayload | undefined)
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function deleteDriveBlobPayload(id: string): Promise<void> {
+  const db = await openDriveBlobDb()
+
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(DRIVE_BLOB_STORE, "readwrite")
+    tx.objectStore(DRIVE_BLOB_STORE).delete(id)
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
 }
 
 function normalizeRouteCoords(value: unknown): RouteCoord[] | undefined {
@@ -173,7 +179,7 @@ function normalizeRouteCoords(value: unknown): RouteCoord[] | undefined {
         Number.isFinite((item as RouteCoord).lat) &&
         Number.isFinite((item as RouteCoord).lng)
     )
-    .map((coord) => ({ lat: coord.lat, lng: coord.lng }))
+    .map(coord => ({ lat: coord.lat, lng: coord.lng }))
 
   return coords.length > 0 ? coords : undefined
 }
@@ -183,14 +189,10 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
 
   const raw = value as Partial<DriveEntry>
 
-  const id = trimString(raw.id)
-  const startTime = parseValidDateString(raw.startTime)
-  const endTime = parseValidDateString(raw.endTime)
-
   if (
-    !id ||
-    !startTime ||
-    !endTime ||
+    typeof raw.id !== "string" ||
+    typeof raw.startTime !== "string" ||
+    typeof raw.endTime !== "string" ||
     !Number.isFinite(raw.totalDurationHours) ||
     !Number.isFinite(raw.dayDurationHours) ||
     !Number.isFinite(raw.nightDurationHours) ||
@@ -239,40 +241,70 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
     Number.isFinite(raw.startLongitude) ? (raw.startLongitude as number) : null
 
   return {
-    id,
-    startTime,
-    endTime,
-
+    id: raw.id,
+    startTime: raw.startTime,
+    endTime: raw.endTime,
     totalDurationHours,
     dayDurationHours,
     nightDurationHours,
     verifiedNightDurationHours,
     nightCalcMode,
     source,
-
     miles: Math.max(0, raw.miles as number),
     milesSource,
-
     startLatitude,
     startLongitude,
-
-    weather: raw.weather == null ? null : trimString(raw.weather) ?? null,
-    notes: trimString(raw.notes),
-    teenPhoto: trimString(raw.teenPhoto),
+    weather: raw.weather ?? null,
+    notes: typeof raw.notes === "string" ? raw.notes : undefined,
+    teenPhoto: typeof raw.teenPhoto === "string" ? raw.teenPhoto : undefined,
     routeCoords: normalizeRouteCoords(raw.routeCoords),
   }
 }
 
-function loadHistoryFromStorage(): void {
-  if (!isBrowser()) {
-    driveHistory = []
-    cachedSnapshot = []
-    return
+function toPersistedDriveEntry(entry: DriveEntry): PersistedDriveEntry {
+  return {
+    id: entry.id,
+    startTime: entry.startTime,
+    endTime: entry.endTime,
+    totalDurationHours: entry.totalDurationHours,
+    dayDurationHours: entry.dayDurationHours,
+    nightDurationHours: entry.nightDurationHours,
+    verifiedNightDurationHours: entry.verifiedNightDurationHours,
+    nightCalcMode: entry.nightCalcMode,
+    source: entry.source,
+    miles: entry.miles,
+    milesSource: entry.milesSource,
+    startLatitude: entry.startLatitude,
+    startLongitude: entry.startLongitude,
+    weather: entry.weather,
+    notes: entry.notes,
+    hasTeenPhoto: !!entry.teenPhoto,
+    hasRouteCoords: !!entry.routeCoords?.length,
   }
+}
 
+async function hydrateBlobFields(entries: PersistedDriveEntry[]): Promise<DriveEntry[]> {
+  const hydrated = await Promise.all(
+    entries.map(async (entry) => {
+      if (!entry.hasTeenPhoto && !entry.hasRouteCoords) {
+        return entry as DriveEntry
+      }
+
+      const payload = await loadDriveBlobPayload(entry.id)
+      return {
+        ...entry,
+        teenPhoto: payload?.teenPhoto,
+        routeCoords: payload?.routeCoords,
+      }
+    })
+  )
+
+  return hydrated
+}
+
+async function loadHistoryFromStorage(): Promise<void> {
   try {
     const raw = localStorage.getItem(DRIVE_HISTORY_STORAGE_KEY)
-
     if (!raw) {
       driveHistory = []
       cachedSnapshot = []
@@ -286,11 +318,12 @@ function loadHistoryFromStorage(): void {
       return
     }
 
-    driveHistory = parsed
+    const lightweight = parsed
       .map(normalizeDriveEntry)
       .filter((entry): entry is DriveEntry => entry !== null)
-      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+      .map(toPersistedDriveEntry)
 
+    driveHistory = await hydrateBlobFields(lightweight)
     cachedSnapshot = [...driveHistory]
   } catch {
     driveHistory = []
@@ -298,35 +331,37 @@ function loadHistoryFromStorage(): void {
   }
 }
 
-function saveHistoryToStorage(): void {
-  if (!isBrowser()) return
-
+async function saveHistoryToStorage(): Promise<void> {
   try {
-    localStorage.setItem(DRIVE_HISTORY_STORAGE_KEY, JSON.stringify(driveHistory))
+    await Promise.all(
+      driveHistory.map(async (entry) => {
+        await saveDriveBlobPayload(entry.id, {
+          teenPhoto: entry.teenPhoto,
+          routeCoords: entry.routeCoords,
+        })
+      })
+    )
+
+    const persisted = driveHistory.map(toPersistedDriveEntry)
+    localStorage.setItem(DRIVE_HISTORY_STORAGE_KEY, JSON.stringify(persisted))
     cachedSnapshot = [...driveHistory]
     window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
   } catch {
-    // storage may be unavailable
+    cachedSnapshot = [...driveHistory]
   }
 }
 
-loadHistoryFromStorage()
-
-/* -------------------------------------------------------
-   PUBLIC API
-------------------------------------------------------- */
+void loadHistoryFromStorage()
 
 export function addDriveToHistory(entry: DriveEntry): void {
   const normalized = normalizeDriveEntry(entry)
   if (!normalized) return
 
-  const existingIds = new Set(driveHistory.map((e) => e.id))
+  const existingIds = new Set(driveHistory.map(e => e.id))
   if (existingIds.has(normalized.id)) return
 
-  driveHistory = [...driveHistory, normalized].sort((a, b) =>
-    a.startTime.localeCompare(b.startTime)
-  )
-  saveHistoryToStorage()
+  driveHistory = [...driveHistory, normalized]
+  void saveHistoryToStorage()
 }
 
 export const saveDrive = addDriveToHistory
@@ -335,26 +370,14 @@ export function getDriveHistory(): DriveEntry[] {
   return cachedSnapshot
 }
 
-function getDriveHistoryServerSnapshot(): DriveEntry[] {
-  return []
-}
-
-/* -------------------------------------------------------
-   EDIT SUPPORT
-------------------------------------------------------- */
-
 export function updateDriveInHistory(updated: DriveEntry): void {
   const normalized = normalizeDriveEntry(updated)
   if (!normalized) return
 
-  const existingIndex = driveHistory.findIndex((entry) => entry.id === normalized.id)
-  if (existingIndex === -1) return
-
-  driveHistory = driveHistory
-    .map((entry) => (entry.id === normalized.id ? normalized : entry))
-    .sort((a, b) => a.startTime.localeCompare(b.startTime))
-
-  saveHistoryToStorage()
+  driveHistory = driveHistory.map(entry =>
+    entry.id === normalized.id ? normalized : entry
+  )
+  void saveHistoryToStorage()
 }
 
 export function replaceDriveHistory(next: DriveEntry[]): void {
@@ -363,36 +386,21 @@ export function replaceDriveHistory(next: DriveEntry[]): void {
     .filter((entry): entry is DriveEntry => entry !== null)
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
-  saveHistoryToStorage()
+  void saveHistoryToStorage()
 }
-
-/* -------------------------------------------------------
-   DELETE SUPPORT
-------------------------------------------------------- */
 
 export function deleteDriveEntry(id: string): void {
-  const nextHistory = driveHistory.filter((entry) => entry.id !== id)
-  if (nextHistory.length === driveHistory.length) return
-
-  driveHistory = nextHistory
-  saveHistoryToStorage()
+  driveHistory = driveHistory.filter(entry => entry.id !== id)
+  void deleteDriveBlobPayload(id)
+  void saveHistoryToStorage()
 }
 
-/* -------------------------------------------------------
-   REACTIVE HISTORY HOOK
-------------------------------------------------------- */
-
 function subscribeHistory(listener: () => void) {
-  if (!isBrowser()) {
-    return () => {}
-  }
-
   const onCustomEvent = () => listener()
 
   const onStorageEvent = (e: StorageEvent) => {
     if (e.key === DRIVE_HISTORY_STORAGE_KEY) {
-      loadHistoryFromStorage()
-      listener()
+      void loadHistoryFromStorage().then(listener)
     }
   }
 
@@ -409,6 +417,6 @@ export function useDriveHistory() {
   return useSyncExternalStore(
     subscribeHistory,
     getDriveHistory,
-    getDriveHistoryServerSnapshot
+    getDriveHistory
   )
 }

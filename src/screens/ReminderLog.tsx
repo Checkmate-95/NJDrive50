@@ -5,6 +5,9 @@ import {
   type ReminderScheduleEntry,
 } from "../../core/ReminderEngine"
 
+const REMINDER_SCHEDULE_STORAGE_KEY = "njdrive50_reminder_schedule"
+const REMINDER_SCHEDULE_EVENT = "njdrive50-reminder-schedule-change"
+
 export default function ReminderLog() {
   const { goBack } = useNav()
   const [entries, setEntries] = useState<ReminderScheduleEntry[]>([])
@@ -26,7 +29,7 @@ export default function ReminderLog() {
     reload()
 
     const onStorageChange = (e: StorageEvent) => {
-      if (e.key === "njdrive50_reminder_schedule") {
+      if (e.key === REMINDER_SCHEDULE_STORAGE_KEY) {
         reload()
       }
     }
@@ -41,9 +44,14 @@ export default function ReminderLog() {
       }
     }
 
+    const onScheduleChange = () => {
+      reload()
+    }
+
     window.addEventListener("storage", onStorageChange)
     window.addEventListener("focus", onFocus)
     document.addEventListener("visibilitychange", onVisibilityChange)
+    window.addEventListener(REMINDER_SCHEDULE_EVENT, onScheduleChange)
 
     const intervalId = window.setInterval(() => {
       reload()
@@ -53,6 +61,7 @@ export default function ReminderLog() {
       window.removeEventListener("storage", onStorageChange)
       window.removeEventListener("focus", onFocus)
       document.removeEventListener("visibilitychange", onVisibilityChange)
+      window.removeEventListener(REMINDER_SCHEDULE_EVENT, onScheduleChange)
       window.clearInterval(intervalId)
     }
   }, [reload])

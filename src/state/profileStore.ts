@@ -113,9 +113,25 @@ loadTeenPhotoFromStorage()
 loadProfileFromStorage()
 
 export function setTeenPhoto(url: string): boolean {
+  const normalized = url.trim()
+
+  if (!normalized) return false
+
+  const isDataUrl = normalized.startsWith("data:")
+  const isBlobUrl = normalized.startsWith("blob:")
+  const isHttpUrl = /^https?:\/\//i.test(normalized)
+  const isAppRelative = normalized.startsWith("/")
+
+  if (isDataUrl || isBlobUrl || (!isHttpUrl && !isAppRelative)) {
+    if (isDev) {
+      console.warn("setTeenPhoto rejected non-persistable image value")
+    }
+    return false
+  }
+
   try {
-    localStorage.setItem(PHOTO_KEY, url)
-    cachedTeenPhoto = url
+    localStorage.setItem(PHOTO_KEY, normalized)
+    cachedTeenPhoto = normalized
     emitPhotoChange()
     return true
   } catch {

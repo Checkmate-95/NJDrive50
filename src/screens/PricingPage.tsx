@@ -229,7 +229,7 @@ export default function PricingPage() {
   }
 
   const handleStartTrial = (_cycle: BillingCycle) => {
-    setScreen("checkout")
+    setScreen("onboarding")
   }
 
   const primaryPlan: Plan =
@@ -365,7 +365,7 @@ export default function PricingPage() {
                   Want to study first? Try the{" "}
                   <button
                     type="button"
-                    onClick={() => setScreen("practice-test")}
+                    onClick={() => setScreen("practiceTest")}
                     className="font-semibold text-[#08194A] underline underline-offset-4"
                   >
                     free New Jersey permit practice test

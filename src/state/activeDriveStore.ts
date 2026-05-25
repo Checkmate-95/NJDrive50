@@ -126,11 +126,11 @@ function createInitialSession(): ActiveDriveSession {
 }
 
 function normalizeNumber(value: unknown): number | null {
-  return Number.isFinite(value) ? (value as number) : null
+  return typeof value === "number" && Number.isFinite(value) ? value : null
 }
 
 function normalizeNonNegativeNumber(value: unknown, fallback = 0): number {
-  return Number.isFinite(value) ? Math.max(0, value as number) : fallback
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : fallback
 }
 
 function normalizeRouteCoord(value: unknown): RouteCoord | null {
@@ -138,12 +138,13 @@ function normalizeRouteCoord(value: unknown): RouteCoord | null {
 
   const raw = value as Partial<RouteCoord>
 
-  if (!Number.isFinite(raw.lat) || !Number.isFinite(raw.lng)) return null
+  if (typeof raw.lat !== "number" || !Number.isFinite(raw.lat)) return null
+  if (typeof raw.lng !== "number" || !Number.isFinite(raw.lng)) return null
 
   return {
-    lat: raw.lat as number,
-    lng: raw.lng as number,
-    at: Number.isFinite(raw.at) ? (raw.at as number) : undefined,
+    lat: raw.lat,
+    lng: raw.lng,
+    at: typeof raw.at === "number" && Number.isFinite(raw.at) ? raw.at : undefined,
   }
 }
 
@@ -165,8 +166,7 @@ function normalizeSession(value: unknown): ActiveDriveSession {
 
   const raw = value as Partial<ActiveDriveSession>
 
-  const currentMode: DriveMode =
-    raw.currentMode === "night" ? "night" : "day"
+  const currentMode: DriveMode = raw.currentMode === "night" ? "night" : "day"
 
   const nightOverride: NightOverride =
     raw.nightOverride === "day" || raw.nightOverride === "night"
@@ -232,10 +232,7 @@ function flushSessionToNow(
     return session
   }
 
-  const baseline =
-    session.lastTickAt ??
-    session.lastModeChangeAt ??
-    session.startTime
+  const baseline = session.lastTickAt ?? session.lastModeChangeAt ?? session.startTime
 
   if (!Number.isFinite(baseline) || now <= baseline) {
     return {
@@ -294,7 +291,7 @@ function normalizeIncomingCoord(coord: RouteCoord, now: number): RouteCoord {
   return {
     lat: coord.lat,
     lng: coord.lng,
-    at: Number.isFinite(coord.at) ? coord.at : now,
+    at: typeof coord.at === "number" && Number.isFinite(coord.at) ? coord.at : now,
   }
 }
 
@@ -625,9 +622,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() =>
-        isBrowser() ? localStorage : noopStorage
-      ),
+      storage: createJSONStorage(() => (isBrowser() ? localStorage : noopStorage)),
       version: 5,
       partialize: (state) => ({ session: state.session }),
       migrate: (persisted: unknown) => {

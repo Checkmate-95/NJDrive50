@@ -176,7 +176,7 @@ export default function App() {
     }
 
     if (useNav.persist.hasHydrated()) {
-      runBootstrap()
+      void runBootstrap()
       return () => {
         cancelled = true
       }
@@ -215,6 +215,8 @@ export default function App() {
         return <HomeDashboard setScreen={setScreenCompat} />
       case "active":
         return <ActiveDrive setScreen={setScreenCompat} setCurrentDrive={setCurrentDrive} />
+      case "todaysDrive":
+        return <TodaysDrive drive={currentDrive} />
       case "summary":
         return <DriveSummary setScreen={setScreenCompat} />
       case "driveHistory":
@@ -239,8 +241,6 @@ export default function App() {
         return <DMVAppointmentPrep />
       case "share":
         return <ShareLogView />
-      case "todaysDrive":
-        return <TodaysDrive drive={currentDrive} />
       case "helpFaq":
         return <HelpFaq />
       case "aiHelper":

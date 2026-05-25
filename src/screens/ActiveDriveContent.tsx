@@ -667,7 +667,7 @@ function ActiveDriveContent({
       setCurrentDrive(driveToSave)
       setShowStopConfirm(false)
 
-      setScreen("confirm")
+      setScreen("todaysDrive")
       hardReset()
     } catch (err) {
       console.error("[ActiveDrive] Save failed:", err)

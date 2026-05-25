@@ -1,13 +1,11 @@
 // src/navigation/navMap.ts
 import type { Screen } from "../App"
 
-// Each screen maps to a set of named actions → target screens
-type NavDefinition = {
+type NavShape = {
   [K in Screen]: Partial<Record<string, Screen>>
 }
 
-// Explicit annotation prevents TS inference bugs
-export const NAV: NavDefinition = {
+export const NAV = {
   landing: {
     continue: "intro",
     pricing: "pricing",
@@ -111,15 +109,13 @@ export const NAV: NavDefinition = {
   aiHelper: {},
   teenDriverRules: {},
   practiceTest: {},
-}
+} as const satisfies NavShape
 
 export type NavMap = typeof NAV
 export type NavScreen = keyof NavMap
-
-// Action keys are always strings
 export type NavAction<S extends NavScreen> = Extract<keyof NavMap[S], string>
+export type NextScreen<S extends NavScreen, A extends NavAction<S>> = NavMap[S][A]
 
-// Type guard: checks if an action is valid for a given screen
 export function canNavigate<S extends NavScreen>(
   current: S,
   action: string
@@ -127,31 +123,37 @@ export function canNavigate<S extends NavScreen>(
   return action in NAV[current]
 }
 
-// Get the next screen for a given action
-export function getNextScreen(
-  current: Screen,
-  action: string
-): Screen | undefined {
-  const routes = NAV[current]
-  if (action in routes) {
-    return routes[action as keyof typeof routes]
-  }
-  return undefined
+export function getNextScreen<
+  S extends NavScreen,
+  A extends NavAction<S>,
+>(current: S, action: A): NextScreen<S, A> {
+  return NAV[current][action]
 }
 
-// Navigate with full type safety
-export function navigate(
+export function navigate<
+  S extends NavScreen,
+  A extends NavAction<S>,
+>(
+  current: S,
+  action: A,
+  setScreen: (screen: Screen) => void
+): NextScreen<S, A> {
+  const next = getNextScreen(current, action)
+  setScreen(next as Screen)
+  return next
+}
+
+export function tryNavigate(
   current: Screen,
   action: string,
   setScreen: (screen: Screen) => void
 ): Screen | undefined {
-  const next = getNextScreen(current, action)
-
-  if (next) {
-    setScreen(next)
-    return next
+  if (!canNavigate(current, action)) {
+    console.warn(`No route for action "${action}" from screen "${current}"`)
+    return undefined
   }
 
-  console.warn(`No route for action "${action}" from screen "${current}"`)
-  return undefined
+  const next = getNextScreen(current, action)
+  setScreen(next as Screen)
+  return next as Screen
 }

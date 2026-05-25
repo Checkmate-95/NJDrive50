@@ -324,12 +324,13 @@ export default function HelpFaq() {
   }, [])
 
   return (
-    <div className="min-h-screen w-full bg-[#F7F9FC] text-[#08194A]">
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-3 pb-24 pt-4 sm:px-4 lg:px-6">
+    <div className="w-full bg-[#F7F9FC] text-[#08194A]">
+      <div className="mx-auto flex w-full max-w-5xl flex-col px-3 pb-24 pt-4 sm:px-4 lg:px-6">
         <header className="rounded-[28px] border border-white/30 bg-white/95 px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md sm:px-6 sm:py-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <button
+                type="button"
                 onClick={() => goBack()}
                 className="inline-flex items-center rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#08194A]/70 transition hover:bg-[#EEF3FA] hover:text-[#08194A]"
               >
@@ -477,11 +478,7 @@ export default function HelpFaq() {
                 {loading ? "Thinking…" : "Ask NJDrive50 AI"}
               </button>
 
-              <div
-                role="status"
-                aria-live="polite"
-                className="mt-4"
-              >
+              <div role="status" aria-live="polite" className="mt-4">
                 <div className="min-h-[96px] whitespace-pre-wrap rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-4 text-sm leading-6 text-[#08194A]">
                   {loading
                     ? "Preparing your answer..."

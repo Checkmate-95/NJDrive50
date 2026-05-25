@@ -1,4 +1,5 @@
 // src/components/map/DriveMapPanel.tsx
+import type { CSSProperties } from "react"
 import { GoogleMap, Polyline, Marker } from "@react-google-maps/api"
 import { useCallback, useMemo, useRef, useState, useEffect } from "react"
 import { useMapContext } from "./MapContext"
@@ -24,7 +25,7 @@ const DEMO_ROUTE: RouteCoord[] = [
   { lat: 40.08, lng: -74.35 },
 ]
 
-const optionBtn: React.CSSProperties = {
+const optionBtn: CSSProperties = {
   width: "100%",
   textAlign: "left",
   padding: "8px 6px",
@@ -102,13 +103,10 @@ export const DriveMapPanel = ({
     map.fitBounds(bounds)
   }, [route, activePosition, mapsLoaded, hasRoute])
 
-  const onLoad = useCallback(
-    (map: google.maps.Map) => {
-      mapRef.current = map
-      setMapsLoaded(true)
-    },
-    []
-  )
+  const onLoad = useCallback((map: google.maps.Map) => {
+    mapRef.current = map
+    setMapsLoaded(true)
+  }, [])
 
   useEffect(() => {
     if (!mapsLoaded) return
@@ -117,10 +115,12 @@ export const DriveMapPanel = ({
 
   useEffect(() => {
     if (!playback) return
+
     if (route.length === 0) {
       setPlayback(false)
       return
     }
+
     if (playIndex >= route.length - 1) {
       setPlayback(false)
       return
@@ -222,6 +222,7 @@ export const DriveMapPanel = ({
       </GoogleMap>
 
       <button
+        type="button"
         onClick={fitBounds}
         style={{
           position: "absolute",
@@ -241,6 +242,8 @@ export const DriveMapPanel = ({
       </button>
 
       <button
+        type="button"
+        aria-label={showOptions ? "Close map options" : "Open map options"}
         onClick={() => setShowOptions((v) => !v)}
         style={{
           position: "absolute",
@@ -261,6 +264,8 @@ export const DriveMapPanel = ({
 
       {showOptions && (
         <div
+          role="dialog"
+          aria-label="Map options"
           style={{
             position: "absolute",
             top: "60px",
@@ -278,21 +283,28 @@ export const DriveMapPanel = ({
             Options
           </div>
 
-          <button onClick={() => setStyleMode("light")} style={optionBtn}>Light Map</button>
-          <button onClick={() => setStyleMode("dark")} style={optionBtn}>Dark Map</button>
-          <button onClick={() => setStyleMode("minimal")} style={optionBtn}>Minimal Map</button>
+          <button type="button" onClick={() => setStyleMode("light")} style={optionBtn}>
+            Light Map
+          </button>
+          <button type="button" onClick={() => setStyleMode("dark")} style={optionBtn}>
+            Dark Map
+          </button>
+          <button type="button" onClick={() => setStyleMode("minimal")} style={optionBtn}>
+            Minimal Map
+          </button>
 
           <hr style={{ margin: "10px 0", opacity: 0.3 }} />
 
-          <button onClick={() => setShowMarkers((v) => !v)} style={optionBtn}>
+          <button type="button" onClick={() => setShowMarkers((v) => !v)} style={optionBtn}>
             {showMarkers ? "Hide Markers" : "Show Markers"}
           </button>
 
-          <button onClick={() => setShowLive((v) => !v)} style={optionBtn}>
+          <button type="button" onClick={() => setShowLive((v) => !v)} style={optionBtn}>
             {showLive ? "Hide Live Position" : "Show Live Position"}
           </button>
 
           <button
+            type="button"
             onClick={() => {
               if (playback) {
                 setPlayback(false)
@@ -310,6 +322,7 @@ export const DriveMapPanel = ({
 
       {driveMeta && (
         <div
+          aria-label="Drive summary"
           style={{
             position: "absolute",
             top: "12px",

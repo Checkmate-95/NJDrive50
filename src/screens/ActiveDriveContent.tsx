@@ -5,7 +5,6 @@ import type { Screen } from "../App"
 import { SunIcon, MoonIcon } from "@heroicons/react/24/solid"
 import { saveDrive } from "../state/driveStore"
 import type { DriveEntry, NightCalcMode } from "../state/driveStore"
-import { navigate } from "../navigation/navMap"
 import {
   useActiveDriveStore,
   type NightOverride,
@@ -668,7 +667,7 @@ function ActiveDriveContent({
       setCurrentDrive(driveToSave)
       setShowStopConfirm(false)
 
-      navigate("active", "confirm", setScreen)
+      setScreen("confirm")
       hardReset()
     } catch (err) {
       console.error("[ActiveDrive] Save failed:", err)
@@ -695,7 +694,7 @@ function ActiveDriveContent({
       if (!previewDrive) return
 
       setCurrentDrive(previewDrive)
-      navigate("active", "summary", setScreen)
+      setScreen("summary")
     } finally {
       setIsPreviewing(false)
     }

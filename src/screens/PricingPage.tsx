@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async"
-import { Link, useNavigate } from "react-router-dom"
+import { useNav } from "../state/navStore"
 import { useMemo, useState } from "react"
 
 type BillingCycle = "monthly" | "yearly"
@@ -151,11 +151,10 @@ function PlanCard({
 }
 
 export default function PricingPage() {
-  const navigate = useNavigate()
+  const setScreen = useNav((s) => s.setScreen)
   const [billing, setBilling] = useState<BillingCycle>("yearly")
 
   const PAGE_URL = "https://njdrive50.com/pricing"
-  const PRACTICE_TEST_PATH = "/practice-test"
 
   const metaTitle =
     "NJDrive50 Pricing | New Jersey Driving Log App Free Trial, Monthly & Annual Plans"
@@ -229,8 +228,8 @@ export default function PricingPage() {
     description: metaDescription,
   }
 
-  const handleStartTrial = (cycle: BillingCycle) => {
-    navigate(`/start-trial?billing=${cycle}`)
+  const handleStartTrial = (_cycle: BillingCycle) => {
+    setScreen("checkout")
   }
 
   const primaryPlan: Plan =
@@ -336,12 +335,13 @@ export default function PricingPage() {
           <header className="rounded-[28px] border border-white/30 bg-white/95 px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.08)] backdrop-blur-md sm:px-6 sm:py-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <Link
-                  to="/"
+                <button
+                  type="button"
+                  onClick={() => setScreen("landing")}
                   className="inline-flex items-center rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[#08194A]/70 transition hover:bg-[#EEF3FA] hover:text-[#08194A]"
                 >
                   ← Back
-                </Link>
+                </button>
 
                 <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.18em] text-[#08194A]/45">
                   Pricing
@@ -363,12 +363,13 @@ export default function PricingPage() {
 
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-[#08194A]/62">
                   Want to study first? Try the{" "}
-                  <Link
-                    to={PRACTICE_TEST_PATH}
+                  <button
+                    type="button"
+                    onClick={() => setScreen("practice-test")}
                     className="font-semibold text-[#08194A] underline underline-offset-4"
                   >
                     free New Jersey permit practice test
-                  </Link>{" "}
+                  </button>{" "}
                   before you pick a plan.
                 </p>
               </div>

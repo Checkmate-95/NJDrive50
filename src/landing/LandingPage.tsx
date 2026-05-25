@@ -1,7 +1,9 @@
 import { Helmet } from "react-helmet-async"
-import { Link } from "react-router-dom"
+import { useNav } from "../state/navStore"
 
 export default function LandingPage() {
+  const setScreen = useNav((s) => s.setScreen)
+
   const PAGE_URL = "https://njdrive50.com"
   const OG_IMAGE_URL = "https://njdrive50.com/og-image.png"
   const PRICING_PAGE_PATH = "/pricing"
@@ -222,10 +224,13 @@ export default function LandingPage() {
   }
 
   const ctaLinkClass =
-    "inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9] active:scale-[0.99] sm:w-auto"
+    "inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9] active:scale-[0.99] sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
 
   const secondaryLinkClass =
-    "flex min-h-[48px] w-full items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/5 active:scale-[0.99] sm:w-auto"
+    "flex min-h-[48px] w-full items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/5 active:scale-[0.99] sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
+
+  const navTextButtonClass =
+    "transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded-sm"
 
   return (
     <>
@@ -298,9 +303,13 @@ export default function LandingPage() {
               <a href="#faq" className="transition hover:text-white">
                 FAQ
               </a>
-              <Link to={PRICING_PAGE_PATH} className="transition hover:text-white">
+              <button
+                type="button"
+                onClick={() => setScreen("pricing")}
+                className={navTextButtonClass}
+              >
                 Pricing
-              </Link>
+              </button>
             </nav>
           </div>
         </header>
@@ -354,9 +363,14 @@ export default function LandingPage() {
                 </div>
 
                 <div className="mt-7 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
-                  <Link id="get-app" to={PRICING_PAGE_PATH} className={ctaLinkClass}>
+                  <button
+                    id="get-app"
+                    type="button"
+                    onClick={() => setScreen("pricing")}
+                    className={ctaLinkClass}
+                  >
                     Get started free
-                  </Link>
+                  </button>
 
                   <a href="#how-it-works" className={secondaryLinkClass}>
                     See how it works
@@ -383,7 +397,15 @@ export default function LandingPage() {
                         <p className="mt-1 text-[10px] text-white/50">17.5 hours left</p>
 
                         <div className="mt-2.5">
-                          <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                          <div
+                            className="h-2 w-full overflow-hidden rounded-full bg-white/10"
+                            role="progressbar"
+                            aria-label="Example total hours progress"
+                            aria-valuemin={0}
+                            aria-valuemax={50}
+                            aria-valuenow={32.5}
+                            aria-valuetext="32.5 of 50 required hours completed"
+                          >
                             <div
                               className="h-full rounded-full bg-[#38BDF8]"
                               style={{ width: "65%" }}
@@ -662,9 +684,13 @@ export default function LandingPage() {
               </p>
 
               <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:justify-center">
-                <Link to={PRICING_PAGE_PATH} className={ctaLinkClass}>
+                <button
+                  type="button"
+                  onClick={() => setScreen("pricing")}
+                  className={ctaLinkClass}
+                >
                   Start 7-Day Free Trial
-                </Link>
+                </button>
 
                 <a href="#faq" className={secondaryLinkClass}>
                   Check NJ permit FAQs
@@ -742,12 +768,13 @@ export default function LandingPage() {
         </footer>
 
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#020617]/95 p-3 backdrop-blur md:hidden">
-          <Link
-            to={PRICING_PAGE_PATH}
-            className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-5 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] active:scale-[0.99]"
+          <button
+            type="button"
+            onClick={() => setScreen("pricing")}
+            className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-5 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
           >
             Start 7-Day Free Trial
-          </Link>
+          </button>
         </div>
       </div>
     </>

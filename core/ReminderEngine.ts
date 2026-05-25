@@ -1,6 +1,4 @@
 // src/core/ReminderEngine.ts
-// PRODUCTION-SAFE VERSION
-// All fixes applied + optional hardening completed
 
 export type ReminderPreferences = {
   weeklyHoursReminder: boolean
@@ -19,10 +17,8 @@ export type OnboardingData = {
   parentPhone: string
   relationship: string
   teenPhoto: string | null
-
   address: string
   permitNumber: string
-
   homeTown: string
   homeZip: string
   homeCounty: string
@@ -279,6 +275,7 @@ export function loadOnboardingData(): OnboardingData {
 function loadReminderSchedule(): ReminderSchedule {
   const raw = safeGetItem(REMINDER_SCHEDULE_KEY)
   if (!raw) return {}
+
   try {
     return JSON.parse(raw) as ReminderSchedule
   } catch {
@@ -386,25 +383,29 @@ export function initializeReminders(prefs: ReminderPreferences): boolean {
 
   let allSucceeded = true
 
-  ;(Object.entries(prefs) as [ReminderType, boolean][]).forEach(
-    ([key, enabled]) => {
-      if (!enabled) return
+  ;(Object.entries(prefs) as [ReminderType, boolean][]).forEach(([key, enabled]) => {
+    if (!enabled) return
 
-      const trigger = triggers[key]
-      if (!trigger) return
+    const trigger = triggers[key]
+    if (!trigger) return
 
-      let message = ""
+    let message = ""
 
-      if (key === "roadTestReminder") message = ROAD_TEST_WARNING_MESSAGE
-      if (key === "weeklyHoursReminder")
-        message = "Weekly reminder: Log your supervised driving hours in NJDrive50."
-      if (key === "permitExpiryReminder")
-        message = "Your permit expires in 30 days. Make sure all requirements are complete."
-
-      const success = scheduleReminder(key, trigger, message)
-      if (!success) allSucceeded = false
+    if (key === "roadTestReminder") {
+      message = ROAD_TEST_WARNING_MESSAGE
     }
-  )
+
+    if (key === "weeklyHoursReminder") {
+      message = "Weekly reminder: Log your supervised driving hours in NJDrive50."
+    }
+
+    if (key === "permitExpiryReminder") {
+      message = "Your permit expires in 30 days. Make sure all requirements are complete."
+    }
+
+    const success = scheduleReminder(key, trigger, message)
+    if (!success) allSucceeded = false
+  })
 
   return allSucceeded
 }

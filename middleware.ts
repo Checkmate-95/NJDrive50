@@ -1,14 +1,38 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+
+const BASIC_AUTH_ENABLED = process.env.BASIC_AUTH_ENABLED === "true"
+const USERNAME = process.env.BASIC_AUTH_USERNAME
+const PASSWORD = process.env.BASIC_AUTH_PASSWORD
 
 export function middleware(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  const expected = "Basic " + btoa("njdrive50:devaccess");
+  if (!BASIC_AUTH_ENABLED) {
+    return NextResponse.next()
+  }
 
-  if (auth !== expected) {
+  if (!USERNAME || !PASSWORD) {
+    return new NextResponse("Basic auth is enabled but not configured", {
+      status: 500,
+    })
+  }
+
+  const authHeader = req.headers.get("authorization")
+  const expectedAuth = `Basic ${btoa(`${USERNAME}:${PASSWORD}`)}`
+
+  if (authHeader !== expectedAuth) {
     return new NextResponse("Unauthorized", {
       status: 401,
-      headers: { "WWW-Authenticate": 'Basic realm="Secure Area"' },
-    });
+      headers: {
+        "WWW-Authenticate": 'Basic realm="NJDrive50 Staging"',
+      },
+    })
   }
+
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\..*).*)",
+  ],
 }

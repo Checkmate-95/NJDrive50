@@ -55,26 +55,30 @@ export default function AIHelperScreen() {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), mode: "chat" }),
+        body: JSON.stringify({ prompt: prompt.trim(), mode: "faq" }),
         signal: controller.signal,
       })
 
+      const data = await res.json().catch(() => null)
+
       if (!res.ok) {
-        throw new Error(`Server error: ${res.status}`)
+        throw new Error(data?.error || `Server error: ${res.status}`)
       }
 
-      const data = await res.json().catch(() => null)
       setResponse(data?.output ?? "No response received.")
     } catch (error) {
       if ((error as Error)?.name === "AbortError") return
+
       setResponse(
-        "We couldn't reach the AI helper right now. Please try again in a moment."
+        error instanceof Error && error.message
+          ? error.message
+          : "We couldn't reach the AI helper right now. Please try again in a moment."
       )
     } finally {
       if (abortRef.current === controller) {
         abortRef.current = null
+        setLoading(false)
       }
-      setLoading(false)
     }
   }
 
@@ -207,13 +211,24 @@ export default function AIHelperScreen() {
         >
           <div
             style={{
-              fontSize: 15,
+              fontSize: 16,
               fontWeight: 800,
               color: "#08194A",
-              marginBottom: 8,
+              marginBottom: 6,
             }}
           >
             Ask a question
+          </div>
+
+          <div
+            style={{
+              fontSize: 13,
+              color: "#475569",
+              marginBottom: 2,
+              fontWeight: 600,
+            }}
+          >
+            Tap the box below to type
           </div>
 
           <div
@@ -228,43 +243,89 @@ export default function AIHelperScreen() {
             appointments, or road test preparation.
           </div>
 
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            maxLength={3000}
-            placeholder="Example: My teen is getting close to the road test. What should I check before we schedule it, and what paperwork should we bring?"
-            style={{
-              width: "100%",
-              minHeight: 140,
-              padding: 14,
-              borderRadius: 14,
-              border: "1px solid #CBD5E1",
-              background: "#F8FAFC",
-              color: "#0F172A",
-              fontSize: 16,
-              lineHeight: 1.6,
-              boxSizing: "border-box",
-              resize: "vertical",
-              outline: "none",
-            }}
-          />
-
           <div
             style={{
-              marginTop: 8,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: 12,
-              flexWrap: "wrap",
+              marginTop: 14,
+              border: "2px solid #B8C7DC",
+              borderRadius: 18,
+              background: "#F8FBFF",
+              boxShadow:
+                "inset 0 1px 2px rgba(8, 25, 74, 0.05), 0 6px 18px rgba(8, 25, 74, 0.04)",
+              padding: 12,
             }}
           >
-            <div style={{ fontSize: 12, color: "#64748B" }}>
-              Tip: Press Ctrl + Enter to send
-            </div>
-            <div style={{ fontSize: 12, color: "#94A3B8", fontWeight: 600 }}>
-              {prompt.trim().length} / 3000 characters
+            <label
+              htmlFor="ai-helper-prompt"
+              style={{
+                display: "block",
+                fontSize: 13,
+                fontWeight: 800,
+                color: "#08194A",
+                marginBottom: 10,
+                letterSpacing: 0.2,
+              }}
+            >
+              Type your question here
+            </label>
+
+            <textarea
+              id="ai-helper-prompt"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              maxLength={3000}
+              placeholder="Example: My teen is getting close to the road test. What should I check before we schedule it, and what paperwork should we bring?"
+              style={{
+                width: "100%",
+                minHeight: 170,
+                padding: 16,
+                borderRadius: 14,
+                border: "2px solid #7C93B3",
+                background: "#FFFFFF",
+                color: "#0F172A",
+                fontSize: 16,
+                lineHeight: 1.65,
+                boxSizing: "border-box",
+                resize: "vertical",
+                outline: "none",
+                boxShadow: "inset 0 1px 3px rgba(15, 23, 42, 0.06)",
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.border = "2px solid #08194A"
+                e.currentTarget.style.boxShadow =
+                  "0 0 0 4px rgba(8, 25, 74, 0.12), inset 0 1px 3px rgba(15, 23, 42, 0.05)"
+                if (e.currentTarget.parentElement) {
+                  e.currentTarget.parentElement.style.border = "2px solid #08194A"
+                  e.currentTarget.parentElement.style.background = "#F3F8FF"
+                }
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.border = "2px solid #7C93B3"
+                e.currentTarget.style.boxShadow =
+                  "inset 0 1px 3px rgba(15, 23, 42, 0.06)"
+                if (e.currentTarget.parentElement) {
+                  e.currentTarget.parentElement.style.border = "2px solid #B8C7DC"
+                  e.currentTarget.parentElement.style.background = "#F8FBFF"
+                }
+              }}
+            />
+
+            <div
+              style={{
+                marginTop: 10,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ fontSize: 12, color: "#5B6B82", fontWeight: 600 }}>
+                Ask anything about permits, hours, paperwork, or the road test.
+              </div>
+              <div style={{ fontSize: 12, color: "#64748B", fontWeight: 700 }}>
+                {prompt.trim().length} / 3000 characters
+              </div>
             </div>
           </div>
 
@@ -363,12 +424,14 @@ export default function AIHelperScreen() {
 
         <div
           ref={responseRef}
+          role="status"
+          aria-live="polite"
           style={{
             background: "#FFFFFF",
-            border: "1px solid #DCE4EE",
-            borderRadius: 18,
-            padding: 16,
-            boxShadow: "0 6px 18px rgba(15, 23, 42, 0.04)",
+            border: "1px solid #C9D7E6",
+            borderRadius: 20,
+            padding: 18,
+            boxShadow: "0 10px 24px rgba(15, 23, 42, 0.06)",
           }}
         >
           <div
@@ -378,11 +441,31 @@ export default function AIHelperScreen() {
               alignItems: "center",
               gap: 12,
               flexWrap: "wrap",
-              marginBottom: 10,
+              marginBottom: 12,
+              paddingBottom: 10,
+              borderBottom: "1px solid #E2E8F0",
             }}
           >
-            <div style={{ fontSize: 14, fontWeight: 800, color: "#08194A" }}>
-              AI response
+            <div>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: "#08194A",
+                }}
+              >
+                AI response
+              </div>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 12,
+                  color: "#64748B",
+                  fontWeight: 600,
+                }}
+              >
+                Your answer appears below after NJDrive50 finishes generating it.
+              </div>
             </div>
 
             <div
@@ -392,10 +475,11 @@ export default function AIHelperScreen() {
                 color: loading ? "#92400E" : response ? "#166534" : "#475569",
                 background: loading ? "#FFF7ED" : response ? "#ECFDF3" : "#F8FAFC",
                 border: `1px solid ${
-                  loading ? "#FED7AA" : response ? "#BBF7D0" : "#E2E8F0"
+                  loading ? "#FED7AA" : response ? "#BBF7D0" : "#CBD5E1"
                 }`,
                 borderRadius: 999,
-                padding: "6px 9px",
+                padding: "7px 10px",
+                letterSpacing: 0.2,
               }}
             >
               {loading ? "Generating" : response ? "Ready" : "Waiting"}
@@ -404,18 +488,26 @@ export default function AIHelperScreen() {
 
           <div
             style={{
-              minHeight: 110,
-              border: "1px solid #E2E8F0",
-              borderRadius: 14,
-              background: "#FAFCFE",
-              padding: 14,
+              minHeight: 140,
+              border: loading
+                ? "2px solid #F59E0B"
+                : response
+                  ? "2px solid #86EFAC"
+                  : "2px solid #D6E0EA",
+              borderRadius: 16,
+              background: loading
+                ? "#FFFDF7"
+                : response
+                  ? "#F8FFFB"
+                  : "#F8FAFC",
+              padding: 16,
               whiteSpace: "pre-wrap",
-              color: "#334155",
+              color: "#1E293B",
               fontSize: 15,
-              lineHeight: 1.65,
-              opacity: loading || response ? 1 : 0.92,
-              transform: loading || response ? "translateY(0)" : "translateY(2px)",
-              transition: "opacity 220ms ease, transform 220ms ease",
+              lineHeight: 1.7,
+              boxShadow: "inset 0 1px 3px rgba(15, 23, 42, 0.05)",
+              transition:
+                "border-color 220ms ease, background 220ms ease, box-shadow 220ms ease",
             }}
           >
             {loading

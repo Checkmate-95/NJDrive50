@@ -1,5 +1,5 @@
 // src/screens/HelpFAQ/index.tsx
-import { useEffect, useId, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import { useNav } from "../../state/navStore"
 
@@ -17,6 +17,9 @@ type HighlightedTextProps = {
   text: string
   query: string
 }
+
+const AI_URL =
+  import.meta.env.VITE_AI_HELPER_API_URL || "/api/njdrive50-ai"
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -54,6 +57,8 @@ export default function HelpFaq() {
   const [aiQuestion, setAiQuestion] = useState("")
   const [aiAnswer, setAiAnswer] = useState("")
   const [loading, setLoading] = useState(false)
+
+  const abortRef = useRef<AbortController | null>(null)
 
   const q = query.trim().toLowerCase()
 
@@ -254,24 +259,22 @@ export default function HelpFaq() {
     const prompt = aiQuestion.trim()
     if (!prompt || loading) return
 
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
     setLoading(true)
     setAiAnswer("")
 
     try {
-      const base = import.meta.env.VITE_AI_SERVER_URL ?? "http://localhost:3001"
-
-      const res = await fetch(`${base}/api/njdrive50-ai`, {
+      const res = await fetch(AI_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt, mode: "faq" }),
+        signal: controller.signal,
       })
 
-      let data: unknown = null
-      try {
-        data = await res.json()
-      } catch {
-        data = null
-      }
+      const data = await res.json().catch(() => null)
 
       const output =
         typeof data === "object" &&
@@ -281,25 +284,44 @@ export default function HelpFaq() {
           ? (data as { output: string }).output
           : null
 
+      const errorMessage =
+        typeof data === "object" &&
+        data !== null &&
+        "error" in data &&
+        typeof (data as { error?: unknown }).error === "string"
+          ? (data as { error: string }).error
+          : null
+
       if (!res.ok) {
-        throw new Error(output || "Something went wrong. Please try again.")
+        throw new Error(errorMessage || output || `Server error: ${res.status}`)
       }
 
       setAiAnswer(output || "I couldn't find an answer, but I'm here to help.")
     } catch (error) {
+      if ((error as Error)?.name === "AbortError") return
+
       setAiAnswer(
         error instanceof Error && error.message
           ? error.message
           : "Something went wrong. Please try again."
       )
     } finally {
-      setLoading(false)
+      if (abortRef.current === controller) {
+        abortRef.current = null
+        setLoading(false)
+      }
     }
   }
 
   function clearSearch() {
     setQuery("")
   }
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
 
   return (
     <div className="min-h-screen w-full bg-[#F7F9FC] text-[#08194A]">
@@ -374,7 +396,11 @@ export default function HelpFaq() {
                 key={section.title}
                 title={section.title}
                 query={q}
-                autoOpen={Boolean(q && (section.titleMatches || section.items.some((item) => item.matches)))}
+                autoOpen={Boolean(
+                  q &&
+                    (section.titleMatches ||
+                      section.items.some((item) => item.matches))
+                )}
               >
                 <div className="space-y-3">
                   {section.items.map((item) => (
@@ -429,7 +455,7 @@ export default function HelpFaq() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !loading && aiQuestion.trim()) {
                       e.preventDefault()
-                      handleAskAI()
+                      void handleAskAI()
                     }
                   }}
                   className="min-h-[48px] w-full rounded-2xl border border-[#08194A]/10 bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:border-[#08194A]/20 focus:bg-white focus:ring-2 focus:ring-[#08194A]/8"
@@ -444,17 +470,23 @@ export default function HelpFaq() {
                     ? "cursor-not-allowed bg-[#08194A] opacity-50"
                     : "bg-[#08194A] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
                 }`}
-                onClick={handleAskAI}
+                onClick={() => {
+                  void handleAskAI()
+                }}
               >
                 {loading ? "Thinking…" : "Ask NJDrive50 AI"}
               </button>
 
-              <div aria-live="polite" className="mt-4">
-                {aiAnswer ? (
-                  <div className="whitespace-pre-wrap rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-4 text-sm leading-6 text-[#08194A]">
-                    {aiAnswer}
-                  </div>
-                ) : null}
+              <div
+                role="status"
+                aria-live="polite"
+                className="mt-4"
+              >
+                <div className="min-h-[96px] whitespace-pre-wrap rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-4 text-sm leading-6 text-[#08194A]">
+                  {loading
+                    ? "Preparing your answer..."
+                    : aiAnswer || "Your answer will appear here."}
+                </div>
               </div>
             </div>
           </aside>

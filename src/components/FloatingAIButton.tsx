@@ -1,63 +1,90 @@
-import { useState } from "react"
 import { useNav } from "../state/navStore"
 
 type FloatingAIButtonProps = {
   className?: string
 }
 
-export default function FloatingAIButton({ className = "" }: FloatingAIButtonProps) {
+export default function FloatingAIButton({
+  className = "",
+}: FloatingAIButtonProps) {
   const { screen, setScreen } = useNav()
-  const [hovered, setHovered] = useState(false)
 
   if (screen === "aiHelper") return null
 
   return (
-    <>
-      {/* Floating AI Bubble */}
-      <button
-        type="button"
-        onClick={() => setScreen("aiHelper")}
-        className={className}
-        aria-label="Open AI Helper"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+    <button
+      type="button"
+      onClick={() => setScreen("aiHelper")}
+      aria-label="Open AI Helper"
+      title="Open AI Helper"
+      className={className}
+      style={{
+        minHeight: 56,
+        minWidth: 56,
+        borderRadius: 999,
+        background: "#08194A",
+        border: "2px solid #f9c80e",
+        color: "#FFFFFF",
+        cursor: "pointer",
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        padding: "10px 14px",
+        zIndex: 9999,
+        boxShadow: "0 10px 24px rgba(8, 25, 74, 0.28), 0 0 14px rgba(249, 200, 14, 0.28)",
+        transition: "transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease",
+        WebkitTapHighlightColor: "transparent",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-1px) scale(1.03)"
+        e.currentTarget.style.boxShadow =
+          "0 14px 28px rgba(8, 25, 74, 0.32), 0 0 18px rgba(249, 200, 14, 0.42)"
+        e.currentTarget.style.background = "#0A1E5E"
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0) scale(1)"
+        e.currentTarget.style.boxShadow =
+          "0 10px 24px rgba(8, 25, 74, 0.28), 0 0 14px rgba(249, 200, 14, 0.28)"
+        e.currentTarget.style.background = "#08194A"
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.transform = "translateY(-1px) scale(1.02)"
+        e.currentTarget.style.boxShadow =
+          "0 0 0 3px rgba(249, 200, 14, 0.22), 0 14px 28px rgba(8, 25, 74, 0.32)"
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.transform = "translateY(0) scale(1)"
+        e.currentTarget.style.boxShadow =
+          "0 10px 24px rgba(8, 25, 74, 0.28), 0 0 14px rgba(249, 200, 14, 0.28)"
+      }}
+    >
+      <span
+        aria-hidden="true"
         style={{
-          width: 48, // smaller bubble
-          height: 48,
-          borderRadius: "50%",
-          background: "#08194A",
-          border: "2px solid #f9c80e",
+          fontSize: 20,
+          lineHeight: 1,
           color: "#f9c80e",
-          fontSize: 22, // smaller sparkle icon
-          cursor: "pointer",
-          display: "flex",
+          display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          zIndex: 9999,
-          transition: "transform 0.2s ease, box-shadow 0.2s ease",
-          transform: hovered ? "scale(1.08)" : "scale(1)",
-          boxShadow: hovered
-            ? "0 0 18px rgba(249, 200, 14, 0.55)"
-            : "0 0 12px rgba(249, 200, 14, 0.35)",
         }}
       >
         ✨
-      </button>
+      </span>
 
-      {/* Label Under Bubble */}
-      <div
+      <span
         style={{
-          marginTop: 4,
+          fontSize: 12,
+          fontWeight: 800,
+          letterSpacing: 0.3,
           color: "#f9c80e",
-          fontSize: 10, // smaller text
-          fontWeight: 600,
-          textShadow: "0 0 4px rgba(0,0,0,0.6)",
-          textAlign: "center",
-          pointerEvents: "none",
+          lineHeight: 1,
+          whiteSpace: "nowrap",
         }}
       >
         AI FAQ
-      </div>
-    </>
+      </span>
+    </button>
   )
 }

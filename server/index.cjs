@@ -1,4 +1,4 @@
-// server/index.js
+// server/index.cjs
 // NJDRIVE50 — PRODUCTION-GRADE SERVER (FINAL)
 // Includes:
 // - Security headers (helmet)
@@ -6,7 +6,7 @@
 // - Disabled x-powered-by
 // - JSON structured logging
 // - Request ID tracing (header + body + logs)
-// - Bearer-token auth (auto-enabled in prod)
+// - Bearer-token auth (kept for protected non-browser routes)
 // - Rate limiting with JSON 429 handler
 // - CORS allowlist enforcement
 // - trust proxy for correct IP handling behind proxies
@@ -51,9 +51,7 @@ if (isProd && allowedOrigins.length === 0) {
 }
 
 if (REQUIRE_API_AUTH && !process.env.API_BEARER_TOKEN) {
-  throw new Error(
-    "API_BEARER_TOKEN must be set when API auth is enabled."
-  )
+  throw new Error("API_BEARER_TOKEN must be set when API auth is enabled.")
 }
 
 if (!Number.isFinite(PORT) || PORT <= 0) {
@@ -75,8 +73,8 @@ if (TRUST_PROXY !== "false") {
     TRUST_PROXY === "true"
       ? true
       : Number.isNaN(Number(TRUST_PROXY))
-      ? TRUST_PROXY
-      : Number(TRUST_PROXY)
+        ? TRUST_PROXY
+        : Number(TRUST_PROXY)
 
   app.set("trust proxy", proxyValue)
 }
@@ -117,7 +115,8 @@ app.use((req, res, next) => {
     const duration = Date.now() - start
     const log = {
       timestamp: new Date().toISOString(),
-      level: res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info",
+      level:
+        res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info",
       requestId: req.id,
       method: req.method,
       url: req.originalUrl,
@@ -206,6 +205,29 @@ function requireBearerToken(req, res, next) {
   next()
 }
 
+function requireTrustedBrowserOrigin(req, res, next) {
+  const origin = req.headers.origin || ""
+  const contentType = req.headers["content-type"] || ""
+
+  if (isProd) {
+    if (!origin || !allowedOrigins.includes(origin)) {
+      return res.status(403).json({
+        error: "Request origin not allowed.",
+        requestId: req.id,
+      })
+    }
+  }
+
+  if (!String(contentType).toLowerCase().includes("application/json")) {
+    return res.status(415).json({
+      error: "Content-Type must be application/json.",
+      requestId: req.id,
+    })
+  }
+
+  next()
+}
+
 function createHttpError(statusCode, message) {
   const err = new Error(message)
   err.statusCode = statusCode
@@ -235,7 +257,7 @@ app.get("/api/reminder-log", (req, res) => {
 
 app.post(
   "/api/njdrive50-ai",
-  requireBearerToken,
+  requireTrustedBrowserOrigin,
   aiRateLimiter,
   asyncHandler(async (req, res) => {
     const { prompt, mode } = req.body || {}
@@ -366,7 +388,10 @@ function shutdown(signal) {
   console.log(`${signal} received — shutting down NJDrive50 server...`)
   server.close((err) => {
     if (err) {
-      console.error("Error during shutdown:", err instanceof Error ? err.message : String(err))
+      console.error(
+        "Error during shutdown:",
+        err instanceof Error ? err.message : String(err)
+      )
       process.exit(1)
     }
     process.exit(0)

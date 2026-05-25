@@ -2,15 +2,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.njdrive50.app">
 
-    <!-- ===== PERMISSIONS ===== -->
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ===== LOCATION PERMISSIONS ===== -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- ===== SERVICE PERMISSIONS ===== -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- ===== NETWORK & NOTIFICATIONS ===== -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- ===== APPLICATION ===== -->
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -18,10 +22,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config">
 
-
-    <!-- Main Capacitor activity -->
         <activity
             android:name="com.getcapacitor.BridgeActivity"
             android:exported="true"
@@ -34,7 +37,6 @@
             </intent-filter>
         </activity>
 
-        <!-- FileProvider for downloads and exports -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

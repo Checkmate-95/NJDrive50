@@ -12,7 +12,7 @@
     "routes-proxy": "tsx routesProxy.ts"
   },
   "dependencies": {
-    "@capacitor/android": "^8.3.2",
+    "@capacitor/android": "^8.3.4",
     "@capacitor/core": "^8.3.1",
     "@capacitor/filesystem": "^8.1.2",
     "@capacitor/geolocation": "^8.2.0",

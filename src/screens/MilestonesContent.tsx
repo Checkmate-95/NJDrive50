@@ -166,7 +166,7 @@ export default function MilestonesContent() {
                 ? `${m.label} progress in required night hours`
                 : `${m.label} progress in required total hours`
 
-            return (
+                          return (
               <motion.div
                 key={m.label}
                 initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
@@ -319,6 +319,15 @@ export default function MilestonesContent() {
             New Jersey supervised-driving progress is tracked here using 50 total
             hours and 10 night hours.
           </p>
+
+          {/* ── Exit Milestones ──────────────────────────────────────────────── */}
+          <button
+            type="button"
+            onClick={() => goBack("summary")}
+            className="mt-5 w-full rounded-2xl border border-[#08194A]/10 bg-[#08194A] py-3.5 text-sm font-bold text-white shadow-sm transition duration-200 hover:-translate-y-[1px] hover:bg-[#0A1E5E] hover:shadow-[0_0_18px_rgba(249,200,14,0.22)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#f9c80e]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F9FAFF]"
+          >
+            Exit Milestones
+          </button>
         </div>
       </div>
     </div>

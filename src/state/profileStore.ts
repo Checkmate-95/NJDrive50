@@ -137,24 +137,47 @@ if (canUseLocalStorage()) {
   loadProfileFromStorage()
 }
 
-export function setTeenPhoto(url: string): boolean {
-  if (!canUseLocalStorage()) return false
+// ─── setTeenPhoto ─────────────────────────────────────────────────────────────
+// FIX: The original implementation incorrectly rejected data: URLs, which is
+// exactly what the crop modal produces. data: URLs are plain base64 strings and
+// are perfectly persistable in localStorage. Only blob: URLs are session-only
+// and must be rejected. An empty string is treated as an explicit clear so that
+// handleRemoveTeenPhoto works correctly via setGlobalTeenPhoto("").
 
+export function setTeenPhoto(url: string): boolean {
   const normalized = url.trim()
 
-  if (!normalized) return false
+  // Empty string → treat as explicit clear
+  if (!normalized) {
+    if (!canUseLocalStorage()) return false
+    try {
+      window.localStorage.removeItem(PHOTO_KEY)
+      cachedTeenPhoto = null
+      emitPhotoChange()
+      return true
+    } catch {
+      if (isDev) console.warn("Failed to clear teen photo from localStorage")
+      return false
+    }
+  }
 
+  // blob: URLs are session-only — they cannot survive a page reload
+  if (normalized.startsWith("blob:")) {
+    if (isDev) console.warn("setTeenPhoto rejected blob: URL — not persistable across sessions")
+    return false
+  }
+
+  // Accept data:, http(s):, and app-relative paths
   const isDataUrl = normalized.startsWith("data:")
-  const isBlobUrl = normalized.startsWith("blob:")
   const isHttpUrl = /^https?:\/\//i.test(normalized)
   const isAppRelative = normalized.startsWith("/")
 
-  if (isDataUrl || isBlobUrl || (!isHttpUrl && !isAppRelative)) {
-    if (isDev) {
-      console.warn("setTeenPhoto rejected non-persistable image value")
-    }
+  if (!isDataUrl && !isHttpUrl && !isAppRelative) {
+    if (isDev) console.warn("setTeenPhoto rejected unrecognized URL format:", normalized.slice(0, 40))
     return false
   }
+
+  if (!canUseLocalStorage()) return false
 
   try {
     window.localStorage.setItem(PHOTO_KEY, normalized)
@@ -162,9 +185,7 @@ export function setTeenPhoto(url: string): boolean {
     emitPhotoChange()
     return true
   } catch {
-    if (isDev) {
-      console.warn("Failed to persist teen photo to localStorage")
-    }
+    if (isDev) console.warn("Failed to persist teen photo to localStorage")
     return false
   }
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react"
+import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from "react"
 import type { Screen } from "../App"
 import { computeDriveScoreV2 } from "../utils/driveLogic"
 import { useDriveHistory, type DriveEntry } from "../state/driveStore"
@@ -71,6 +71,10 @@ export default function DriveSummaryContent({
 
   const [teenImgFailed, setTeenImgFailed] = useState(false)
   const [showScoreHelp, setShowScoreHelp] = useState(false)
+
+  // Stable onError handler — prevents re-creation on every render which could
+  // flicker or reset the error state unexpectedly on Android WebView
+  const handleTeenImgError = useCallback(() => setTeenImgFailed(true), [])
 
   const lastDrive: DriveEntry | null = useMemo(() => {
     if (drives.length === 0) return null
@@ -289,7 +293,7 @@ export default function DriveSummaryContent({
                   <img
                     src={teenPhoto}
                     alt="Teen Driver Photo"
-                    onError={() => setTeenImgFailed(true)}
+                    onError={handleTeenImgError}
                     className="h-[92px] w-[92px] rounded-full border-4 border-[#f9c80e] object-cover shadow-[0_8px_24px_rgba(0,0,0,0.18)] sm:h-[110px] sm:w-[110px]"
                   />
                 ) : (

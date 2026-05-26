@@ -384,79 +384,95 @@ export default function LandingPage() {
               </div>
 
               <div className="flex w-full flex-1 justify-center md:justify-end">
-                <div className="w-full max-w-[190px] sm:max-w-[215px] md:max-w-[225px]">
-                  <div className="relative overflow-hidden rounded-[32px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.72)]">
-                    <div className="flex flex-col gap-2.5 p-3.5 sm:p-4">
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
-                        <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
-                          Total Hours
-                        </p>
-                        <p className="mt-1 text-[28px] font-extrabold tracking-tight text-[#38BDF8] sm:text-[30px]">
-                          32.5
-                        </p>
-                        <p className="mt-1 text-[10px] text-white/50">17.5 hours left</p>
+  <div className="w-full max-w-[220px] sm:max-w-[250px] md:max-w-[270px]">
+    <div className="relative overflow-hidden rounded-[32px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.72)]">
+      <div className="flex flex-col gap-2.5 p-3.5 sm:p-4">
 
-                        <div className="mt-2.5">
-                          <div
-                            className="h-2 w-full overflow-hidden rounded-full bg-white/10"
-                            role="progressbar"
-                            aria-label="Example total hours progress"
-                            aria-valuemin={0}
-                            aria-valuemax={50}
-                            aria-valuenow={32.5}
-                            aria-valuetext="32.5 of 50 required hours completed"
-                          >
-                            <div
-                              className="h-full rounded-full bg-[#38BDF8]"
-                              style={{ width: "65%" }}
-                            />
-                          </div>
-                          <div className="mt-1.5 flex items-center justify-between text-[9px] text-white/45 sm:text-[10px]">
-                            <span>65% complete</span>
-                            <span>Goal: 50 hrs</span>
-                          </div>
-                        </div>
-                      </div>
+        {/* Total Hours */}
+        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
+          <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+            Total Hours
+          </p>
+          <p className="mt-1 text-[28px] font-extrabold tracking-tight text-[#38BDF8] sm:text-[30px]">
+            32.5
+          </p>
+          <p className="mt-1 text-[10px] text-white/50">17.5 hours left</p>
 
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
-                          <p className="text-sm font-extrabold text-yellow-400 sm:text-[15px]">
-                            26.5h
-                          </p>
-                          <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
-                            Day
-                          </p>
-                        </div>
+          <div className="mt-2.5">
+            <div
+              className="h-2 w-full overflow-hidden rounded-full bg-white/10"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={50}
+              aria-valuenow={32.5}
+            >
+              <div
+                className="h-full rounded-full bg-[#38BDF8]"
+                style={{ width: "65%" }}
+              />
+            </div>
+            <div className="mt-1.5 flex items-center justify-between text-[9px] text-white/45 sm:text-[10px]">
+              <span>65% complete</span>
+              <span>Goal: 50 hrs</span>
+            </div>
+          </div>
+        </div>
 
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
-                          <p className="text-sm font-extrabold text-[#38BDF8] sm:text-[15px]">
-                            6.0h
-                          </p>
-                          <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
-                            Night
-                          </p>
-                        </div>
-                      </div>
+        {/* Day / Night */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
+            <p className="text-sm font-extrabold text-yellow-400 sm:text-[15px]">
+              26.5h
+            </p>
+            <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
+              Day
+            </p>
+          </div>
 
-                      <div className="grid gap-2">
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-                          <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
-                            Road test eligibility
-                          </p>
-                          <p className="mt-1 text-sm font-bold text-white">47 days</p>
-                        </div>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
+            <p className="text-sm font-extrabold text-[#38BDF8] sm:text-[15px]">
+              6.0h
+            </p>
+            <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
+              Night
+            </p>
+          </div>
+        </div>
 
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-                          <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
-                            Night hours remaining
-                          </p>
-                          <p className="mt-1 text-sm font-bold text-yellow-400">4.0 hrs</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* Road Test + Night Hrs Left */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center">
+  <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+    Road test
+  </p>
+
+  {/* 47 days */}
+  <p className="mt-1 text-sm font-bold text-white leading-none">
+    47 days
+  </p>
+
+  {/* Bigger + blue + spaced like Day/Night labels */}
+  <p className="mt-1 text-[11px] font-semibold text-[#38BDF8] tracking-[0.12em] uppercase">
+    Left
+  </p>
+</div>
+
+
+
+
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center">
+            <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+              Night hrs left
+            </p>
+            <p className="mt-1 text-sm font-bold text-yellow-400">4.0 hrs</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
             </div>
           </section>
 

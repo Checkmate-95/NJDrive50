@@ -5,19 +5,23 @@ import { fileURLToPath } from "node:url"
 import cors from "cors"
 import helmet from "helmet"
 import rateLimit from "express-rate-limit"
+import OpenAI from "openai"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// Load environment variables
 const envPath = path.join(__dirname, "server", ".env")
 const dotenvResult = dotenv.config({ path: envPath })
-
 if (dotenvResult.error) {
   console.error("dotenv load error:", dotenvResult.error)
 }
 
 const PORT = Number(process.env.PORT ?? 3001)
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini"
+
 const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
@@ -26,11 +30,14 @@ const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
 if (!GOOGLE_MAPS_API_KEY) {
   throw new Error("Missing GOOGLE_MAPS_API_KEY in server/.env")
 }
+if (!OPENAI_API_KEY) {
+  console.warn("⚠️ Missing OPENAI_API_KEY — AI helper will not work until added.")
+}
 
 const app = express()
+const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
 
 app.set("trust proxy", 1)
-
 app.use(helmet())
 
 app.use(
@@ -39,7 +46,7 @@ app.use(
     max: 30,
     standardHeaders: true,
     legacyHeaders: false,
-  }),
+  })
 )
 
 app.use(
@@ -54,22 +61,14 @@ app.use(
     methods: ["POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400,
-  }),
+  })
 )
 
 app.use(express.json({ limit: "100kb" }))
 
-type LatLng = {
-  latitude: number
-  longitude: number
-}
-
-type Waypoint = {
-  location: {
-    latLng: LatLng
-  }
-}
-
+// ---------------- Google Routes Proxy ----------------
+type LatLng = { latitude: number; longitude: number }
+type Waypoint = { location: { latLng: LatLng } }
 type ComputeRoutesRequest = {
   origin: Waypoint
   destination: Waypoint
@@ -95,11 +94,7 @@ function isValidLatLng(value: unknown): value is LatLng {
 }
 
 function isValidWaypoint(value: unknown): value is Waypoint {
-  return (
-    isObject(value) &&
-    isObject(value.location) &&
-    isValidLatLng(value.location.latLng)
-  )
+  return isObject(value) && isObject(value.location) && isValidLatLng(value.location.latLng)
 }
 
 function normalizeComputeRoutesBody(body: unknown): ComputeRoutesRequest | null {
@@ -118,17 +113,10 @@ function normalizeComputeRoutesBody(body: unknown): ComputeRoutesRequest | null 
         : "TRAFFIC_AWARE",
   }
 
-  if (typeof body.departureTime === "string") {
-    normalized.departureTime = body.departureTime
-  }
-
-  if (Array.isArray(body.intermediates) && body.intermediates.every(isValidWaypoint)) {
+  if (typeof body.departureTime === "string") normalized.departureTime = body.departureTime
+  if (Array.isArray(body.intermediates) && body.intermediates.every(isValidWaypoint))
     normalized.intermediates = body.intermediates
-  }
-
-  if (body.units === "METRIC" || body.units === "IMPERIAL") {
-    normalized.units = body.units
-  }
+  if (body.units === "METRIC" || body.units === "IMPERIAL") normalized.units = body.units
 
   return normalized
 }
@@ -136,59 +124,70 @@ function normalizeComputeRoutesBody(body: unknown): ComputeRoutesRequest | null 
 app.post("/api/computeRoutes", async (req, res) => {
   try {
     const normalizedBody = normalizeComputeRoutesBody(req.body)
-
-    if (!normalizedBody) {
-      return res.status(400).json({ error: "Invalid computeRoutes payload" })
-    }
+    if (!normalizedBody) return res.status(400).json({ error: "Invalid computeRoutes payload" })
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 8000)
 
     try {
-      const response = await fetch(
-        "https://routes.googleapis.com/directions/v2:computeRoutes",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
-            "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
-          },
-          body: JSON.stringify(normalizedBody),
-          signal: controller.signal,
+      const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
+          "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
         },
-      )
+        body: JSON.stringify(normalizedBody),
+        signal: controller.signal,
+      })
 
       const text = await response.text()
-
       if (!response.ok) {
         console.error("Routes API error:", response.status, text)
-        return res.status(response.status).json({
-          error: "Routing service unavailable",
-          status: response.status,
-        })
+        return res.status(response.status).json({ error: "Routing service unavailable" })
       }
 
-      try {
-        return res.json(JSON.parse(text))
-      } catch {
-        return res.status(502).json({ error: "Invalid upstream JSON response" })
-      }
+      return res.json(JSON.parse(text))
     } finally {
       clearTimeout(timeoutId)
     }
   } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
+    if (err instanceof Error && err.name === "AbortError")
       return res.status(504).json({ error: "Routing request timed out" })
-    }
-
     console.error("Proxy error:", err)
     return res.status(500).json({ error: "Failed to compute routes" })
   }
 })
 
-app.listen(PORT, () => {
+// ---------------- AI Helper Endpoint ----------------
+app.post("/api/njdrive50-ai", async (req, res) => {
+  try {
+    const { prompt } = req.body
+    if (!prompt || typeof prompt !== "string") {
+      return res.status(400).json({ error: "Missing or invalid prompt" })
+    }
+
+    if (!OPENAI_API_KEY) {
+      return res.status(500).json({ error: "Missing OpenAI API key" })
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: OPENAI_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+    })
+
+    const reply = completion.choices[0]?.message?.content ?? "No response"
+    res.status(200).json({ message: reply })
+  } catch (err) {
+    console.error("AI helper error:", err)
+    res.status(500).json({ error: "AI helper failed" })
+  }
+})
+
+// ---------------- Server Start ----------------
+app.listen(PORT, "0.0.0.0", () => {
   console.log(
-    `Routes API proxy running on http://localhost:${PORT} (${process.env.NODE_ENV ?? "development"})`,
+    `Routes API proxy running on http://192.168.0.157:${PORT} (${process.env.NODE_ENV ?? "development"})`
   )
 })

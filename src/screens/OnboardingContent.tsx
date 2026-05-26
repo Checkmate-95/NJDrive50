@@ -913,7 +913,7 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
             </div>
           </div>
 
-          <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 pb-6 text-white shadow-[0_14px_34px_rgba(10,30,94,0.18)]">
+                    <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 pb-6 text-white shadow-[0_14px_34px_rgba(10,30,94,0.18)]">
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">
@@ -942,8 +942,30 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
             >
               Continue to Dashboard
             </button>
+
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4">
+              <button
+                type="button"
+                onClick={() => setScreen("privacy")}
+                className="flex w-full items-center justify-between py-3 text-sm text-white/70 transition hover:text-white"
+              >
+                <span>Privacy Policy</span>
+                <span className="text-white/30">›</span>
+              </button>
+
+              <div className="h-px w-full bg-white/10" />
+
+              <button
+                type="button"
+                onClick={() => setScreen("terms")}
+                className="flex w-full items-center justify-between py-3 text-sm text-white/70 transition hover:text-white"
+              >
+                <span>Terms of Use</span>
+                <span className="text-white/30">›</span>
+              </button>
+            </div>
           </div>
-        </div>
+          </div>
       </section>
 
       {/* ── Teen Panel ──────────────────────────────────────────────────────── */}

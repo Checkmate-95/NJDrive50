@@ -215,6 +215,32 @@ export default function Settings() {
             </div>
           </SettingsCard>
 
+          {/* ── Legal ──────────────────────────────────────────────────────── */}
+          <SettingsCard
+            eyebrow="Legal"
+            title="Privacy & Terms"
+            description="Review the privacy policy and terms of use for NJDrive50."
+          >
+            <div className="divide-y divide-[#08194A]/8 rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setScreen("privacy")}
+                className="flex min-h-[48px] w-full items-center justify-between px-4 py-3 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
+              >
+                <span>Privacy Policy</span>
+                <span className="text-[#08194A]/30 text-base">›</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setScreen("terms")}
+                className="flex min-h-[48px] w-full items-center justify-between px-4 py-3 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
+              >
+                <span>Terms of Use</span>
+                <span className="text-[#08194A]/30 text-base">›</span>
+              </button>
+            </div>
+          </SettingsCard>
+
           {isDev && (
             <SettingsCard
               eyebrow="Internal"

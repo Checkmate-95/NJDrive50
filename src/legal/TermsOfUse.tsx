@@ -6,9 +6,13 @@ export default function TermsOfUse() {
   return (
     <div className="relative px-4 py-6 max-w-3xl mx-auto text-[#08194A]">
 
-      {/* X Close Button */}
+      {/* X Close Button — Go Back to Previous Screen */}
       <button
-        onClick={() => setScreen("landing")}
+        onClick={() => {
+          const stack = useNav.getState().stack
+          const previous = stack.at(-2) ?? "settings"
+          setScreen(previous)
+        }}
         className="absolute right-4 top-4 text-[#08194A] text-2xl font-bold"
         aria-label="Close"
       >

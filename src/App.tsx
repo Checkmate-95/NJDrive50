@@ -6,9 +6,9 @@ import HomeDashboard from "./screens/HomeDashboardContent"
 import ActiveDrive from "./screens/ActiveDriveContent"
 import Onboarding from "./screens/OnboardingContent"
 import HomeIntro from "./screens/HomeIntroContent"
-import PrivacyPolicy from "./legal/PrivacyPolicy";
-import TermsOfUse from "./legal/TermsOfUse";
 
+import PrivacyPolicy from "./legal/PrivacyPolicy"
+import TermsOfUse from "./legal/TermsOfUse"
 
 import { Preferences } from "@capacitor/preferences"
 
@@ -70,7 +70,6 @@ export type Screen =
   | "privacy"
   | "terms"
 
-
 const VALID_SCREENS: readonly Screen[] = [
   "landing",
   "intro",
@@ -99,7 +98,6 @@ const VALID_SCREENS: readonly Screen[] = [
   "privacy",
   "terms",
 ] as const
-
 
 function isBrowser() {
   return typeof window !== "undefined"
@@ -269,12 +267,21 @@ export default function App() {
       case "pricing":
         return <PricingPage />
       case "privacy":
-        return <PrivacyPolicy />;
+        return <PrivacyPolicy />
       case "terms":
-        return <TermsOfUse />;
+        return <TermsOfUse />
       default:
         return null
     }
+  }
+
+  // 🚨 BYPASS APPSHELL FOR LEGAL SCREENS
+  if (safeScreen === "privacy") {
+    return <PrivacyPolicy />
+  }
+
+  if (safeScreen === "terms") {
+    return <TermsOfUse />
   }
 
   if (!bootstrapped) {

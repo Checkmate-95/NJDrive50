@@ -513,7 +513,7 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
     }, 600)
   }
 
-  useEffect(() => {
+   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current)
@@ -521,31 +521,47 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
     }
   }, [])
 
-  const handleTeenPhotoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleTeenPhotoChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const result = reader.result
-      if (typeof result === "string") {
-        setCropImageSrc(result)
+      // Capture ref before async FileReader so value clear happens after state set
+      const inputEl = e.target
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const result = reader.result
+        if (typeof result === "string") {
+          setCropImageSrc(result)
+        }
+        // Clear AFTER setting state — avoids Android WebView race
+        inputEl.value = ""
       }
-    }
-    reader.readAsDataURL(file)
-    e.target.value = ""
-  }
+      reader.onerror = () => {
+        inputEl.value = ""
+      }
+      reader.readAsDataURL(file)
+    },
+    []
+  )
 
-  const handleTeenPhotoCropSave = (croppedDataUrl: string) => {
-    setGlobalTeenPhoto(croppedDataUrl)
-    persistOnboarding({ teenPhoto: croppedDataUrl })
-    setCropImageSrc(null)
-  }
+  const handleTeenPhotoCropSave = useCallback(
+    (croppedDataUrl: string) => {
+      setGlobalTeenPhoto(croppedDataUrl)
+      persistOnboarding({ teenPhoto: croppedDataUrl })
+      setCropImageSrc(null)
+    },
+    // persistOnboarding always reads latestDataRef — no closure dep needed
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
 
-  const handleRemoveTeenPhoto = () => {
+  const handleRemoveTeenPhoto = useCallback(() => {
     setGlobalTeenPhoto("")
     persistOnboarding({ teenPhoto: "" })
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const teenComplete = Boolean(teenName.trim() && teenBirthday.trim())
   const parentComplete = Boolean(parentName.trim() && relationship.trim())

@@ -356,8 +356,8 @@ const ParentPanelContent = memo(function ParentPanelContent({
 // ─── OnboardingContent ───────────────────────────────────────────────────────
 
 export default function OnboardingContent({ setScreen }: OnboardingContentProps) {
-  const initialDataRef = useRef<OnboardingData>(loadOnboardingData())
-  const saved = initialDataRef.current
+  const [saved, setSaved] = useState<OnboardingData>(() => loadOnboardingData())
+
 
   const { isLoaded } = useMapContext()
 
@@ -447,10 +447,12 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   ])
 
   const persistOnboarding = (overrides: Partial<OnboardingData> = {}) => {
-    const updated: OnboardingData = { ...latestDataRef.current, ...overrides }
-    latestDataRef.current = updated
-    saveOnboardingData(updated)
-  }
+  const updated = { ...latestDataRef.current, ...overrides }
+  latestDataRef.current = updated
+  setSaved(updated) // <-- NEW
+  saveOnboardingData(updated)
+}
+
 
   const clearResolvedAddressState = () => {
     setHomeTown("")

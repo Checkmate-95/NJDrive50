@@ -1,18 +1,14 @@
 import { useNav } from "../state/navStore"
 
 export default function TermsOfUse() {
-  const { setScreen } = useNav()
+  const { goBack } = useNav()
 
   return (
     <div className="relative px-4 py-6 max-w-3xl mx-auto text-[#08194A]">
 
-      {/* X Close Button — Go Back to Previous Screen */}
+      {/* X Close Button — Proper Back Navigation */}
       <button
-        onClick={() => {
-          const stack = useNav.getState().stack
-          const previous = stack.at(-2) ?? "settings"
-          setScreen(previous)
-        }}
+        onClick={() => goBack("settings")}
         className="absolute right-4 top-4 text-[#08194A] text-2xl font-bold"
         aria-label="Close"
       >

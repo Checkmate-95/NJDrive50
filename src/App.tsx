@@ -275,14 +275,7 @@ export default function App() {
     }
   }
 
-  // 🚨 BYPASS APPSHELL FOR LEGAL SCREENS
-  if (safeScreen === "privacy") {
-    return <PrivacyPolicy />
-  }
-
-  if (safeScreen === "terms") {
-    return <TermsOfUse />
-  }
+  
 
   if (!bootstrapped) {
     return (

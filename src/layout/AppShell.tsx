@@ -7,7 +7,16 @@ type AppShellProps = PropsWithChildren<{
   active: Screen
 }>
 
-const CHROMELESS_SCREENS: Screen[] = ["landing", "pricing", "intro", "onboarding"]
+// Screens that should NOT show the cockpit chrome
+// (Landing, Pricing, Intro, Onboarding, Privacy, Terms)
+const CHROMELESS_SCREENS: Screen[] = [
+  "landing",
+  "pricing",
+  "intro",
+  "onboarding",
+  "privacy",
+  "terms",
+]
 
 export default function AppShell({
   children,
@@ -15,6 +24,9 @@ export default function AppShell({
   active,
 }: AppShellProps) {
   const chromeHidden = CHROMELESS_SCREENS.includes(active)
+
+  // Legal screens need a white background instead of blue
+  const isLegal = active === "privacy" || active === "terms"
 
   const itemClasses = (screen: Screen) =>
     [
@@ -24,14 +36,22 @@ export default function AppShell({
       active === screen ? "text-[#f9c80e]" : "text-white/88 hover:text-[#f9c80e]",
     ].join(" ")
 
+  // CHROMELESS MODE (Landing, Intro, Onboarding, Pricing, Privacy, Terms)
   if (chromeHidden) {
     return (
-      <div className="relative min-h-dvh w-full overflow-x-hidden bg-[#08194A]">
+      <div
+        className={
+          isLegal
+            ? "relative min-h-dvh w-full overflow-x-hidden bg-white text-[#08194A]"
+            : "relative min-h-dvh w-full overflow-x-hidden bg-[#08194A]"
+        }
+      >
         {children}
       </div>
     )
   }
 
+  // FULL COCKPIT MODE
   return (
     <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#08194A]">
       <header className="w-full shrink-0 bg-[#08194A] px-4 pb-3 pt-5 sm:pb-4 sm:pt-6">

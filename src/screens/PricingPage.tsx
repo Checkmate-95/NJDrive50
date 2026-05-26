@@ -535,6 +535,42 @@ export default function PricingPage() {
                 </div>
               </aside>
             </section>
+
+            <section className="rounded-[28px] border border-[#08194A]/10 bg-[#08194A] px-4 py-5 text-white shadow-[0_8px_24px_rgba(8,25,74,0.14)] sm:px-6 sm:py-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#F9C80E]/80">
+                Legal
+              </p>
+
+              <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
+                Privacy and terms
+              </h2>
+
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
+                Review the NJDrive50 privacy policy and terms before starting a trial or choosing a billing plan.
+              </p>
+
+              <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                <button
+                  type="button"
+                  onClick={() => setScreen("privacy")}
+                  className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white"
+                >
+                  <span>Privacy Policy</span>
+                  <span className="text-white/35">›</span>
+                </button>
+
+                <div className="h-px w-full bg-white/10" />
+
+                <button
+                  type="button"
+                  onClick={() => setScreen("terms")}
+                  className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white"
+                >
+                  <span>Terms of Use</span>
+                  <span className="text-white/35">›</span>
+                </button>
+              </div>
+            </section>
           </main>
         </div>
       </div>

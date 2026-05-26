@@ -9,7 +9,7 @@ export default function HomeIntroContent({
   setScreen,
 }: HomeIntroContentProps) {
   return (
-    <div className="w-full px-3 pt-4 pb-6 text-[#08194A] sm:px-4">
+    <div className="w-full px-3 pb-6 pt-4 text-[#08194A] sm:px-4">
       <div className="flex w-full justify-center">
         <section className="relative w-full max-w-2xl overflow-hidden rounded-[32px] border border-[#08194A]/8 bg-white px-5 py-6 shadow-[0_14px_36px_rgba(0,0,0,0.08)] sm:px-7 sm:py-8">
           <img
@@ -115,6 +115,28 @@ export default function HomeIntroContent({
               Setup takes only a few minutes and helps keep your driving records
               organized from the start.
             </p>
+
+            <div className="mt-4 rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC]/95 px-4">
+              <button
+                type="button"
+                onClick={() => setScreen("privacy")}
+                className="flex w-full items-center justify-between py-3 text-sm text-[#08194A]/70 transition hover:text-[#08194A]"
+              >
+                <span>Privacy Policy</span>
+                <span className="text-[#08194A]/30">›</span>
+              </button>
+
+              <div className="h-px w-full bg-[#08194A]/10" />
+
+              <button
+                type="button"
+                onClick={() => setScreen("terms")}
+                className="flex w-full items-center justify-between py-3 text-sm text-[#08194A]/70 transition hover:text-[#08194A]"
+              >
+                <span>Terms of Use</span>
+                <span className="text-[#08194A]/30">›</span>
+              </button>
+            </div>
           </div>
         </section>
       </div>

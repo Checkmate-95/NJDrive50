@@ -1,6 +1,20 @@
+import { useNav } from "../state/navStore"
+
 export default function TermsOfUse() {
+  const { setScreen } = useNav()
+
   return (
-    <div className="px-4 py-6 max-w-3xl mx-auto text-[#08194A]">
+    <div className="relative px-4 py-6 max-w-3xl mx-auto text-[#08194A]">
+
+      {/* X Close Button */}
+      <button
+        onClick={() => setScreen("landing")}
+        className="absolute right-4 top-4 text-[#08194A] text-2xl font-bold"
+        aria-label="Close"
+      >
+        ×
+      </button>
+
       <h1 className="text-2xl font-bold mb-4">NJDrive50 — Terms of Use</h1>
       <p className="text-sm text-[#0A1E5E]/70 mb-6">
         Effective Date: May 26, 2026 — ORGANIC BRANDS LLC
@@ -86,5 +100,5 @@ export default function TermsOfUse() {
         For legal or support inquiries: support@njdrive50.com
       </p>
     </div>
-  );
+  )
 }

@@ -6,6 +6,9 @@ import HomeDashboard from "./screens/HomeDashboardContent"
 import ActiveDrive from "./screens/ActiveDriveContent"
 import Onboarding from "./screens/OnboardingContent"
 import HomeIntro from "./screens/HomeIntroContent"
+import PrivacyPolicy from "./legal/PrivacyPolicy";
+import TermsOfUse from "./legal/TermsOfUse";
+
 
 import { Preferences } from "@capacitor/preferences"
 
@@ -64,6 +67,9 @@ export type Screen =
   | "dataCleared"
   | "practiceTest"
   | "pricing"
+  | "privacy"
+  | "terms"
+
 
 const VALID_SCREENS: readonly Screen[] = [
   "landing",
@@ -90,7 +96,10 @@ const VALID_SCREENS: readonly Screen[] = [
   "dataCleared",
   "practiceTest",
   "pricing",
+  "privacy",
+  "terms",
 ] as const
+
 
 function isBrowser() {
   return typeof window !== "undefined"
@@ -259,6 +268,10 @@ export default function App() {
         return <DataCleared />
       case "pricing":
         return <PricingPage />
+      case "privacy":
+        return <PrivacyPolicy />;
+      case "terms":
+        return <TermsOfUse />;
       default:
         return null
     }

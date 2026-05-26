@@ -1,5 +1,5 @@
-// src/navigation/navMap.ts
 import type { Screen } from "../App"
+
 
 type NavShape = {
   [K in Screen]: Partial<Record<string, Screen>>
@@ -35,6 +35,8 @@ export const NAV = {
     helpFaq: "helpFaq",
     aiHelper: "aiHelper",
     practiceTest: "practiceTest",
+    privacy: "privacy",
+    terms: "terms",
   },
 
   active: {
@@ -61,11 +63,15 @@ export const NAV = {
     home: "home",
     helpFaq: "helpFaq",
     aiHelper: "aiHelper",
+    privacy: "privacy",
+    terms: "terms",
   },
 
   milestones: {
     summary: "summary",
     home: "home",
+    privacy: "privacy",
+    terms: "terms",
   },
 
   driveHistory: {},
@@ -85,6 +91,8 @@ export const NAV = {
     teenDriverRules: "teenDriverRules",
     reminderLog: "reminderLog",
     close: "home",
+    privacy: "privacy",
+    terms: "terms",
   },
 
   reminderSettings: {},
@@ -109,6 +117,10 @@ export const NAV = {
   aiHelper: {},
   teenDriverRules: {},
   practiceTest: {},
+
+  // NEW LEGAL SCREENS
+  privacy: {},
+  terms: {},
 } as const satisfies NavShape
 
 export type NavMap = typeof NAV

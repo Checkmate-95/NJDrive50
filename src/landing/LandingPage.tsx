@@ -722,12 +722,22 @@ export default function LandingPage() {
 
             <div className="flex flex-col gap-2 text-sm text-white/40">
               <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">Legal</p>
-              <a href="#privacy" className="min-h-[44px] py-1 hover:text-white/70">
-                Privacy Policy
-              </a>
-              <a href="#terms" className="min-h-[44px] py-1 hover:text-white/70">
-                Terms of Use
-              </a>
+              <button
+  type="button"
+  onClick={() => setScreen("privacy")}
+  className="min-h-[44px] py-1 text-left hover:text-white/70"
+>
+  Privacy Policy
+</button>
+
+<button
+  type="button"
+  onClick={() => setScreen("terms")}
+  className="min-h-[44px] py-1 text-left hover:text-white/70"
+>
+  Terms of Use
+</button>
+
             </div>
 
             <div className="flex flex-col gap-2 text-sm text-white/40">

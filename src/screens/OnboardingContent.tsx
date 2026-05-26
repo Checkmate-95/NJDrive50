@@ -360,160 +360,160 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   }
 
   return (
-    <div
-      className="min-h-[100dvh] w-full overflow-y-auto px-3 pb-40 pt-4 text-white sm:px-4"
-      style={{ WebkitOverflowScrolling: "touch" }}
-    >
-      {cropImageSrc && (
-        <PhotoCropModal
-          imageSrc={cropImageSrc}
-          onCancel={() => setCropImageSrc(null)}
-          onSave={handleTeenPhotoCropSave}
-        />
-      )}
+  <div
+    className="min-h-[100dvh] w-full overflow-hidden px-3 pb-40 pt-4 text-white sm:px-4"
+    style={{ WebkitOverflowScrolling: "touch" }}
+  >
+    {cropImageSrc && (
+      <PhotoCropModal
+        imageSrc={cropImageSrc}
+        onCancel={() => setCropImageSrc(null)}
+        onSave={handleTeenPhotoCropSave}
+      />
+    )}
 
-      <section className="relative mx-auto w-full min-w-0 max-w-[42rem] overflow-hidden rounded-[28px] border border-white/15 bg-[#F8FAFD] shadow-[0_20px_55px_rgba(0,0,0,0.18)]">
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#f9c80e] via-white/80 to-[#0A1E5E]" />
+    <section className="relative mx-auto w-full min-w-0 max-w-[42rem] overflow-hidden rounded-[28px] border border-white/15 bg-[#F8FAFD] shadow-[0_20px_55px_rgba(0,0,0,0.18)]">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#f9c80e] via-white/80 to-[#0A1E5E]" />
 
-        <div className="p-5 pb-10 pt-6 sm:p-6 sm:pb-12 sm:pt-7">
-          <div className="rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white shadow-inner">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-[#f9c80e]/90">
-                  Driver Setup
-                </p>
-                <h2 className="mt-2 text-2xl font-extrabold leading-tight">
-                  Let&apos;s set up your driving profile
-                </h2>
-                <p className="mt-2 max-w-[26ch] text-sm leading-relaxed text-white/75">
-                  Add the teen driver, parent contact, and permit details so
-                  progress tracking and reminders are ready from the start.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-white/85">
-                    TEEN PROFILE
-                  </span>
-                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-white/85">
-                    PARENT CONTACT
-                  </span>
-                  <span className="rounded-full border border-[#f9c80e]/35 bg-[#f9c80e]/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-[#f9c80e]">
-                    NJ PERMIT
-                  </span>
-                </div>
-              </div>
-
-              <div className="shrink-0">
-                <input
-                  ref={photoInputRef}
-                  id="teenPhotoInput"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleTeenPhotoChange}
-                />
-
-                <button
-                  type="button"
-                  onClick={openPhotoPicker}
-                  aria-label="Upload teen photo"
-                  className="group relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#f9c80e]/70 bg-white/10 shadow-[0_0_18px_rgba(249,200,14,0.18)] transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_22px_rgba(249,200,14,0.32)]"
-                >
-                  {teenPhoto ? (
-                    <img
-                      src={teenPhoto}
-                      alt="Teen profile preview"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="px-2 text-center">
-                      <span className="block text-[11px] font-bold uppercase tracking-[0.16em] text-[#f9c80e]">
-                        Add
-                      </span>
-                      <span className="block text-[11px] text-white/80">Photo</span>
-                    </div>
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={openPhotoPicker}
-                  className="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-[11px] font-semibold text-white/85 transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_16px_rgba(249,200,14,0.22)]"
-                >
-                  {teenPhoto ? "Edit" : "Upload"}
-                </button>
-
-                {teenPhoto && (
-                  <button
-                    type="button"
-                    onClick={handleRemoveTeenPhoto}
-                    className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] font-semibold text-white/70 transition duration-200 hover:bg-white/10 hover:text-white"
-                  >
-                    Remove
-                  </button>
-                )}
+      <div className="p-5 pb-10 pt-6 sm:p-6 sm:pb-12 sm:pt-7">
+        <div className="rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white shadow-inner">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-[#f9c80e]/90">
+                Driver Setup
+              </p>
+              <h2 className="mt-2 text-2xl font-extrabold leading-tight">
+                Let&apos;s set up your driving profile
+              </h2>
+              <p className="mt-2 max-w-[26ch] text-sm leading-relaxed text-white/75">
+                Add the teen driver, parent contact, and permit details so
+                progress tracking and reminders are ready from the start.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-white/85">
+                  TEEN PROFILE
+                </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-white/85">
+                  PARENT CONTACT
+                </span>
+                <span className="rounded-full border border-[#f9c80e]/35 bg-[#f9c80e]/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-[#f9c80e]">
+                  NJ PERMIT
+                </span>
               </div>
             </div>
-          </div>
 
-          <div className="mt-5 grid gap-3">
-            <button
-              type="button"
-              onClick={() => setShowTeenPanel(true)}
-              className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-[1px] hover:border-[#0A1E5E]/20 hover:shadow-[0_0_18px_rgba(249,200,14,0.14)]"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">
-                    Driver Profile
-                  </p>
-                  <h3 className="mt-1 text-base font-bold text-[#0A1E5E]">
-                    Teen Driver
-                  </h3>
-                  <p className="mt-1 text-sm text-[#0A1E5E]/72">
-                    Add birthday, phone number, and profile details.
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold tracking-[0.14em] ${
-                    teenComplete
-                      ? "border border-green-600/20 bg-green-50 text-green-700"
-                      : "border border-[#0A1E5E]/10 bg-white text-[#0A1E5E]/65"
-                  }`}
-                >
-                  {teenComplete ? "SAVED" : "OPEN"}
-                </span>
-              </div>
-            </button>
+            <div className="shrink-0">
+              <input
+                ref={photoInputRef}
+                id="teenPhotoInput"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleTeenPhotoChange}
+              />
 
-            <button
-              type="button"
-              onClick={() => setShowParentPanel(true)}
-              className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-[1px] hover:border-[#0A1E5E]/20 hover:shadow-[0_0_18px_rgba(249,200,14,0.14)]"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">
-                    Contact Setup
-                  </p>
-                  <h3 className="mt-1 text-base font-bold text-[#0A1E5E]">
-                    Parent / Guardian
-                  </h3>
-                  <p className="mt-1 text-sm text-[#0A1E5E]/72">
-                    Add the adult contact who helps supervise and track progress.
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold tracking-[0.14em] ${
-                    parentComplete
-                      ? "border border-green-600/20 bg-green-50 text-green-700"
-                      : "border border-[#0A1E5E]/10 bg-white text-[#0A1E5E]/65"
-                  }`}
+              <button
+                type="button"
+                onClick={openPhotoPicker}
+                aria-label="Upload teen photo"
+                className="group relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#f9c80e]/70 bg-white/10 shadow-[0_0_18px_rgba(249,200,14,0.18)] transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_22px_rgba(249,200,14,0.32)]"
+              >
+                {teenPhoto ? (
+                  <img
+                    src={teenPhoto}
+                    alt="Teen profile preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="px-2 text-center">
+                    <span className="block text-[11px] font-bold uppercase tracking-[0.16em] text-[#f9c80e]">
+                      Add
+                    </span>
+                    <span className="block text-[11px] text-white/80">Photo</span>
+                  </div>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={openPhotoPicker}
+                className="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-[11px] font-semibold text-white/85 transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_16px_rgba(249,200,14,0.22)]"
+              >
+                {teenPhoto ? "Edit" : "Upload"}
+              </button>
+
+              {teenPhoto && (
+                <button
+                  type="button"
+                  onClick={handleRemoveTeenPhoto}
+                  className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] font-semibold text-white/70 transition duration-200 hover:bg-white/10 hover:text-white"
                 >
-                  {parentComplete ? "SAVED" : "OPEN"}
-                </span>
-              </div>
-            </button>
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          <button
+            type="button"
+            onClick={() => setShowTeenPanel(true)}
+            className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-[1px] hover:border-[#0A1E5E]/20 hover:shadow-[0_0_18px_rgba(249,200,14,0.14)]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">
+                  Driver Profile
+                </p>
+                <h3 className="mt-1 text-base font-bold text-[#0A1E5E]">
+                  Teen Driver
+                </h3>
+                <p className="mt-1 text-sm text-[#0A1E5E]/72">
+                  Add birthday, phone number, and profile details.
+                </p>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold tracking-[0.14em] ${
+                  teenComplete
+                    ? "border border-green-600/20 bg-green-50 text-green-700"
+                    : "border border-[#0A1E5E]/10 bg-white text-[#0A1E5E]/65"
+                }`}
+              >
+                {teenComplete ? "SAVED" : "OPEN"}
+              </span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowParentPanel(true)}
+            className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-4 text-left shadow-sm transition duration-200 hover:-translate-y-[1px] hover:border-[#0A1E5E]/20 hover:shadow-[0_0_18px_rgba(249,200,14,0.14)]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">
+                  Contact Setup
+                </p>
+                <h3 className="mt-1 text-base font-bold text-[#0A1E5E]">
+                  Parent / Guardian
+                </h3>
+                <p className="mt-1 text-sm text-[#0A1E5E]/72">
+                  Add the adult contact who helps supervise and track progress.
+                </p>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold tracking-[0.14em] ${
+                  parentComplete
+                    ? "border border-green-600/20 bg-green-50 text-green-700"
+                    : "border border-[#0A1E5E]/10 bg-white text-[#0A1E5E]/65"
+                }`}
+              >
+                {parentComplete ? "SAVED" : "OPEN"}
+              </span>
+            </div>
+          </button>
+        </div>
 
           <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4 shadow-inner">
             <div className="mb-4">

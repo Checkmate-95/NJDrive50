@@ -38,6 +38,13 @@ export default function BottomPanel({
   const resolvedTitleId = titleId ?? fallbackTitleId
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
 
+  // ✅ Stable ref for onClose — never causes effect to re-run
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  })
+
+  // ✅ Focus-on-open effect — depends ONLY on `open`, not on onClose or initialFocusRef
   useEffect(() => {
     if (!open) return
 
@@ -52,25 +59,33 @@ export default function BottomPanel({
       (panel?.querySelector(FOCUSABLE_SELECTOR) as HTMLElement | null) ??
       panel
 
-    window.setTimeout(() => {
+    // ✅ Only focus when the panel first opens — store the timer ID and cancel on cleanup
+    const timerId = window.setTimeout(() => {
       focusTarget?.focus()
-    }, 0)
+    }, 50)
+
+    return () => {
+      clearTimeout(timerId)  // ✅ Cancel if panel closes before timeout fires
+      document.body.style.overflow = originalOverflow
+      previouslyFocusedRef.current?.focus?.()
+    }
+  // ✅ Only re-run when open changes — NOT on every render
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ✅ Separate stable effect for the Escape key listener
+  useEffect(() => {
+    if (!open) return
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault()
-        onClose()
+        onCloseRef.current()  // ✅ Always calls latest onClose via ref
       }
     }
 
     document.addEventListener("keydown", onKey)
-
-    return () => {
-      document.removeEventListener("keydown", onKey)
-      document.body.style.overflow = originalOverflow
-      previouslyFocusedRef.current?.focus?.()
-    }
-  }, [open, onClose, initialFocusRef])
+    return () => document.removeEventListener("keydown", onKey)
+  }, [open])  // ✅ Only re-run when open changes
 
   if (!open) return null
 

@@ -13,7 +13,6 @@ import {
 } from "../state/activeDriveStore"
 // ✅ CHANGED 1: removed computeDayNightSplit — no longer needed
 // ✅ CHANGED 2: kept getSolarWindowForDate — still used in handlePress for session metadata
-import { getSolarWindowForDate } from "../engine/solarEngine"
 // ✅ CHANGED 3: removed loadOnboardingData — snapshot now trusts DMV buckets directly
 import { Geolocation } from "@capacitor/geolocation"
 import { Capacitor } from "@capacitor/core"
@@ -652,156 +651,132 @@ function ActiveDriveContent({
 
 
   const handlePress = async () => {
-    if (isStopping || isPreviewing || isPreparingStop) return
+  if (isStopping || isPreviewing || isPreparingStop) return
 
+  if (session.isRunning) {
+    pauseDrive()
+    setShowStopConfirm(false)
+    return
+  }
 
-    if (session.isRunning) {
-      pauseDrive()
-      setShowStopConfirm(false)
-      return
-    }
+  // ✅ Resuming a paused drive — instant, GPS updates coords in background
+  if (session.isActive) {
+    resumeDrive()
+    setShowStopConfirm(false)
+    setLocationError(null)
 
+    requestAndGetLocation().then((coord) => {
+      if (coord && mountedRef.current) {
+        primeSessionCoord(coord)
+      }
+    })
+    return
+  }
 
-    const coord = await requestAndGetLocation()
+  // ✅ Starting a fresh drive — timer starts immediately, GPS resolves in background
+  startDrive(Date.now(), null)
+  setShowStopConfirm(false)
+  setLocationError(null)
 
+  requestAndGetLocation().then((coord) => {
+    if (!mountedRef.current) return
 
     if (!coord) {
-      setLocationError("Location access is required to start drive tracking.")
+      setLocationError("Location access is required for accurate mileage.")
       return
     }
 
+    setLocationError(null)
+    primeSessionCoord(coord)
+  })
+}
 
-    try {
-      if (!session.isActive) {
-        const today = new Date()
-        // ✅ CHANGED 5: solar window still passed for session metadata storage,
-        // but resolveDriveMode in the store now ignores it — DMV rule takes over
-        const solarWindow = getSolarWindowForDate(coord.lat, coord.lng, today)
+const handleStopRequest = () => {
+  if (saveDisabled) return
 
+  wasRunningBeforeStopRef.current = session.isRunning
 
-        startDrive(Date.now(), coord, {
-          sunrise: solarWindow.sunrise ? solarWindow.sunrise.getTime() : 0,
-          sunset: solarWindow.sunset ? solarWindow.sunset.getTime() : 0,
-        })
-      } else {
-        primeSessionCoord(coord)
-        resumeDrive()
-      }
-
-
-      setShowStopConfirm(false)
-      setLocationError(null)
-    } catch (error) {
-      console.error("Location error:", error)
-      setLocationError("Location access is required to start drive tracking.")
-    }
+  if (session.isRunning) {
+    pauseDrive()
   }
 
+  // ✅ Show confirm dialog instantly
+  setShowStopConfirm(true)
+  setIsPreparingStop(true)
 
-  const handleStopRequest = async () => {
-    if (saveDisabled) return
-
-
-    wasRunningBeforeStopRef.current = session.isRunning
-
-
-    if (session.isRunning) {
-      pauseDrive()
-    }
-
-
-    setIsPreparingStop(true)
-    setShowStopConfirm(true)
-
-
-    try {
-      await startFrozenSnapshot({ isPreview: false })
-    } finally {
-      if (mountedRef.current) {
-        setIsPreparingStop(false)
-      }
-    }
-  }
-
-
-  const handleCancelStop = () => {
-    activeSnapshotAbortRef.current?.abort()
-    activeSnapshotAbortRef.current = null
-    frozenSnapshotRef.current = null
-    setShowStopConfirm(false)
-    setIsPreparingStop(false)
-
-
-    if (wasRunningBeforeStopRef.current) {
-      resumeDrive()
-    }
-  }
-
-
-  const handleSaveDrive = async () => {
-    if (isSavingRef.current || isPreparingStop) return
-
-
-    isSavingRef.current = true
-    setIsStopping(true)
-
-
-    try {
-      clearAllLoops()
-
-
-      const finalizedDrive = frozenSnapshotRef.current
-        ? await frozenSnapshotRef.current
-        : await startFrozenSnapshot({ isPreview: false })
-
-
-      if (!finalizedDrive) return
-
-
-      const { isPreview: _stripped, ...driveToSave } = finalizedDrive
-
-
-      saveDrive(driveToSave)
-      setCurrentDrive(driveToSave)
-      setShowStopConfirm(false)
-
-
-      setScreen("todaysDrive")
-      hardReset()
-    } catch (err) {
-      console.error("[ActiveDrive] Save failed:", err)
-      setLocationError(
-        "Drive save failed. Please try again before closing the app."
-      )
-    } finally {
-      isSavingRef.current = false
-      setIsStopping(false)
+  // ✅ Snapshot builds in background while user reads the confirm dialog
+  startFrozenSnapshot({ isPreview: false }).finally(() => {
+    if (mountedRef.current) {
       setIsPreparingStop(false)
-      frozenSnapshotRef.current = null
-      activeSnapshotAbortRef.current = null
-      wasRunningBeforeStopRef.current = false
     }
+  })
+}
+
+const handleCancelStop = () => {
+  activeSnapshotAbortRef.current?.abort()
+  activeSnapshotAbortRef.current = null
+  frozenSnapshotRef.current = null
+  setShowStopConfirm(false)
+  setIsPreparingStop(false)
+
+  if (wasRunningBeforeStopRef.current) {
+    resumeDrive()
   }
+}
 
+const handleSaveDrive = async () => {
+  if (isSavingRef.current || isPreparingStop) return
 
-  const handlePreviewSummary = async () => {
-    if (previewDisabled) return
+  isSavingRef.current = true
+  setIsStopping(true)
 
+  try {
+    clearAllLoops()
 
-    try {
-      setIsPreviewing(true)
+    const finalizedDrive = frozenSnapshotRef.current
+      ? await frozenSnapshotRef.current
+      : await startFrozenSnapshot({ isPreview: false })
 
+    if (!finalizedDrive) return
 
-      const previewDrive = await startFrozenSnapshot({ isPreview: true })
-      if (!previewDrive) return
+    const { isPreview: _stripped, ...driveToSave } = finalizedDrive
 
+    saveDrive(driveToSave)
+    setCurrentDrive(driveToSave)
+    setShowStopConfirm(false)
 
-      setCurrentDrive(previewDrive)
-      setScreen("summary")
-    } finally {
-      setIsPreviewing(false)
-    }
+    setScreen("todaysDrive")
+    hardReset()
+  } catch (err) {
+    console.error("[ActiveDrive] Save failed:", err)
+    setLocationError(
+      "Drive save failed. Please try again before closing the app."
+    )
+  } finally {
+    isSavingRef.current = false
+    setIsStopping(false)
+    setIsPreparingStop(false)
+    frozenSnapshotRef.current = null
+    activeSnapshotAbortRef.current = null
+    wasRunningBeforeStopRef.current = false
   }
+}
+
+const handlePreviewSummary = async () => {
+  if (previewDisabled) return
+
+  try {
+    setIsPreviewing(true)
+
+    const previewDrive = await startFrozenSnapshot({ isPreview: true })
+    if (!previewDrive) return
+
+    setCurrentDrive(previewDrive)
+    setScreen("summary")
+  } finally {
+    setIsPreviewing(false)
+  }
+}
 
 
   return (

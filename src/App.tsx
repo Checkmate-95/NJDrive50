@@ -48,20 +48,26 @@ export type Screen =
   | "onboarding"
   | "home"
   | "active"
+  | "activeDrive"    // ✅ added — bottom nav "Start Drive" slot
   | "todaysDrive"
   | "summary"
   | "milestones"
   | "driveHistory"
   | "export"
+  | "exportLogs"     // ✅ added — More drawer alias
   | "settings"
   | "reminderSettings"
   | "reminderLog"
   | "dmv"
   | "dmvPrep"
+  | "paperwork"      // ✅ added — More drawer
   | "share"
   | "helpFaq"
   | "aiHelper"
+  | "aiFaq"          // ✅ added — More drawer alias
   | "teenDriverRules"
+  | "teenInfo"       // ✅ added — More drawer
+  | "parentInfo"     // ✅ added — More drawer
   | "manageProfile"
   | "restartOnboarding"
   | "dataCleared"
@@ -69,6 +75,7 @@ export type Screen =
   | "pricing"
   | "privacy"
   | "terms"
+  | "about"          // ✅ added — More drawer
 
 const VALID_SCREENS: readonly Screen[] = [
   "landing",
@@ -76,20 +83,26 @@ const VALID_SCREENS: readonly Screen[] = [
   "onboarding",
   "home",
   "active",
+  "activeDrive",
   "todaysDrive",
   "summary",
   "milestones",
   "driveHistory",
   "export",
+  "exportLogs",
   "settings",
   "reminderSettings",
   "reminderLog",
   "dmv",
   "dmvPrep",
+  "paperwork",
   "share",
   "helpFaq",
   "aiHelper",
+  "aiFaq",
   "teenDriverRules",
+  "teenInfo",
+  "parentInfo",
   "manageProfile",
   "restartOnboarding",
   "dataCleared",
@@ -97,6 +110,7 @@ const VALID_SCREENS: readonly Screen[] = [
   "pricing",
   "privacy",
   "terms",
+  "about",
 ] as const
 
 function isBrowser() {
@@ -226,16 +240,24 @@ export default function App() {
         return <Onboarding setScreen={setScreenCompat} />
       case "home":
         return <HomeDashboard setScreen={setScreenCompat} />
+
+      // ✅ Both "active" (legacy) and "activeDrive" (new nav) render the same screen
       case "active":
+      case "activeDrive":
         return <ActiveDrive setScreen={setScreenCompat} setCurrentDrive={setCurrentDrive} />
+
       case "todaysDrive":
         return <TodaysDrive drive={currentDrive} />
       case "summary":
         return <DriveSummary setScreen={setScreenCompat} />
       case "driveHistory":
         return <DriveHistoryContent />
+
+      // ✅ Both "export" (legacy) and "exportLogs" (new nav) render the same screen
       case "export":
+      case "exportLogs":
         return <ExportLog setScreen={setScreenCompat} />
+
       case "settings":
         return <Settings />
       case "teenDriverRules":
@@ -252,12 +274,27 @@ export default function App() {
         return <DMVBundle />
       case "dmvPrep":
         return <DMVAppointmentPrep />
+
+      // ✅ "paperwork" routes to DMVBundle — best existing match
+      case "paperwork":
+        return <DMVBundle />
+
       case "share":
         return <ShareLogView />
       case "helpFaq":
         return <HelpFaq />
+
+      // ✅ Both "aiHelper" (legacy) and "aiFaq" (new nav) render the same screen
       case "aiHelper":
+      case "aiFaq":
         return <AIHelperScreen />
+
+      // ✅ "teenInfo" and "parentInfo" route to Onboarding — best existing match
+      case "teenInfo":
+      case "parentInfo":
+      case "manageProfile":
+        return <Onboarding setScreen={setScreenCompat} />
+
       case "practiceTest":
         return <PublicPracticeTestPage />
       case "restartOnboarding":
@@ -270,12 +307,15 @@ export default function App() {
         return <PrivacyPolicy />
       case "terms":
         return <TermsOfUse />
+
+      // ✅ "about" — placeholder until you build an About screen
+      case "about":
+        return <Settings />
+
       default:
         return null
     }
   }
-
-  
 
   if (!bootstrapped) {
     return (

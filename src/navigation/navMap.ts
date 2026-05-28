@@ -1,6 +1,5 @@
 import type { Screen } from "../App"
 
-
 type NavShape = {
   [K in Screen]: Partial<Record<string, Screen>>
 }
@@ -118,9 +117,31 @@ export const NAV = {
   teenDriverRules: {},
   practiceTest: {},
 
-  // NEW LEGAL SCREENS
   privacy: {},
   terms: {},
+
+  // ✅ NEW — added to satisfy NavShape
+  activeDrive: {
+    confirm: "todaysDrive",
+    summary: "summary",
+    startNew: "activeDrive",
+  },
+  exportLogs: {
+    history: "driveHistory",
+  },
+  paperwork: {
+    home: "home",
+  },
+  aiFaq: {},
+  teenInfo: {
+    home: "home",
+  },
+  parentInfo: {
+    home: "home",
+  },
+  about: {
+    home: "home",
+  },
 } as const satisfies NavShape
 
 export type NavMap = typeof NAV

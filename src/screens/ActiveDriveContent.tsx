@@ -1076,7 +1076,7 @@ function ActiveDriveContent({
                   </div>
 
 
-                  <div className="mt-3 flex flex-wrap justify-center gap-2">
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {["Clear", "Rain", "Snow", "Fog"].map((w) => {
                       const isSelected = session.weather === w
                       return (

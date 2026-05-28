@@ -2,6 +2,8 @@
 
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
+// ✅ CHANGED 1: added isNightByDMV import
+import { isNightByDMV } from "../engine/solarEngine"
 
 export type DriveMode = "day" | "night"
 export type NightOverride = "auto" | "day" | "night"
@@ -203,25 +205,14 @@ function normalizeSession(value: unknown): ActiveDriveSession {
   }
 }
 
+// ✅ CHANGED 2: replaced resolveDriveMode — now uses DMV fixed rule instead of solar
 function resolveDriveMode(
   now: number,
-  override: NightOverride,
-  solarSunrise: number | null,
-  solarSunset: number | null
+  override: NightOverride
 ): DriveMode {
   if (override === "day") return "day"
   if (override === "night") return "night"
-
-  if (
-    solarSunrise !== null &&
-    solarSunset !== null &&
-    Number.isFinite(solarSunrise) &&
-    Number.isFinite(solarSunset)
-  ) {
-    return now < solarSunrise || now >= solarSunset ? "night" : "day"
-  }
-
-  return "day"
+  return isNightByDMV(new Date(now)) ? "night" : "day"
 }
 
 function flushSessionToNow(
@@ -310,11 +301,14 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         const initialCoord = coord ? normalizeIncomingCoord(coord, now) : null
 
         const override = options?.override ?? "auto"
-        const sunrise = options?.sunrise ?? null
-        const sunset = options?.sunset ?? null
         const weather = options?.weather ?? null
 
-        const currentMode = resolveDriveMode(now, override, sunrise, sunset)
+        // ✅ solarSunrise/solarSunset kept in session shape for backwards compat
+        // but resolveDriveMode no longer uses them
+        const sunrise = options?.sunrise ?? null
+        const sunset = options?.sunset ?? null
+
+        const currentMode = resolveDriveMode(now, override)
 
         get().stopGlobalTick()
 
@@ -371,12 +365,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           const s = state.session
           if (!s.isActive || s.isRunning) return { session: s }
 
-          const currentMode = resolveDriveMode(
-            now,
-            s.nightOverride,
-            s.solarSunrise,
-            s.solarSunset
-          )
+          const currentMode = resolveDriveMode(now, s.nightOverride)
 
           return {
             session: {
@@ -426,12 +415,8 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             return { session: next }
           }
 
-          const resolvedMode = resolveDriveMode(
-            now,
-            next.nightOverride,
-            next.solarSunrise,
-            next.solarSunset
-          )
+          // ✅ CHANGED 3: uses DMV rule — no longer passes solarSunrise/solarSunset
+          const resolvedMode = resolveDriveMode(now, next.nightOverride)
 
           if (resolvedMode !== next.currentMode) {
             next = {
@@ -476,12 +461,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           const s = state.session
           const now = Date.now()
           const flushed = flushSessionToNow(s, now)
-          const currentMode = resolveDriveMode(
-            now,
-            mode,
-            flushed.solarSunrise,
-            flushed.solarSunset
-          )
+          const currentMode = resolveDriveMode(now, mode)
 
           return {
             session: {
@@ -576,16 +556,11 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         }
       },
 
+      // ✅ CHANGED 3: getCurrentMode uses DMV rule — no solar params
       getCurrentMode: () => {
         const { session: s } = get()
         if (!s.isActive) return s.currentMode
-
-        return resolveDriveMode(
-          Date.now(),
-          s.nightOverride,
-          s.solarSunrise,
-          s.solarSunset
-        )
+        return resolveDriveMode(Date.now(), s.nightOverride)
       },
 
       _tickInterval: null,

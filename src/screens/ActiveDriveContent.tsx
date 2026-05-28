@@ -11,31 +11,35 @@ import {
   type DriveMode,
   type RouteCoord,
 } from "../state/activeDriveStore"
-import {
-  getSolarWindowForDate,
-  computeDayNightSplit,
-} from "../engine/solarEngine"
-import { loadOnboardingData } from "../../core/ReminderEngine"
+// ✅ CHANGED 1: removed computeDayNightSplit — no longer needed
+// ✅ CHANGED 2: kept getSolarWindowForDate — still used in handlePress for session metadata
+import { getSolarWindowForDate } from "../engine/solarEngine"
+// ✅ CHANGED 3: removed loadOnboardingData — snapshot now trusts DMV buckets directly
 import { Geolocation } from "@capacitor/geolocation"
 import { Capacitor } from "@capacitor/core"
+
 
 type ActiveDriveContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
   setCurrentDrive: Dispatch<SetStateAction<DriveEntry | null>>
 }
 
+
 type DriveSnapshot = DriveEntry & {
   isPreview?: boolean
 }
+
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
 const GPS_POLL_INTERVAL_MS = 20000
 const ROUTE_TIMEOUT_MS = 8000
 
+
 const safeNumber = (value: unknown) => {
   const num = Number(value)
   return Number.isFinite(num) ? num : 0
 }
+
 
 const formatTime = (ms: number) => {
   const totalSec = Math.max(0, Math.floor(ms / 1000))
@@ -43,10 +47,12 @@ const formatTime = (ms: number) => {
   const minutes = Math.floor((totalSec % 3600) / 60)
   const seconds = totalSec % 60
 
+
   return [hours, minutes, seconds]
     .map((part) => String(part).padStart(2, "0"))
     .join(":")
 }
+
 
 const sameCoord = (
   a: RouteCoord | null | undefined,
@@ -56,13 +62,16 @@ const sameCoord = (
   return a.lat === b.lat && a.lng === b.lng
 }
 
+
 function makeDriveId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID()
   }
 
+
   return `drive-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
+
 
 function composeAbortSignal(
   external?: AbortSignal,
@@ -74,6 +83,7 @@ function composeAbortSignal(
         any?: (signals: AbortSignal[]) => AbortSignal
       })
     | undefined
+
 
   if (
     AbortSignalCtor &&
@@ -89,11 +99,14 @@ function composeAbortSignal(
     }
   }
 
+
   const controller = new AbortController()
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
 
+
   const abortHandler = () => controller.abort()
   external?.addEventListener("abort", abortHandler, { once: true })
+
 
   return {
     signal: controller.signal,
@@ -104,6 +117,7 @@ function composeAbortSignal(
   }
 }
 
+
 async function getAccurateMileage(
   start: RouteCoord,
   end: RouteCoord,
@@ -112,7 +126,9 @@ async function getAccurateMileage(
   try {
     if (!API_BASE_URL) return null
 
+
     const { signal: requestSignal, cleanup } = composeAbortSignal(signal)
+
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
@@ -134,11 +150,14 @@ async function getAccurateMileage(
         }),
       })
 
+
       if (!res.ok) return null
+
 
       const data = await res.json()
       const meters = data?.routes?.[0]?.distanceMeters
       if (typeof meters !== "number") return null
+
 
       return meters / 1609.34
     } finally {
@@ -148,6 +167,7 @@ async function getAccurateMileage(
     return null
   }
 }
+
 
 function ActiveDriveContent({
   setScreen,
@@ -160,6 +180,7 @@ function ActiveDriveContent({
   const [isPreparingStop, setIsPreparingStop] = useState(false)
   const [showWeatherHelp, setShowWeatherHelp] = useState(false)
 
+
   const gpsRef = useRef<number | null>(null)
   const frozenSnapshotRef = useRef<Promise<DriveSnapshot | null> | null>(null)
   const isSavingRef = useRef(false)
@@ -170,6 +191,7 @@ function ActiveDriveContent({
   const mountedRef = useRef(true)
   const weatherHelpButtonId = useId()
   const weatherHelpPanelId = useId()
+
 
   const {
     session,
@@ -183,6 +205,7 @@ function ActiveDriveContent({
     getCurrentMode,
   } = useActiveDriveStore()
 
+
   const clearGpsLoop = useCallback(() => {
     if (gpsRef.current !== null) {
       window.clearInterval(gpsRef.current)
@@ -190,33 +213,41 @@ function ActiveDriveContent({
     }
   }, [])
 
+
   const clearAllLoops = useCallback(() => {
     clearGpsLoop()
   }, [clearGpsLoop])
+
 
   const requestAndGetLocation = useCallback(async (): Promise<RouteCoord | null> => {
     if (inflightLocationRef.current) {
       return inflightLocationRef.current
     }
 
+
     const promise = (async () => {
       try {
         if (Capacitor.isNativePlatform()) {
           const permission = await Geolocation.checkPermissions()
 
+
           const needsLocation =
             permission.location !== "granted" &&
             permission.coarseLocation !== "granted"
 
+
           if (needsLocation) {
             const requested = await Geolocation.requestPermissions()
+
 
             const granted =
               requested.location === "granted" ||
               requested.coarseLocation === "granted"
 
+
             if (!granted) return null
           }
+
 
           const pos = await Geolocation.getCurrentPosition({
             enableHighAccuracy: true,
@@ -224,16 +255,21 @@ function ActiveDriveContent({
             maximumAge: 5000,
           })
 
+
           const lat = pos.coords.latitude
           const lng = pos.coords.longitude
+
 
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
           if (lat === 0 && lng === 0) return null
 
+
           return { lat, lng }
         }
 
+
         if (!navigator.geolocation) return null
+
 
         return await new Promise<RouteCoord | null>((resolve) => {
           navigator.geolocation.getCurrentPosition(
@@ -241,15 +277,18 @@ function ActiveDriveContent({
               const lat = pos.coords.latitude
               const lng = pos.coords.longitude
 
+
               if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
                 resolve(null)
                 return
               }
 
+
               if (lat === 0 && lng === 0) {
                 resolve(null)
                 return
               }
+
 
               resolve({ lat, lng })
             },
@@ -265,19 +304,23 @@ function ActiveDriveContent({
       }
     })()
 
+
     inflightLocationRef.current = promise
     return promise
   }, [])
 
+
   const primeSessionCoord = useCallback((coord: RouteCoord) => {
     useActiveDriveStore.setState((state) => {
       const s = state.session
+
 
       const hasStart = !!s.startCoord
       const sameAsLast =
         !!s.lastCoord &&
         s.lastCoord.lat === coord.lat &&
         s.lastCoord.lng === coord.lng
+
 
       return {
         session: {
@@ -294,6 +337,7 @@ function ActiveDriveContent({
     })
   }, [])
 
+
   const buildDriveSnapshot = useCallback(
     async (opts?: {
       isPreview?: boolean
@@ -302,25 +346,32 @@ function ActiveDriveContent({
       const state = useActiveDriveStore.getState()
       const sessionSnapshot = state.session
 
+
       const savedStartTime = sessionSnapshot.startTime
       if (!savedStartTime) return null
 
+
       const snapshotTime = Date.now()
       state.tick(undefined, snapshotTime)
+
 
       const freshState = useActiveDriveStore.getState()
       const fresh = freshState.session
       const liveMode = freshState.getCurrentMode() ?? fresh.currentMode ?? "day"
 
+
       const currentEndCoord = await requestAndGetLocation()
       if (opts?.signal?.aborted) return null
+
 
       const finalElapsedMs = fresh.dayMs + fresh.nightMs
       if (finalElapsedMs <= 0) return null
 
+
       let finalDayMs = Math.max(0, fresh.dayMs)
       let finalNightMs = Math.max(0, fresh.nightMs)
       const bucketTotal = finalDayMs + finalNightMs
+
 
       if (bucketTotal < finalElapsedMs) {
         const remainder = finalElapsedMs - bucketTotal
@@ -337,13 +388,16 @@ function ActiveDriveContent({
         }
       }
 
+
       const normalizedTotalMs = Math.max(
         finalElapsedMs,
         finalDayMs + finalNightMs
       )
 
+
       let accurateMiles = safeNumber(fresh.liveMiles)
       let milesSource: DriveEntry["milesSource"] = "gps-accumulated"
+
 
       if (fresh.startCoord && currentEndCoord) {
         const routeMiles = await getAccurateMileage(
@@ -352,7 +406,9 @@ function ActiveDriveContent({
           opts?.signal
         )
 
+
         if (opts?.signal?.aborted) return null
+
 
         if (routeMiles !== null) {
           accurateMiles = routeMiles
@@ -360,45 +416,29 @@ function ActiveDriveContent({
         }
       }
 
+
       const baseTrail = Array.isArray(fresh.routeTrail) ? fresh.routeTrail : []
       const lastTrailCoord =
         baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
+
 
       const finalTrail =
         currentEndCoord && !sameCoord(lastTrailCoord, currentEndCoord)
           ? [...baseTrail, currentEndCoord]
           : baseTrail
 
-      const startDate = new Date(savedStartTime)
-      const endDate = new Date(snapshotTime)
 
-      let dayHours = finalDayMs / 3600000
-      let nightHours = finalNightMs / 3600000
-      let verifiedNightDurationHours: number | undefined
-      let nightCalcMode: NightCalcMode | undefined = "estimated"
+      // ✅ CHANGED 4: removed solar/onboarding recalculation — trust DMV buckets directly
+      const dayHours = finalDayMs / 3600000
+      const nightHours = finalNightMs / 3600000
+      const verifiedNightDurationHours = nightHours
+      const nightCalcMode: NightCalcMode = "dmv-fixed"
 
-      const onboarding = loadOnboardingData()
-      const { homeLat, homeLng } = onboarding
-
-      if (
-        typeof homeLat === "number" &&
-        Number.isFinite(homeLat) &&
-        typeof homeLng === "number" &&
-        Number.isFinite(homeLng)
-      ) {
-        const solarWindow = getSolarWindowForDate(homeLat, homeLng, startDate)
-        const split = computeDayNightSplit(startDate, endDate, solarWindow)
-
-        dayHours = split.dayHours
-        nightHours = split.nightHours
-        verifiedNightDurationHours = split.nightHours
-        nightCalcMode = "verified"
-      }
 
       return {
         id: makeDriveId(),
-        startTime: startDate.toISOString(),
-        endTime: endDate.toISOString(),
+        startTime: new Date(savedStartTime).toISOString(),
+        endTime: new Date(snapshotTime).toISOString(),
         totalDurationHours: normalizedTotalMs / 3600000,
         dayDurationHours: dayHours,
         nightDurationHours: nightHours,
@@ -417,17 +457,21 @@ function ActiveDriveContent({
     [requestAndGetLocation]
   )
 
+
   const startFrozenSnapshot = useCallback(
     (opts?: { isPreview?: boolean }) => {
       activeSnapshotAbortRef.current?.abort()
 
+
       const controller = new AbortController()
       activeSnapshotAbortRef.current = controller
+
 
       const promise = buildDriveSnapshot({
         isPreview: opts?.isPreview,
         signal: controller.signal,
       })
+
 
       frozenSnapshotRef.current = promise
       return promise
@@ -435,10 +479,12 @@ function ActiveDriveContent({
     [buildDriveSnapshot]
   )
 
+
   const [displayedMs, setDisplayedMs] = useState(() => {
     const s = useActiveDriveStore.getState().session
     return s.dayMs + s.nightMs
   })
+
 
   useEffect(() => {
     mountedRef.current = true
@@ -448,14 +494,17 @@ function ActiveDriveContent({
     }
   }, [])
 
+
   useEffect(() => {
     const id = window.setInterval(() => {
       const s = useActiveDriveStore.getState().session
+
 
       if (!s.isActive) {
         setDisplayedMs(s.dayMs + s.nightMs)
         return
       }
+
 
       if (s.isRunning && s.lastTickAt !== null) {
         const accumulated = s.dayMs + s.nightMs
@@ -466,10 +515,13 @@ function ActiveDriveContent({
       }
     }, 500)
 
+
     return () => window.clearInterval(id)
   }, [])
 
+
   const formattedElapsed = formatTime(displayedMs)
+
 
   const isRunning = session.isRunning
   const hasActiveDrive = session.isActive
@@ -478,18 +530,23 @@ function ActiveDriveContent({
   const previewDisabled =
     !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing || isPreparingStop
 
+
   const effectiveMode: DriveMode | null = hasActiveDrive
     ? getCurrentMode()
     : session.currentMode
 
+
   const effectiveNight = effectiveMode === "night"
+
 
   const modePillClasses = effectiveNight
     ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40"
     : "bg-white text-[#08194A]"
 
+
   const modePillLabel =
     effectiveMode === "night" ? "Night" : effectiveMode === "day" ? "Day" : "--"
+
 
   const statusClass = isRunning ? "text-[#00C851]" : "text-red-400"
   const statusText = isRunning
@@ -498,49 +555,62 @@ function ActiveDriveContent({
       ? "Drive Paused"
       : "Ready to Start"
 
+
   useEffect(() => {
     if (!session.isActive) return
 
+
     let cancelled = false
+
 
     ;(async () => {
       const coord = await requestAndGetLocation()
       if (cancelled || !mountedRef.current) return
+
 
       if (coord) {
         primeSessionCoord(coord)
         setLocationError(null)
       }
 
+
       tick(undefined, Date.now())
     })()
+
 
     return () => {
       cancelled = true
     }
   }, [session.isActive, primeSessionCoord, requestAndGetLocation, tick])
 
+
   useEffect(() => {
     clearGpsLoop()
 
+
     if (!session.isRunning) return
+
 
     gpsRef.current = window.setInterval(() => {
       requestAndGetLocation().then((coord) => {
         if (!mountedRef.current) return
+
 
         if (!coord) {
           setLocationError("Location access is required for accurate mileage.")
           return
         }
 
+
         setLocationError(null)
         tick(coord, Date.now())
       })
     }, GPS_POLL_INTERVAL_MS)
 
+
     return clearGpsLoop
   }, [session.isRunning, tick, clearGpsLoop, requestAndGetLocation])
+
 
   useEffect(() => {
     return () => {
@@ -548,8 +618,10 @@ function ActiveDriveContent({
     }
   }, [clearAllLoops])
 
+
   useEffect(() => {
     if (!showWeatherHelp) return
+
 
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node
@@ -558,15 +630,18 @@ function ActiveDriveContent({
       }
     }
 
+
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setShowWeatherHelp(false)
       }
     }
 
+
     document.addEventListener("mousedown", handlePointerDown)
     document.addEventListener("touchstart", handlePointerDown)
     document.addEventListener("keydown", handleEscape)
+
 
     return () => {
       document.removeEventListener("mousedown", handlePointerDown)
@@ -575,8 +650,10 @@ function ActiveDriveContent({
     }
   }, [showWeatherHelp])
 
+
   const handlePress = async () => {
     if (isStopping || isPreviewing || isPreparingStop) return
+
 
     if (session.isRunning) {
       pauseDrive()
@@ -584,17 +661,23 @@ function ActiveDriveContent({
       return
     }
 
+
     const coord = await requestAndGetLocation()
+
 
     if (!coord) {
       setLocationError("Location access is required to start drive tracking.")
       return
     }
 
+
     try {
       if (!session.isActive) {
         const today = new Date()
+        // ✅ CHANGED 5: solar window still passed for session metadata storage,
+        // but resolveDriveMode in the store now ignores it — DMV rule takes over
         const solarWindow = getSolarWindowForDate(coord.lat, coord.lng, today)
+
 
         startDrive(Date.now(), coord, {
           sunrise: solarWindow.sunrise ? solarWindow.sunrise.getTime() : 0,
@@ -605,6 +688,7 @@ function ActiveDriveContent({
         resumeDrive()
       }
 
+
       setShowStopConfirm(false)
       setLocationError(null)
     } catch (error) {
@@ -613,17 +697,22 @@ function ActiveDriveContent({
     }
   }
 
+
   const handleStopRequest = async () => {
     if (saveDisabled) return
 
+
     wasRunningBeforeStopRef.current = session.isRunning
+
 
     if (session.isRunning) {
       pauseDrive()
     }
 
+
     setIsPreparingStop(true)
     setShowStopConfirm(true)
+
 
     try {
       await startFrozenSnapshot({ isPreview: false })
@@ -634,6 +723,7 @@ function ActiveDriveContent({
     }
   }
 
+
   const handleCancelStop = () => {
     activeSnapshotAbortRef.current?.abort()
     activeSnapshotAbortRef.current = null
@@ -641,31 +731,40 @@ function ActiveDriveContent({
     setShowStopConfirm(false)
     setIsPreparingStop(false)
 
+
     if (wasRunningBeforeStopRef.current) {
       resumeDrive()
     }
   }
 
+
   const handleSaveDrive = async () => {
     if (isSavingRef.current || isPreparingStop) return
+
 
     isSavingRef.current = true
     setIsStopping(true)
 
+
     try {
       clearAllLoops()
+
 
       const finalizedDrive = frozenSnapshotRef.current
         ? await frozenSnapshotRef.current
         : await startFrozenSnapshot({ isPreview: false })
 
+
       if (!finalizedDrive) return
 
+
       const { isPreview: _stripped, ...driveToSave } = finalizedDrive
+
 
       saveDrive(driveToSave)
       setCurrentDrive(driveToSave)
       setShowStopConfirm(false)
+
 
       setScreen("todaysDrive")
       hardReset()
@@ -684,14 +783,18 @@ function ActiveDriveContent({
     }
   }
 
+
   const handlePreviewSummary = async () => {
     if (previewDisabled) return
+
 
     try {
       setIsPreviewing(true)
 
+
       const previewDrive = await startFrozenSnapshot({ isPreview: true })
       if (!previewDrive) return
+
 
       setCurrentDrive(previewDrive)
       setScreen("summary")
@@ -700,12 +803,14 @@ function ActiveDriveContent({
     }
   }
 
+
   return (
     <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
       <div className="w-full max-w-[46rem]">
         <div className="mx-auto w-full max-w-[42rem]">
           <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
             <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
+
 
             <div className="p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
@@ -724,6 +829,7 @@ function ActiveDriveContent({
                 </div>
               </div>
 
+
               <div className="mt-4 rounded-2xl border border-white/10 bg-[#08194A]/70 p-4 shadow-inner">
                 <div className="flex items-center gap-3">
                   <div
@@ -739,6 +845,7 @@ function ActiveDriveContent({
                       <SunIcon className="h-7 w-7 text-[#f9c80e]" />
                     )}
                   </div>
+
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -757,6 +864,7 @@ function ActiveDriveContent({
                   </div>
                 </div>
 
+
                 <div className="mt-4">
                   <div className="mb-1.5 flex justify-between text-[10px] uppercase tracking-[0.16em] text-white/45">
                     <span>Day</span>
@@ -773,6 +881,7 @@ function ActiveDriveContent({
                   </div>
                 </div>
               </div>
+
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-1.5">
                 <div className="grid grid-cols-3 gap-2">
@@ -801,10 +910,12 @@ function ActiveDriveContent({
           </div>
         </div>
 
+
         <div className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
           <p className={`text-sm uppercase tracking-[0.18em] ${statusClass}`}>
             {statusText}
           </p>
+
 
           <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
             <button
@@ -832,14 +943,17 @@ function ActiveDriveContent({
               )}
             </button>
 
+
             <div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums text-white">
               {formattedElapsed}
             </div>
           </div>
         </div>
 
+
         <div className="mx-auto mt-4 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#0A1E5E] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#0A1E5E]" />
+
 
           <div className="p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
@@ -862,6 +976,7 @@ function ActiveDriveContent({
               </div>
             </div>
 
+
             <div className="mt-5 flex flex-col gap-3">
               <div className="w-full rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
@@ -871,6 +986,7 @@ function ActiveDriveContent({
                   {formattedElapsed}
                 </p>
               </div>
+
 
               <div className="w-full rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
@@ -888,6 +1004,7 @@ function ActiveDriveContent({
               </div>
             </div>
 
+
             <div className="mt-4 rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F4F6FA] p-4 shadow-sm">
               <div className="grid grid-cols-1 items-center gap-4 text-center sm:grid-cols-2">
                 <div>
@@ -901,6 +1018,7 @@ function ActiveDriveContent({
                   </p>
                 </div>
 
+
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                     Lighting
@@ -910,6 +1028,7 @@ function ActiveDriveContent({
                   </p>
                 </div>
 
+
                 <div className="flex flex-col items-center sm:col-span-2">
                   <div
                     ref={weatherHelpRef}
@@ -918,6 +1037,7 @@ function ActiveDriveContent({
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                       Weather Conditions
                     </p>
+
 
                     <button
                       id={weatherHelpButtonId}
@@ -930,6 +1050,7 @@ function ActiveDriveContent({
                     >
                       ⓘ
                     </button>
+
 
                     {showWeatherHelp && (
                       <div
@@ -947,12 +1068,13 @@ function ActiveDriveContent({
                           summary.
                         </p>
                         <p className="mt-1 italic text-[#0A1E5E]/70">
-                          If you don’t select anything, weather will simply be
+                          If you don't select anything, weather will simply be
                           left blank.
                         </p>
                       </div>
                     )}
                   </div>
+
 
                   <div className="mt-3 flex flex-wrap justify-center gap-2">
                     {["Clear", "Rain", "Snow", "Fog"].map((w) => {
@@ -977,6 +1099,7 @@ function ActiveDriveContent({
               </div>
             </div>
 
+
             {locationError && (
               <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 text-left shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-red-600">
@@ -987,6 +1110,7 @@ function ActiveDriveContent({
                 </p>
               </div>
             )}
+
 
             <div className="mt-5 space-y-3">
               <div className="grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
@@ -1011,6 +1135,7 @@ function ActiveDriveContent({
                       : "Start Timer"}
                 </button>
 
+
                 <button
                   type="button"
                   onClick={() => {
@@ -1027,6 +1152,7 @@ function ActiveDriveContent({
                 </button>
               </div>
 
+
               {showStopConfirm && (
                 <div className="rounded-2xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm">
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#0A1E5E]/55">
@@ -1040,11 +1166,13 @@ function ActiveDriveContent({
                     and lighting conditions.
                   </p>
 
+
                   {isPreparingStop && (
                     <p className="mt-2 text-sm font-semibold text-[#0A1E5E]">
                       Preparing final snapshot...
                     </p>
                   )}
+
 
                   <div className="mt-4 grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
                     <button
@@ -1055,6 +1183,7 @@ function ActiveDriveContent({
                     >
                       Cancel
                     </button>
+
 
                     <button
                       type="button"
@@ -1071,6 +1200,7 @@ function ActiveDriveContent({
                   </div>
                 </div>
               )}
+
 
               <button
                 type="button"
@@ -1090,6 +1220,7 @@ function ActiveDriveContent({
           </div>
         </div>
 
+
         <style>
           {`
             @keyframes pulse-slow {
@@ -1098,9 +1229,11 @@ function ActiveDriveContent({
               100% { transform: scale(1); }
             }
 
+
             .animate-pulse-slow {
               animation: pulse-slow 2.5s ease-in-out infinite;
             }
+
 
             @media (prefers-reduced-motion: reduce) {
               .animate-pulse-slow {
@@ -1113,5 +1246,6 @@ function ActiveDriveContent({
     </div>
   )
 }
+
 
 export default ActiveDriveContent

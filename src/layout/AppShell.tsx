@@ -17,7 +17,6 @@ const CHROMELESS_SCREENS: Screen[] = [
   "terms",
 ]
 
-// Screens that belong to the "More" group — highlights ••• when active
 const MORE_SCREENS: Screen[] = [
   "milestones",
   "exportLogs",
@@ -85,17 +84,25 @@ export default function AppShell({
         </section>
       </main>
 
+      {/* ── AI Bubble — always behind drawer when open ── */}
+      {/* ✅ z-40 so drawer/backdrop at z-50 covers it */}
+      <div className="pointer-events-none fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40">
+        <div className="pointer-events-auto">
+          <FloatingAIButton />
+        </div>
+      </div>
+
       {/* ── More Drawer ── */}
       {showMore && (
         <>
-          {/* Backdrop */}
+          {/* ✅ Backdrop z-50 — covers AI bubble */}
           <div
-            className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowMore(false)}
           />
 
-          {/* Drawer panel */}
-          <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 mx-auto w-full max-w-[42rem] px-3">
+          {/* ✅ Drawer panel z-50 — sits above backdrop and AI bubble */}
+          <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 mx-auto w-full max-w-[42rem] px-3">
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d2260] shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
 
               {/* Compliance & Records */}
@@ -188,8 +195,8 @@ export default function AppShell({
         </>
       )}
 
-      {/* ── Bottom Nav ── */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#08194A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#08194A]/88">
+      {/* ── Bottom Nav — z-50 so it stays above backdrop ── */}
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#08194A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#08194A]/88">
         <div className="mx-auto w-full max-w-[42rem] px-2 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-3 sm:pt-3">
           <div className="grid grid-cols-5 gap-1 sm:gap-2">
 
@@ -248,12 +255,6 @@ export default function AppShell({
           </div>
         </div>
       </nav>
-
-      <div className="pointer-events-none fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-50">
-        <div className="pointer-events-auto">
-          <FloatingAIButton />
-        </div>
-      </div>
     </div>
   )
 }

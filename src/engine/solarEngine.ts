@@ -1,15 +1,12 @@
 // src/engine/solarEngine.ts
 import { getSunrise, getSunset } from "sunrise-sunset-js"
 
-
 export type SolarWindow = {
   sunrise: Date | null
   sunset: Date | null
 }
 
-
 export type SolarSplitMode = "solar" | "unverified"
-
 
 export type DayNightSplit = {
   dayHours: number
@@ -17,16 +14,13 @@ export type DayNightSplit = {
   mode: SolarSplitMode
 }
 
-
 function isFiniteCoord(value: number): boolean {
   return Number.isFinite(value)
 }
 
-
 function isValidDate(value: Date): boolean {
   return value instanceof Date && !Number.isNaN(value.getTime())
 }
-
 
 function getOverlapMs(
   rangeStart: number,
@@ -36,7 +30,6 @@ function getOverlapMs(
 ): number {
   return Math.max(0, Math.min(rangeEnd, windowEnd) - Math.max(rangeStart, windowStart))
 }
-
 
 /**
  * Returns sunrise and sunset times for a given location and date.
@@ -51,29 +44,24 @@ export function getSolarWindowForDate(
     return { sunrise: null, sunset: null }
   }
 
-
   try {
     const rawSunrise = getSunrise(latitude, longitude, date) ?? null
     const rawSunset = getSunset(latitude, longitude, date) ?? null
-
 
     const safeSunrise =
       rawSunrise !== null && isValidDate(rawSunrise) ? rawSunrise : null
     const safeSunset =
       rawSunset !== null && isValidDate(rawSunset) ? rawSunset : null
 
-
     if (!safeSunrise || !safeSunset || safeSunset <= safeSunrise) {
       return { sunrise: null, sunset: null }
     }
-
 
     return { sunrise: safeSunrise, sunset: safeSunset }
   } catch {
     return { sunrise: null, sunset: null }
   }
 }
-
 
 /**
  * Determines if a drive start time qualifies as a verified night drive.
@@ -85,10 +73,8 @@ export function isNightDrive(startTime: Date, solarWindow: SolarWindow): boolean
   if (!isValidDate(solarWindow.sunrise) || !isValidDate(solarWindow.sunset)) return false
   if (solarWindow.sunset <= solarWindow.sunrise) return false
 
-
   return startTime < solarWindow.sunrise || startTime >= solarWindow.sunset
 }
-
 
 /* -------------------------------------------------------
    DAY / NIGHT SPLITTING ENGINE
@@ -96,7 +82,6 @@ export function isNightDrive(startTime: Date, solarWindow: SolarWindow): boolean
    Assumes solarWindow covers the SAME calendar day as the drive.
    For multi-day drives, call once per calendar day and sum.
 ------------------------------------------------------- */
-
 
 export function computeDayNightSplit(
   startTime: Date,
@@ -107,42 +92,33 @@ export function computeDayNightSplit(
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
-
   const start = startTime.getTime()
   const end = endTime.getTime()
-
 
   if (end <= start) {
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
-
   const { sunrise, sunset } = solarWindow
-
 
   if (!sunrise || !sunset) {
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
-
   if (!isValidDate(sunrise) || !isValidDate(sunset)) {
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
-
   const sunriseMs = sunrise.getTime()
   const sunsetMs = sunset.getTime()
-
 
   if (!Number.isFinite(sunriseMs) || !Number.isFinite(sunsetMs) || sunsetMs <= sunriseMs) {
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
-
   const totalMs = end - start
   const dayMs = getOverlapMs(start, end, sunriseMs, sunsetMs)
   const nightMs = Math.max(totalMs - dayMs, 0)
-
 
   return {
     dayHours: Math.max(dayMs / (1000 * 60 * 60), 0),
@@ -150,7 +126,6 @@ export function computeDayNightSplit(
     mode: "solar",
   }
 }
-
 
 /* -------------------------------------------------------
    DMV FIXED RULE — NJ MVC Supervised Driving Log
@@ -160,14 +135,19 @@ export function computeDayNightSplit(
    Does NOT depend on location or sunrise/sunset.
 ------------------------------------------------------- */
 
-
 export function isNightByDMV(date: Date): boolean {
   const hour = date.getHours()
   const minute = date.getMinutes()
 
-  if (hour > 17) return true                       // 6:00 PM–11:59 PM
-  if (hour < 6) return true                        // 12:00 AM–5:59 AM
-  if (hour === 17 && minute >= 1) return true      // 5:01 PM–5:59 PM
+  // Night: 12:00 AM → 5:59 AM
+  if (hour < 6) return true
 
-  return false                                     // 6:00 AM–5:00 PM = day
+  // Night: 5:01 PM → 5:59 PM
+  if (hour === 17 && minute >= 1) return true
+
+  // Night: 6:00 PM → 11:59 PM
+  if (hour > 17) return true
+
+  // Otherwise: 6:00 AM → 5:00 PM = day
+  return false
 }

@@ -225,116 +225,105 @@ function ActiveDriveContent({
 
 
     const promise = (async () => {
-      try {
-        if (Capacitor.isNativePlatform()) {
-          const permission = await Geolocation.checkPermissions()
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const permission = await Geolocation.checkPermissions()
 
+      const needsLocation =
+        permission.location !== "granted" &&
+        permission.coarseLocation !== "granted"
 
-          const needsLocation =
-            permission.location !== "granted" &&
-            permission.coarseLocation !== "granted"
+      if (needsLocation) {
+        const requested = await Geolocation.requestPermissions()
 
+        const granted =
+          requested.location === "granted" ||
+          requested.coarseLocation === "granted"
 
-          if (needsLocation) {
-            const requested = await Geolocation.requestPermissions()
+        if (!granted) return null
+      }
 
+      const pos = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 5000,
+      })
 
-            const granted =
-              requested.location === "granted" ||
-              requested.coarseLocation === "granted"
+      const lat = pos.coords.latitude
+      const lng = pos.coords.longitude
 
+      console.log("GPS POLL:", lat, lng, Date.now())  // ← DEBUG LOG
 
-            if (!granted) return null
-          }
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+      if (lat === 0 && lng === 0) return null
 
+      return { lat, lng }
+    }
 
-          const pos = await Geolocation.getCurrentPosition({
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 5000,
-          })
+    if (!navigator.geolocation) return null
 
-
+    return await new Promise<RouteCoord | null>((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
           const lat = pos.coords.latitude
           const lng = pos.coords.longitude
 
+          console.log("GPS POLL (browser):", lat, lng, Date.now())  // ← DEBUG LOG
 
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-          if (lat === 0 && lng === 0) return null
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            resolve(null)
+            return
+          }
 
+          if (lat === 0 && lng === 0) {
+            resolve(null)
+            return
+          }
 
-          return { lat, lng }
-        }
-
-
-        if (!navigator.geolocation) return null
-
-
-        return await new Promise<RouteCoord | null>((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const lat = pos.coords.latitude
-              const lng = pos.coords.longitude
-
-
-              if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-                resolve(null)
-                return
-              }
-
-
-              if (lat === 0 && lng === 0) {
-                resolve(null)
-                return
-              }
-
-
-              resolve({ lat, lng })
-            },
-            () => resolve(null),
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-          )
-        })
-      } catch (err) {
-        console.error("Location error:", err)
-        return null
-      } finally {
-        inflightLocationRef.current = null
-      }
-    })()
-
-
-    inflightLocationRef.current = promise
-    return promise
-  }, [])
-
-
-  const primeSessionCoord = useCallback((coord: RouteCoord) => {
-    useActiveDriveStore.setState((state) => {
-      const s = state.session
-
-
-      const hasStart = !!s.startCoord
-      const sameAsLast =
-        !!s.lastCoord &&
-        s.lastCoord.lat === coord.lat &&
-        s.lastCoord.lng === coord.lng
-
-
-      return {
-        session: {
-          ...s,
-          startCoord: s.startCoord ?? coord,
-          lastCoord: coord,
-          routeTrail:
-            hasStart && sameAsLast
-              ? s.routeTrail
-              : [...s.routeTrail, coord].slice(-500),
-          lastUpdated: Date.now(),
+          resolve({ lat, lng })
         },
-      }
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+      )
     })
-  }, [])
+  } catch (err) {
+    console.error("Location error:", err)
+    return null
+  } finally {
+    inflightLocationRef.current = null
+  }
+})()
+
+inflightLocationRef.current = promise
+return promise
+}, [])
+
+
+const primeSessionCoord = useCallback((coord: RouteCoord) => {
+  useActiveDriveStore.setState((state) => {
+    const s = state.session
+
+    const hasStart = !!s.startCoord
+    const sameAsLast =
+      !!s.lastCoord &&
+      s.lastCoord.lat === coord.lat &&
+      s.lastCoord.lng === coord.lng
+
+    return {
+      session: {
+        ...s,
+        startCoord: s.startCoord ?? coord,
+        lastCoord: coord,
+        routeTrail:
+          hasStart && sameAsLast
+            ? s.routeTrail
+            : [...s.routeTrail, coord].slice(-500),
+        lastUpdated: Date.now(),
+      },
+    }
+  })
+}, [])
+
 
 
   const buildDriveSnapshot = useCallback(

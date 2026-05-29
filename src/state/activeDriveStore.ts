@@ -2,8 +2,9 @@
 
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
-// ✅ CHANGED 1: added isNightByDMV import
 import { isNightByDMV } from "../engine/solarEngine"
+// ✅ ADDED: Capacitor App listener for foreground resume
+import { App as CapacitorApp } from "@capacitor/app"
 
 export type DriveMode = "day" | "night"
 export type NightOverride = "auto" | "day" | "night"
@@ -76,6 +77,8 @@ type ActiveDriveStore = {
   getCurrentMode: () => DriveMode
 
   _tickInterval: number | null
+  // ✅ ADDED: tracks Capacitor foreground listener cleanup
+  _appStateListener: (() => void) | null
   startGlobalTick: () => void
   stopGlobalTick: () => void
 }
@@ -205,7 +208,6 @@ function normalizeSession(value: unknown): ActiveDriveSession {
   }
 }
 
-// ✅ CHANGED 2: replaced resolveDriveMode — now uses DMV fixed rule instead of solar
 function resolveDriveMode(
   now: number,
   override: NightOverride
@@ -303,8 +305,6 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         const override = options?.override ?? "auto"
         const weather = options?.weather ?? null
 
-        // ✅ solarSunrise/solarSunset kept in session shape for backwards compat
-        // but resolveDriveMode no longer uses them
         const sunrise = options?.sunrise ?? null
         const sunset = options?.sunset ?? null
 
@@ -415,7 +415,6 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             return { session: next }
           }
 
-          // ✅ CHANGED 3: uses DMV rule — no longer passes solarSunrise/solarSunset
           const resolvedMode = resolveDriveMode(now, next.nightOverride)
 
           if (resolvedMode !== next.currentMode) {
@@ -556,7 +555,6 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         }
       },
 
-      // ✅ CHANGED 3: getCurrentMode uses DMV rule — no solar params
       getCurrentMode: () => {
         const { session: s } = get()
         if (!s.isActive) return s.currentMode
@@ -564,6 +562,8 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
       },
 
       _tickInterval: null,
+      // ✅ ADDED: holds cleanup fn for Capacitor foreground listener
+      _appStateListener: null,
 
       startGlobalTick: () => {
         if (!isBrowser()) return
@@ -571,22 +571,38 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         const existing = get()._tickInterval
         if (existing !== null) return
 
+        // Regular 1-second interval while app is in foreground
         const id = window.setInterval(() => {
           const s = get().session
           if (!s.isActive || !s.isRunning) {
             get().stopGlobalTick()
             return
           }
-
           get().tick(undefined, Date.now())
         }, GLOBAL_TICK_MS)
 
         set({ _tickInterval: id })
+
+        // ✅ ADDED: Capacitor foreground listener
+        // Fires when app comes back from background on Android
+        // Forces immediate tick so day/night mode catches up from wall clock
+        CapacitorApp.addListener("appStateChange", ({ isActive }) => {
+          if (!isActive) return // going to background — nothing to do
+
+          const s = get().session
+          if (!s.isActive || !s.isRunning) return
+
+          // Single tick with real current time — flushSessionToNow catches
+          // up all elapsed ms correctly from lastTickAt regardless of gap
+          get().tick(undefined, Date.now())
+        }).then((handle) => {
+          set({ _appStateListener: () => handle.remove() })
+        })
       },
 
       stopGlobalTick: () => {
         if (!isBrowser()) {
-          set({ _tickInterval: null })
+          set({ _tickInterval: null, _appStateListener: null })
           return
         }
 
@@ -595,12 +611,20 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           window.clearInterval(id)
           set({ _tickInterval: null })
         }
+
+        // ✅ ADDED: clean up Capacitor foreground listener
+        const removeListener = get()._appStateListener
+        if (removeListener) {
+          removeListener()
+          set({ _appStateListener: null })
+        }
       },
     }),
     {
       name: STORAGE_KEY,
       storage: createJSONStorage(() => (isBrowser() ? localStorage : noopStorage)),
       version: 5,
+      // ✅ _appStateListener intentionally excluded — it's a runtime fn, not serializable
       partialize: (state) => ({ session: state.session }),
       migrate: (persisted: unknown) => {
         const raw = persisted as { session?: unknown } | null

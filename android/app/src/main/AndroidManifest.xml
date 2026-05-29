@@ -47,5 +47,7 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- NO SERVICE BLOCK NEEDED FOR COMMUNITY PLUGIN -->
+
     </application>
 </manifest>

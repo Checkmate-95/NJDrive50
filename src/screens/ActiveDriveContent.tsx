@@ -11,34 +11,26 @@ import {
   type DriveMode,
   type RouteCoord,
 } from "../state/activeDriveStore"
-// ✅ CHANGED 1: removed computeDayNightSplit — no longer needed
-// ✅ CHANGED 2: kept getSolarWindowForDate — still used in handlePress for session metadata
-// ✅ CHANGED 3: removed loadOnboardingData — snapshot now trusts DMV buckets directly
 import { Geolocation } from "@capacitor/geolocation"
 import { Capacitor } from "@capacitor/core"
-
 
 type ActiveDriveContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
   setCurrentDrive: Dispatch<SetStateAction<DriveEntry | null>>
 }
 
-
 type DriveSnapshot = DriveEntry & {
   isPreview?: boolean
 }
 
-
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
-const GPS_POLL_INTERVAL_MS = 20000
+// ✅ REMOVED: GPS_POLL_INTERVAL_MS no longer needed — watchPosition handles its own cadence
 const ROUTE_TIMEOUT_MS = 8000
-
 
 const safeNumber = (value: unknown) => {
   const num = Number(value)
   return Number.isFinite(num) ? num : 0
 }
-
 
 const formatTime = (ms: number) => {
   const totalSec = Math.max(0, Math.floor(ms / 1000))
@@ -46,12 +38,10 @@ const formatTime = (ms: number) => {
   const minutes = Math.floor((totalSec % 3600) / 60)
   const seconds = totalSec % 60
 
-
   return [hours, minutes, seconds]
     .map((part) => String(part).padStart(2, "0"))
     .join(":")
 }
-
 
 const sameCoord = (
   a: RouteCoord | null | undefined,
@@ -61,16 +51,12 @@ const sameCoord = (
   return a.lat === b.lat && a.lng === b.lng
 }
 
-
 function makeDriveId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID()
   }
-
-
   return `drive-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
-
 
 function composeAbortSignal(
   external?: AbortSignal,
@@ -82,7 +68,6 @@ function composeAbortSignal(
         any?: (signals: AbortSignal[]) => AbortSignal
       })
     | undefined
-
 
   if (
     AbortSignalCtor &&
@@ -98,14 +83,11 @@ function composeAbortSignal(
     }
   }
 
-
   const controller = new AbortController()
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
 
-
   const abortHandler = () => controller.abort()
   external?.addEventListener("abort", abortHandler, { once: true })
-
 
   return {
     signal: controller.signal,
@@ -116,7 +98,6 @@ function composeAbortSignal(
   }
 }
 
-
 async function getAccurateMileage(
   start: RouteCoord,
   end: RouteCoord,
@@ -125,16 +106,12 @@ async function getAccurateMileage(
   try {
     if (!API_BASE_URL) return null
 
-
     const { signal: requestSignal, cleanup } = composeAbortSignal(signal)
-
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         signal: requestSignal,
         body: JSON.stringify({
           origin: {
@@ -149,14 +126,11 @@ async function getAccurateMileage(
         }),
       })
 
-
       if (!res.ok) return null
-
 
       const data = await res.json()
       const meters = data?.routes?.[0]?.distanceMeters
       if (typeof meters !== "number") return null
-
 
       return meters / 1609.34
     } finally {
@@ -166,7 +140,6 @@ async function getAccurateMileage(
     return null
   }
 }
-
 
 function ActiveDriveContent({
   setScreen,
@@ -179,8 +152,8 @@ function ActiveDriveContent({
   const [isPreparingStop, setIsPreparingStop] = useState(false)
   const [showWeatherHelp, setShowWeatherHelp] = useState(false)
 
-
-  const gpsRef = useRef<number | null>(null)
+  // ✅ REMOVED: gpsRef no longer needed — watchPosition manages its own lifecycle via watchIdRef
+  const watchIdRef = useRef<string | null>(null)
   const frozenSnapshotRef = useRef<Promise<DriveSnapshot | null> | null>(null)
   const isSavingRef = useRef(false)
   const weatherHelpRef = useRef<HTMLDivElement | null>(null)
@@ -190,7 +163,6 @@ function ActiveDriveContent({
   const mountedRef = useRef(true)
   const weatherHelpButtonId = useId()
   const weatherHelpPanelId = useId()
-
 
   const {
     session,
@@ -204,127 +176,109 @@ function ActiveDriveContent({
     getCurrentMode,
   } = useActiveDriveStore()
 
-
-  const clearGpsLoop = useCallback(() => {
-    if (gpsRef.current !== null) {
-      window.clearInterval(gpsRef.current)
-      gpsRef.current = null
+  // ✅ UPDATED: clears watchPosition instead of setInterval
+  const clearGpsWatch = useCallback(async () => {
+    if (watchIdRef.current !== null) {
+      try {
+        await Geolocation.clearWatch({ id: watchIdRef.current })
+      } catch {
+        // ignore cleanup errors
+      }
+      watchIdRef.current = null
     }
   }, [])
 
-
   const clearAllLoops = useCallback(() => {
-    clearGpsLoop()
-  }, [clearGpsLoop])
-
+    void clearGpsWatch()
+  }, [clearGpsWatch])
 
   const requestAndGetLocation = useCallback(async (): Promise<RouteCoord | null> => {
     if (inflightLocationRef.current) {
       return inflightLocationRef.current
     }
 
-
     const promise = (async () => {
-  try {
-    if (Capacitor.isNativePlatform()) {
-      const permission = await Geolocation.checkPermissions()
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const permission = await Geolocation.checkPermissions()
 
-      const needsLocation =
-        permission.location !== "granted" &&
-        permission.coarseLocation !== "granted"
+          const needsLocation =
+            permission.location !== "granted" &&
+            permission.coarseLocation !== "granted"
 
-      if (needsLocation) {
-        const requested = await Geolocation.requestPermissions()
+          if (needsLocation) {
+            const requested = await Geolocation.requestPermissions()
+            const granted =
+              requested.location === "granted" ||
+              requested.coarseLocation === "granted"
+            if (!granted) return null
+          }
 
-        const granted =
-          requested.location === "granted" ||
-          requested.coarseLocation === "granted"
+          const pos = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 5000,
+          })
 
-        if (!granted) return null
-      }
-
-      const pos = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 5000,
-      })
-
-      const lat = pos.coords.latitude
-      const lng = pos.coords.longitude
-
-      console.log("GPS POLL:", lat, lng, Date.now())  // ← DEBUG LOG
-
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-      if (lat === 0 && lng === 0) return null
-
-      return { lat, lng }
-    }
-
-    if (!navigator.geolocation) return null
-
-    return await new Promise<RouteCoord | null>((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
           const lat = pos.coords.latitude
           const lng = pos.coords.longitude
 
-          console.log("GPS POLL (browser):", lat, lng, Date.now())  // ← DEBUG LOG
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+          if (lat === 0 && lng === 0) return null
 
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            resolve(null)
-            return
-          }
+          return { lat, lng }
+        }
 
-          if (lat === 0 && lng === 0) {
-            resolve(null)
-            return
-          }
+        if (!navigator.geolocation) return null
 
-          resolve({ lat, lng })
+        return await new Promise<RouteCoord | null>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const lat = pos.coords.latitude
+              const lng = pos.coords.longitude
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) { resolve(null); return }
+              if (lat === 0 && lng === 0) { resolve(null); return }
+              resolve({ lat, lng })
+            },
+            () => resolve(null),
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+          )
+        })
+      } catch (err) {
+        console.error("Location error:", err)
+        return null
+      } finally {
+        inflightLocationRef.current = null
+      }
+    })()
+
+    inflightLocationRef.current = promise
+    return promise
+  }, [])
+
+  const primeSessionCoord = useCallback((coord: RouteCoord) => {
+    useActiveDriveStore.setState((state) => {
+      const s = state.session
+      const hasStart = !!s.startCoord
+      const sameAsLast =
+        !!s.lastCoord &&
+        s.lastCoord.lat === coord.lat &&
+        s.lastCoord.lng === coord.lng
+
+      return {
+        session: {
+          ...s,
+          startCoord: s.startCoord ?? coord,
+          lastCoord: coord,
+          routeTrail:
+            hasStart && sameAsLast
+              ? s.routeTrail
+              : [...s.routeTrail, coord].slice(-500),
+          lastUpdated: Date.now(),
         },
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
-      )
+      }
     })
-  } catch (err) {
-    console.error("Location error:", err)
-    return null
-  } finally {
-    inflightLocationRef.current = null
-  }
-})()
-
-inflightLocationRef.current = promise
-return promise
-}, [])
-
-
-const primeSessionCoord = useCallback((coord: RouteCoord) => {
-  useActiveDriveStore.setState((state) => {
-    const s = state.session
-
-    const hasStart = !!s.startCoord
-    const sameAsLast =
-      !!s.lastCoord &&
-      s.lastCoord.lat === coord.lat &&
-      s.lastCoord.lng === coord.lng
-
-    return {
-      session: {
-        ...s,
-        startCoord: s.startCoord ?? coord,
-        lastCoord: coord,
-        routeTrail:
-          hasStart && sameAsLast
-            ? s.routeTrail
-            : [...s.routeTrail, coord].slice(-500),
-        lastUpdated: Date.now(),
-      },
-    }
-  })
-}, [])
-
-
+  }, [])
 
   const buildDriveSnapshot = useCallback(
     async (opts?: {
@@ -334,32 +288,25 @@ const primeSessionCoord = useCallback((coord: RouteCoord) => {
       const state = useActiveDriveStore.getState()
       const sessionSnapshot = state.session
 
-
       const savedStartTime = sessionSnapshot.startTime
       if (!savedStartTime) return null
 
-
       const snapshotTime = Date.now()
       state.tick(undefined, snapshotTime)
-
 
       const freshState = useActiveDriveStore.getState()
       const fresh = freshState.session
       const liveMode = freshState.getCurrentMode() ?? fresh.currentMode ?? "day"
 
-
       const currentEndCoord = await requestAndGetLocation()
       if (opts?.signal?.aborted) return null
-
 
       const finalElapsedMs = fresh.dayMs + fresh.nightMs
       if (finalElapsedMs <= 0) return null
 
-
       let finalDayMs = Math.max(0, fresh.dayMs)
       let finalNightMs = Math.max(0, fresh.nightMs)
       const bucketTotal = finalDayMs + finalNightMs
-
 
       if (bucketTotal < finalElapsedMs) {
         const remainder = finalElapsedMs - bucketTotal
@@ -376,16 +323,10 @@ const primeSessionCoord = useCallback((coord: RouteCoord) => {
         }
       }
 
-
-      const normalizedTotalMs = Math.max(
-        finalElapsedMs,
-        finalDayMs + finalNightMs
-      )
-
+      const normalizedTotalMs = Math.max(finalElapsedMs, finalDayMs + finalNightMs)
 
       let accurateMiles = safeNumber(fresh.liveMiles)
       let milesSource: DriveEntry["milesSource"] = "gps-accumulated"
-
 
       if (fresh.startCoord && currentEndCoord) {
         const routeMiles = await getAccurateMileage(
@@ -393,35 +334,25 @@ const primeSessionCoord = useCallback((coord: RouteCoord) => {
           currentEndCoord,
           opts?.signal
         )
-
-
         if (opts?.signal?.aborted) return null
-
-
         if (routeMiles !== null) {
           accurateMiles = routeMiles
           milesSource = "routes-api"
         }
       }
 
-
       const baseTrail = Array.isArray(fresh.routeTrail) ? fresh.routeTrail : []
-      const lastTrailCoord =
-        baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
-
+      const lastTrailCoord = baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
 
       const finalTrail =
         currentEndCoord && !sameCoord(lastTrailCoord, currentEndCoord)
           ? [...baseTrail, currentEndCoord]
           : baseTrail
 
-
-      // ✅ CHANGED 4: removed solar/onboarding recalculation — trust DMV buckets directly
       const dayHours = finalDayMs / 3600000
       const nightHours = finalNightMs / 3600000
       const verifiedNightDurationHours = nightHours
       const nightCalcMode: NightCalcMode = "dmv-fixed"
-
 
       return {
         id: makeDriveId(),
@@ -445,34 +376,25 @@ const primeSessionCoord = useCallback((coord: RouteCoord) => {
     [requestAndGetLocation]
   )
 
-
   const startFrozenSnapshot = useCallback(
     (opts?: { isPreview?: boolean }) => {
       activeSnapshotAbortRef.current?.abort()
-
-
       const controller = new AbortController()
       activeSnapshotAbortRef.current = controller
-
-
       const promise = buildDriveSnapshot({
         isPreview: opts?.isPreview,
         signal: controller.signal,
       })
-
-
       frozenSnapshotRef.current = promise
       return promise
     },
     [buildDriveSnapshot]
   )
 
-
   const [displayedMs, setDisplayedMs] = useState(() => {
     const s = useActiveDriveStore.getState().session
     return s.dayMs + s.nightMs
   })
-
 
   useEffect(() => {
     mountedRef.current = true
@@ -482,18 +404,14 @@ const primeSessionCoord = useCallback((coord: RouteCoord) => {
     }
   }, [])
 
-
+  // ✅ Display timer — unchanged
   useEffect(() => {
     const id = window.setInterval(() => {
       const s = useActiveDriveStore.getState().session
-
-
       if (!s.isActive) {
         setDisplayedMs(s.dayMs + s.nightMs)
         return
       }
-
-
       if (s.isRunning && s.lastTickAt !== null) {
         const accumulated = s.dayMs + s.nightMs
         const liveDelta = Math.max(0, Date.now() - s.lastTickAt)
@@ -502,114 +420,109 @@ const primeSessionCoord = useCallback((coord: RouteCoord) => {
         setDisplayedMs(s.dayMs + s.nightMs)
       }
     }, 500)
-
-
     return () => window.clearInterval(id)
   }, [])
 
+  // ✅ REPLACED: persistent watchPosition instead of polling interval
+  // Survives Android backgrounding — feeds coords directly into tick()
+  useEffect(() => {
+    void clearGpsWatch()
+    if (!session.isRunning) return
 
-  const formattedElapsed = formatTime(displayedMs)
+    let active = true
 
+    const startWatch = async () => {
+      try {
+        if (Capacitor.isNativePlatform()) {
+          const permission = await Geolocation.checkPermissions()
+          const needsLocation =
+            permission.location !== "granted" &&
+            permission.coarseLocation !== "granted"
 
-  const isRunning = session.isRunning
-  const hasActiveDrive = session.isActive
-  const saveDisabled =
-    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreparingStop
-  const previewDisabled =
-    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing || isPreparingStop
+          if (needsLocation) {
+            const requested = await Geolocation.requestPermissions()
+            const granted =
+              requested.location === "granted" ||
+              requested.coarseLocation === "granted"
+            if (!granted) {
+              setLocationError("Location access is required for accurate mileage.")
+              return
+            }
+          }
+        }
 
+        const id = await Geolocation.watchPosition(
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
+          (pos, err) => {
+            if (!mountedRef.current || !active) return
 
-  const effectiveMode: DriveMode | null = hasActiveDrive
-    ? getCurrentMode()
-    : session.currentMode
+            if (err || !pos) {
+              setLocationError("Location access is required for accurate mileage.")
+              return
+            }
 
+            const lat = pos.coords.latitude
+            const lng = pos.coords.longitude
 
-  const effectiveNight = effectiveMode === "night"
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+            if (lat === 0 && lng === 0) return
 
+            setLocationError(null)
+            tick({ lat, lng }, Date.now())
+          }
+        )
 
-  const modePillClasses = effectiveNight
-    ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40"
-    : "bg-white text-[#08194A]"
+        if (active) {
+          watchIdRef.current = id
+        } else {
+          // component unmounted before watch started — clean up immediately
+          await Geolocation.clearWatch({ id })
+        }
+      } catch {
+        setLocationError("Location access is required for accurate mileage.")
+      }
+    }
 
+    void startWatch()
 
-  const modePillLabel =
-    effectiveMode === "night" ? "Night" : effectiveMode === "day" ? "Day" : "--"
+    return () => {
+      active = false
+      void clearGpsWatch()
+    }
+  }, [session.isRunning, tick, clearGpsWatch])
 
-
-  const statusClass = isRunning ? "text-[#00C851]" : "text-red-400"
-  const statusText = isRunning
-    ? "Drive Active"
-    : hasActiveDrive
-      ? "Drive Paused"
-      : "Ready to Start"
-
-
+  // ✅ Prime initial coord when drive becomes active — unchanged logic, no GPS loop
   useEffect(() => {
     if (!session.isActive) return
 
-
     let cancelled = false
-
 
     ;(async () => {
       const coord = await requestAndGetLocation()
       if (cancelled || !mountedRef.current) return
-
 
       if (coord) {
         primeSessionCoord(coord)
         setLocationError(null)
       }
 
-
       tick(undefined, Date.now())
     })()
-
 
     return () => {
       cancelled = true
     }
   }, [session.isActive, primeSessionCoord, requestAndGetLocation, tick])
 
-
-  useEffect(() => {
-    clearGpsLoop()
-
-
-    if (!session.isRunning) return
-
-
-    gpsRef.current = window.setInterval(() => {
-      requestAndGetLocation().then((coord) => {
-        if (!mountedRef.current) return
-
-
-        if (!coord) {
-          setLocationError("Location access is required for accurate mileage.")
-          return
-        }
-
-
-        setLocationError(null)
-        tick(coord, Date.now())
-      })
-    }, GPS_POLL_INTERVAL_MS)
-
-
-    return clearGpsLoop
-  }, [session.isRunning, tick, clearGpsLoop, requestAndGetLocation])
-
-
+  // ✅ Cleanup on unmount
   useEffect(() => {
     return () => {
       clearAllLoops()
     }
   }, [clearAllLoops])
 
-
   useEffect(() => {
     if (!showWeatherHelp) return
-
 
     const handlePointerDown = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node
@@ -618,18 +531,13 @@ const primeSessionCoord = useCallback((coord: RouteCoord) => {
       }
     }
 
-
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setShowWeatherHelp(false)
-      }
+      if (event.key === "Escape") setShowWeatherHelp(false)
     }
-
 
     document.addEventListener("mousedown", handlePointerDown)
     document.addEventListener("touchstart", handlePointerDown)
     document.addEventListener("keydown", handleEscape)
-
 
     return () => {
       document.removeEventListener("mousedown", handlePointerDown)
@@ -638,135 +546,144 @@ const primeSessionCoord = useCallback((coord: RouteCoord) => {
     }
   }, [showWeatherHelp])
 
-
   const handlePress = async () => {
-  if (isStopping || isPreviewing || isPreparingStop) return
+    if (isStopping || isPreviewing || isPreparingStop) return
 
-  if (session.isRunning) {
-    pauseDrive()
-    setShowStopConfirm(false)
-    return
-  }
+    if (session.isRunning) {
+      pauseDrive()
+      setShowStopConfirm(false)
+      return
+    }
 
-  // ✅ Resuming a paused drive — instant, GPS updates coords in background
-  if (session.isActive) {
-    resumeDrive()
+    if (session.isActive) {
+      resumeDrive()
+      setShowStopConfirm(false)
+      setLocationError(null)
+
+      requestAndGetLocation().then((coord) => {
+        if (coord && mountedRef.current) primeSessionCoord(coord)
+      })
+      return
+    }
+
+    startDrive(Date.now(), null)
     setShowStopConfirm(false)
     setLocationError(null)
 
     requestAndGetLocation().then((coord) => {
-      if (coord && mountedRef.current) {
-        primeSessionCoord(coord)
+      if (!mountedRef.current) return
+      if (!coord) {
+        setLocationError("Location access is required for accurate mileage.")
+        return
       }
+      setLocationError(null)
+      primeSessionCoord(coord)
     })
-    return
   }
 
-  // ✅ Starting a fresh drive — timer starts immediately, GPS resolves in background
-  startDrive(Date.now(), null)
-  setShowStopConfirm(false)
-  setLocationError(null)
+  const handleStopRequest = () => {
+    if (saveDisabled) return
 
-  requestAndGetLocation().then((coord) => {
-    if (!mountedRef.current) return
+    wasRunningBeforeStopRef.current = session.isRunning
 
-    if (!coord) {
-      setLocationError("Location access is required for accurate mileage.")
-      return
-    }
+    if (session.isRunning) pauseDrive()
 
-    setLocationError(null)
-    primeSessionCoord(coord)
-  })
-}
+    setShowStopConfirm(true)
+    setIsPreparingStop(true)
 
-const handleStopRequest = () => {
-  if (saveDisabled) return
-
-  wasRunningBeforeStopRef.current = session.isRunning
-
-  if (session.isRunning) {
-    pauseDrive()
+    startFrozenSnapshot({ isPreview: false }).finally(() => {
+      if (mountedRef.current) setIsPreparingStop(false)
+    })
   }
 
-  // ✅ Show confirm dialog instantly
-  setShowStopConfirm(true)
-  setIsPreparingStop(true)
-
-  // ✅ Snapshot builds in background while user reads the confirm dialog
-  startFrozenSnapshot({ isPreview: false }).finally(() => {
-    if (mountedRef.current) {
-      setIsPreparingStop(false)
-    }
-  })
-}
-
-const handleCancelStop = () => {
-  activeSnapshotAbortRef.current?.abort()
-  activeSnapshotAbortRef.current = null
-  frozenSnapshotRef.current = null
-  setShowStopConfirm(false)
-  setIsPreparingStop(false)
-
-  if (wasRunningBeforeStopRef.current) {
-    resumeDrive()
-  }
-}
-
-const handleSaveDrive = async () => {
-  if (isSavingRef.current || isPreparingStop) return
-
-  isSavingRef.current = true
-  setIsStopping(true)
-
-  try {
-    clearAllLoops()
-
-    const finalizedDrive = frozenSnapshotRef.current
-      ? await frozenSnapshotRef.current
-      : await startFrozenSnapshot({ isPreview: false })
-
-    if (!finalizedDrive) return
-
-    const { isPreview: _stripped, ...driveToSave } = finalizedDrive
-
-    saveDrive(driveToSave)
-    setCurrentDrive(driveToSave)
-    setShowStopConfirm(false)
-
-    setScreen("todaysDrive")
-    hardReset()
-  } catch (err) {
-    console.error("[ActiveDrive] Save failed:", err)
-    setLocationError(
-      "Drive save failed. Please try again before closing the app."
-    )
-  } finally {
-    isSavingRef.current = false
-    setIsStopping(false)
-    setIsPreparingStop(false)
-    frozenSnapshotRef.current = null
+  const handleCancelStop = () => {
+    activeSnapshotAbortRef.current?.abort()
     activeSnapshotAbortRef.current = null
-    wasRunningBeforeStopRef.current = false
+    frozenSnapshotRef.current = null
+    setShowStopConfirm(false)
+    setIsPreparingStop(false)
+
+    if (wasRunningBeforeStopRef.current) resumeDrive()
   }
-}
 
-const handlePreviewSummary = async () => {
-  if (previewDisabled) return
+  const handleSaveDrive = async () => {
+    if (isSavingRef.current || isPreparingStop) return
 
-  try {
-    setIsPreviewing(true)
+    isSavingRef.current = true
+    setIsStopping(true)
 
-    const previewDrive = await startFrozenSnapshot({ isPreview: true })
-    if (!previewDrive) return
+    try {
+      clearAllLoops()
 
-    setCurrentDrive(previewDrive)
-    setScreen("summary")
-  } finally {
-    setIsPreviewing(false)
+      const finalizedDrive = frozenSnapshotRef.current
+        ? await frozenSnapshotRef.current
+        : await startFrozenSnapshot({ isPreview: false })
+
+      if (!finalizedDrive) return
+
+      const { isPreview: _stripped, ...driveToSave } = finalizedDrive
+
+      saveDrive(driveToSave)
+      setCurrentDrive(driveToSave)
+      setShowStopConfirm(false)
+
+      setScreen("todaysDrive")
+      hardReset()
+    } catch (err) {
+      console.error("[ActiveDrive] Save failed:", err)
+      setLocationError("Drive save failed. Please try again before closing the app.")
+    } finally {
+      isSavingRef.current = false
+      setIsStopping(false)
+      setIsPreparingStop(false)
+      frozenSnapshotRef.current = null
+      activeSnapshotAbortRef.current = null
+      wasRunningBeforeStopRef.current = false
+    }
   }
-}
 
+  const handlePreviewSummary = async () => {
+    if (previewDisabled) return
+
+    try {
+      setIsPreviewing(true)
+      const previewDrive = await startFrozenSnapshot({ isPreview: true })
+      if (!previewDrive) return
+      setCurrentDrive(previewDrive)
+      setScreen("summary")
+    } finally {
+      setIsPreviewing(false)
+    }
+  }
+
+  const formattedElapsed = formatTime(displayedMs)
+
+  const isRunning = session.isRunning
+  const hasActiveDrive = session.isActive
+  const saveDisabled =
+    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreparingStop
+  const previewDisabled =
+    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing || isPreparingStop
+
+  const effectiveMode: DriveMode | null = hasActiveDrive
+    ? getCurrentMode()
+    : session.currentMode
+
+  const effectiveNight = effectiveMode === "night"
+
+  const modePillClasses = effectiveNight
+    ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40"
+    : "bg-white text-[#08194A]"
+
+  const modePillLabel =
+    effectiveMode === "night" ? "Night" : effectiveMode === "day" ? "Day" : "--"
+
+  const statusClass = isRunning ? "text-[#00C851]" : "text-red-400"
+  const statusText = isRunning
+    ? "Drive Active"
+    : hasActiveDrive
+      ? "Drive Paused"
+      : "Ready to Start"
 
   return (
     <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
@@ -774,7 +691,6 @@ const handlePreviewSummary = async () => {
         <div className="mx-auto w-full max-w-[42rem]">
           <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
             <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
-
 
             <div className="p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
@@ -793,7 +709,6 @@ const handlePreviewSummary = async () => {
                 </div>
               </div>
 
-
               <div className="mt-4 rounded-2xl border border-white/10 bg-[#08194A]/70 p-4 shadow-inner">
                 <div className="flex items-center gap-3">
                   <div
@@ -809,7 +724,6 @@ const handlePreviewSummary = async () => {
                       <SunIcon className="h-7 w-7 text-[#f9c80e]" />
                     )}
                   </div>
-
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -828,7 +742,6 @@ const handlePreviewSummary = async () => {
                   </div>
                 </div>
 
-
                 <div className="mt-4">
                   <div className="mb-1.5 flex justify-between text-[10px] uppercase tracking-[0.16em] text-white/45">
                     <span>Day</span>
@@ -845,7 +758,6 @@ const handlePreviewSummary = async () => {
                   </div>
                 </div>
               </div>
-
 
               <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-1.5">
                 <div className="grid grid-cols-3 gap-2">
@@ -874,12 +786,10 @@ const handlePreviewSummary = async () => {
           </div>
         </div>
 
-
         <div className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
           <p className={`text-sm uppercase tracking-[0.18em] ${statusClass}`}>
             {statusText}
           </p>
-
 
           <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
             <button
@@ -907,17 +817,14 @@ const handlePreviewSummary = async () => {
               )}
             </button>
 
-
             <div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums text-white">
               {formattedElapsed}
             </div>
           </div>
         </div>
 
-
         <div className="mx-auto mt-4 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#0A1E5E] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#0A1E5E]" />
-
 
           <div className="p-5 sm:p-6">
             <div className="flex items-start justify-between gap-3">
@@ -940,7 +847,6 @@ const handlePreviewSummary = async () => {
               </div>
             </div>
 
-
             <div className="mt-5 flex flex-col gap-3">
               <div className="w-full rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
@@ -950,7 +856,6 @@ const handlePreviewSummary = async () => {
                   {formattedElapsed}
                 </p>
               </div>
-
 
               <div className="w-full rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm">
                 <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
@@ -968,7 +873,6 @@ const handlePreviewSummary = async () => {
               </div>
             </div>
 
-
             <div className="mt-4 rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F4F6FA] p-4 shadow-sm">
               <div className="grid grid-cols-1 items-center gap-4 text-center sm:grid-cols-2">
                 <div>
@@ -982,7 +886,6 @@ const handlePreviewSummary = async () => {
                   </p>
                 </div>
 
-
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                     Lighting
@@ -992,7 +895,6 @@ const handlePreviewSummary = async () => {
                   </p>
                 </div>
 
-
                 <div className="flex flex-col items-center sm:col-span-2">
                   <div
                     ref={weatherHelpRef}
@@ -1001,7 +903,6 @@ const handlePreviewSummary = async () => {
                     <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                       Weather Conditions
                     </p>
-
 
                     <button
                       id={weatherHelpButtonId}
@@ -1014,7 +915,6 @@ const handlePreviewSummary = async () => {
                     >
                       ⓘ
                     </button>
-
 
                     {showWeatherHelp && (
                       <div
@@ -1039,7 +939,6 @@ const handlePreviewSummary = async () => {
                     )}
                   </div>
 
-
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {["Clear", "Rain", "Snow", "Fog"].map((w) => {
                       const isSelected = session.weather === w
@@ -1063,7 +962,6 @@ const handlePreviewSummary = async () => {
               </div>
             </div>
 
-
             {locationError && (
               <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 text-left shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-red-600">
@@ -1074,7 +972,6 @@ const handlePreviewSummary = async () => {
                 </p>
               </div>
             )}
-
 
             <div className="mt-5 space-y-3">
               <div className="grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
@@ -1099,12 +996,9 @@ const handlePreviewSummary = async () => {
                       : "Start Timer"}
                 </button>
 
-
                 <button
                   type="button"
-                  onClick={() => {
-                    void handleStopRequest()
-                  }}
+                  onClick={() => { void handleStopRequest() }}
                   disabled={saveDisabled}
                   className={`w-full rounded-xl py-3 font-bold transition ${
                     saveDisabled
@@ -1115,7 +1009,6 @@ const handlePreviewSummary = async () => {
                   {isPreparingStop ? "Preparing..." : "Stop Drive"}
                 </button>
               </div>
-
 
               {showStopConfirm && (
                 <div className="rounded-2xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm">
@@ -1130,13 +1023,11 @@ const handlePreviewSummary = async () => {
                     and lighting conditions.
                   </p>
 
-
                   {isPreparingStop && (
                     <p className="mt-2 text-sm font-semibold text-[#0A1E5E]">
                       Preparing final snapshot...
                     </p>
                   )}
-
 
                   <div className="mt-4 grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
                     <button
@@ -1147,7 +1038,6 @@ const handlePreviewSummary = async () => {
                     >
                       Cancel
                     </button>
-
 
                     <button
                       type="button"
@@ -1164,7 +1054,6 @@ const handlePreviewSummary = async () => {
                   </div>
                 </div>
               )}
-
 
               <button
                 type="button"
@@ -1184,7 +1073,6 @@ const handlePreviewSummary = async () => {
           </div>
         </div>
 
-
         <style>
           {`
             @keyframes pulse-slow {
@@ -1193,11 +1081,9 @@ const handlePreviewSummary = async () => {
               100% { transform: scale(1); }
             }
 
-
             .animate-pulse-slow {
               animation: pulse-slow 2.5s ease-in-out infinite;
             }
-
 
             @media (prefers-reduced-motion: reduce) {
               .animate-pulse-slow {
@@ -1210,6 +1096,5 @@ const handlePreviewSummary = async () => {
     </div>
   )
 }
-
 
 export default ActiveDriveContent

@@ -233,48 +233,41 @@ export default function HomeDashboardContent({
   const handleStartDrive = async () => {
   if (startingDrive) return;
 
-  // ⭐ Hide bottom nav immediately
-  setLocationPermissionGranted(false);
-
-  if (hasActiveDrive) {
-    setScreen("active");
-    return;
-  }
-
   // Check existing permission
   const perm = await queryLocationPermission();
 
-  if (perm !== "granted") {
-    // Show your disclosure modal
-    setShowLocationDisclosure(true);
+  if (perm === "granted") {
+    setLocationPermissionGranted(true);
+    await beginDrive();
     return;
   }
 
-  // ⭐ Permission already granted → show nav again
-  setLocationPermissionGranted(true);
-
-  await beginDrive();
+  // Not granted → show disclosure modal
+  setShowLocationDisclosure(true);
 };
 
 
-  const handleAllowAndContinue = async () => {
-    try {
-      const perm = await Geolocation.requestPermissions({
-        permissions: ["location"],
-      })
+const handleAllowAndContinue = async () => {
+  try {
+    const perm = await Geolocation.requestPermissions({
+      permissions: ["location"],
+    });
 
-      if (perm.location === "granted") {
-        setShowLocationDisclosure(false)
-        await beginDrive()
-      } else {
-        console.warn("Location permission denied")
-        setShowLocationDisclosure(false)
-      }
-    } catch (err) {
-      console.error("Location permission error:", err)
-      setShowLocationDisclosure(false)
+    if (perm.location === "granted") {
+      setLocationPermissionGranted(true);
+      setShowLocationDisclosure(false);
+      await beginDrive();
+    } else {
+      console.warn("Location permission denied");
+      setShowLocationDisclosure(false);
     }
+  } catch (err) {
+    console.error("Location permission error:", err);
+    setShowLocationDisclosure(false);
   }
+};
+
+
 
   return (
     <>

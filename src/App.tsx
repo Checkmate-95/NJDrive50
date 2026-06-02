@@ -1,8 +1,10 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react"
+import React, { Suspense, lazy, useEffect, useRef, useState } from "react"
+
 import AppShell from "./layout/AppShell"
 import ErrorBoundary from "./components/ErrorBoundary"
 
-import HomeDashboard from "./screens/HomeDashboardContent"
+import HomeDashboardContent from "./screens/HomeDashboardContent"
+
 import ActiveDrive from "./screens/ActiveDriveContent"
 import Onboarding from "./screens/OnboardingContent"
 import HomeIntro from "./screens/HomeIntroContent"
@@ -144,7 +146,6 @@ export default function App() {
   // ⭐ NEW — required for HomeDashboardContent
   const [_locationPermissionGranted, setLocationPermissionGranted] = useState(false)
 
-
   // ⭐ PATCH — auto‑grant permission in browser
   useEffect(() => {
     if (!isNativePlatform()) {
@@ -255,12 +256,13 @@ export default function App() {
         return <Onboarding setScreen={setScreenCompat} />
 
       case "home":
-        return (
-          <HomeDashboard
-            setScreen={setScreenCompat}
-            setLocationPermissionGranted={setLocationPermissionGranted}
-          />
-        )
+  return (
+    <HomeDashboardContent
+      setScreen={setScreenCompat}
+      setLocationPermissionGranted={setLocationPermissionGranted}
+    />
+  )
+
 
       case "active":
       case "activeDrive":
@@ -348,22 +350,27 @@ export default function App() {
   }
 
   return (
-    <AppShell setScreen={setScreenCompat} active={safeScreen}>
-      <MapProvider>
-        <ErrorBoundary
-          key={safeScreen}
-          onReloadApp={() => {
-            setScreen("landing")
-            if (isBrowser()) {
-              window.location.reload()
-            }
-          }}
-        >
-          <Suspense fallback={<ScreenLoader />}>
-            {renderScreen()}
-          </Suspense>
-        </ErrorBoundary>
-      </MapProvider>
-    </AppShell>
+  <AppShell setScreen={setScreenCompat} active={safeScreen}>
+    <MapProvider>
+      <ErrorBoundary
+        key={safeScreen}
+        onReloadApp={() => {
+          setScreen("landing")
+          if (isBrowser()) {
+            window.location.reload()
+          }
+        }}
+      >
+        <Suspense fallback={<ScreenLoader />}>
+          {safeScreen === "home"
+            ? React.cloneElement(
+                renderScreen() as React.ReactElement<any>,
+                { setLocationPermissionGranted }
+              )
+            : renderScreen()}
+        </Suspense>
+      </ErrorBoundary>
+    </MapProvider>
+  </AppShell>
   )
 }

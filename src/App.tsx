@@ -48,26 +48,26 @@ export type Screen =
   | "onboarding"
   | "home"
   | "active"
-  | "activeDrive"    // ✅ added — bottom nav "Start Drive" slot
+  | "activeDrive"
   | "todaysDrive"
   | "summary"
   | "milestones"
   | "driveHistory"
   | "export"
-  | "exportLogs"     // ✅ added — More drawer alias
+  | "exportLogs"
   | "settings"
   | "reminderSettings"
   | "reminderLog"
   | "dmv"
   | "dmvPrep"
-  | "paperwork"      // ✅ added — More drawer
+  | "paperwork"
   | "share"
   | "helpFaq"
   | "aiHelper"
-  | "aiFaq"          // ✅ added — More drawer alias
+  | "aiFaq"
   | "teenDriverRules"
-  | "teenInfo"       // ✅ added — More drawer
-  | "parentInfo"     // ✅ added — More drawer
+  | "teenInfo"
+  | "parentInfo"
   | "manageProfile"
   | "restartOnboarding"
   | "dataCleared"
@@ -75,7 +75,7 @@ export type Screen =
   | "pricing"
   | "privacy"
   | "terms"
-  | "about"          // ✅ added — More drawer
+  | "about"
 
 const VALID_SCREENS: readonly Screen[] = [
   "landing",
@@ -136,6 +136,10 @@ export default function App() {
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const [bootstrapped, setBootstrapped] = useState(false)
   const prevStackLengthRef = useRef(stack.length)
+
+  // ⭐ NEW — required for HomeDashboardContent
+  const [_locationPermissionGranted, setLocationPermissionGranted] = useState(false)
+
 
   const safeScreen: Screen = isValidScreen(screen) ? screen : "landing"
 
@@ -238,13 +242,23 @@ export default function App() {
         return <HomeIntro setScreen={setScreenCompat} />
       case "onboarding":
         return <Onboarding setScreen={setScreenCompat} />
-      case "home":
-        return <HomeDashboard setScreen={setScreenCompat} />
 
-      // ✅ Both "active" (legacy) and "activeDrive" (new nav) render the same screen
+      case "home":
+        return (
+          <HomeDashboard
+            setScreen={setScreenCompat}
+            setLocationPermissionGranted={setLocationPermissionGranted}
+          />
+        )
+
       case "active":
       case "activeDrive":
-        return <ActiveDrive setScreen={setScreenCompat} setCurrentDrive={setCurrentDrive} />
+        return (
+          <ActiveDrive
+            setScreen={setScreenCompat}
+            setCurrentDrive={setCurrentDrive}
+          />
+        )
 
       case "todaysDrive":
         return <TodaysDrive drive={currentDrive} />
@@ -253,7 +267,6 @@ export default function App() {
       case "driveHistory":
         return <DriveHistoryContent />
 
-      // ✅ Both "export" (legacy) and "exportLogs" (new nav) render the same screen
       case "export":
       case "exportLogs":
         return <ExportLog setScreen={setScreenCompat} />
@@ -275,7 +288,6 @@ export default function App() {
       case "dmvPrep":
         return <DMVAppointmentPrep />
 
-      // ✅ "paperwork" routes to DMVBundle — best existing match
       case "paperwork":
         return <DMVBundle />
 
@@ -284,12 +296,10 @@ export default function App() {
       case "helpFaq":
         return <HelpFaq />
 
-      // ✅ Both "aiHelper" (legacy) and "aiFaq" (new nav) render the same screen
       case "aiHelper":
       case "aiFaq":
         return <AIHelperScreen />
 
-      // ✅ "teenInfo" and "parentInfo" route to Onboarding — best existing match
       case "teenInfo":
       case "parentInfo":
       case "manageProfile":
@@ -308,7 +318,6 @@ export default function App() {
       case "terms":
         return <TermsOfUse />
 
-      // ✅ "about" — placeholder until you build an About screen
       case "about":
         return <Settings />
 
@@ -339,7 +348,9 @@ export default function App() {
             }
           }}
         >
-          <Suspense fallback={<ScreenLoader />}>{renderScreen()}</Suspense>
+          <Suspense fallback={<ScreenLoader />}>
+            {renderScreen()}
+          </Suspense>
         </ErrorBoundary>
       </MapProvider>
     </AppShell>

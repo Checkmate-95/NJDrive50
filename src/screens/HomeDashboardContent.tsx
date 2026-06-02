@@ -36,7 +36,11 @@ const isNonNullButton = (
 
 export default function HomeDashboardContent({
   setScreen,
-}: HomeDashboardContentProps) {
+  setLocationPermissionGranted,   // ⭐ NEW
+}: HomeDashboardContentProps & {
+  setLocationPermissionGranted: (v: boolean) => void
+}) {
+
   const [startingDrive, setStartingDrive] = useState(false)
   const [showLocationDisclosure, setShowLocationDisclosure] = useState(false)
 
@@ -227,21 +231,31 @@ export default function HomeDashboardContent({
   }
 
   const handleStartDrive = async () => {
-    if (startingDrive) return
+  if (startingDrive) return;
 
-    if (hasActiveDrive) {
-      setScreen("active")
-      return
-    }
+  // ⭐ Hide bottom nav immediately
+  setLocationPermissionGranted(false);
 
-    const perm = await queryLocationPermission()
-    if (perm !== "granted") {
-      setShowLocationDisclosure(true)
-      return
-    }
-
-    await beginDrive()
+  if (hasActiveDrive) {
+    setScreen("active");
+    return;
   }
+
+  // Check existing permission
+  const perm = await queryLocationPermission();
+
+  if (perm !== "granted") {
+    // Show your disclosure modal
+    setShowLocationDisclosure(true);
+    return;
+  }
+
+  // ⭐ Permission already granted → show nav again
+  setLocationPermissionGranted(true);
+
+  await beginDrive();
+};
+
 
   const handleAllowAndContinue = async () => {
     try {

@@ -1,4 +1,4 @@
-import React, { useState, isValidElement } from "react"
+import React, { useState, isValidElement, useEffect } from "react"
 import type { PropsWithChildren } from "react"
 import type { Screen } from "../App"
 import FloatingAIButton from "../components/FloatingAIButton"
@@ -29,6 +29,10 @@ const MORE_SCREENS: Screen[] = [
   "about",
 ]
 
+function isNativePlatform() {
+  return !!(window as any).Capacitor?.isNativePlatform
+}
+
 export default function AppShell({
   children,
   setScreen,
@@ -36,8 +40,15 @@ export default function AppShell({
 }: AppShellProps) {
   const [showMore, setShowMore] = useState(false)
 
-  // ⭐ Global permission flag
+  // ⭐ Permission state (but browser auto-grants)
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
+
+  // ⭐ Browser ALWAYS gets permission
+  useEffect(() => {
+    if (!isNativePlatform()) {
+      setLocationPermissionGranted(true)
+    }
+  }, [])
 
   const chromeHidden = CHROMELESS_SCREENS.includes(active)
   const isLegal = active === "privacy" || active === "terms"
@@ -53,7 +64,7 @@ export default function AppShell({
         : "text-white/88 hover:text-[#f9c80e]",
     ].join(" ")
 
-  // CHROMELESS MODE
+  // ⭐ CHROMELESS MODE
   if (chromeHidden) {
     return (
       <div
@@ -72,7 +83,7 @@ export default function AppShell({
     )
   }
 
-  // FULL COCKPIT MODE
+  // ⭐ FULL APP MODE
   return (
     <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#08194A]">
       <header className="w-full shrink-0 bg-[#08194A] px-4 pb-3 pt-5 sm:pb-4 sm:pt-6">
@@ -95,7 +106,7 @@ export default function AppShell({
         </section>
       </main>
 
-      {/* ⭐ AI Bubble hidden until permission granted */}
+      {/* ⭐ AI Bubble */}
       {locationPermissionGranted && (
         <div className="pointer-events-none fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40">
           <div className="pointer-events-auto">
@@ -104,7 +115,7 @@ export default function AppShell({
         </div>
       )}
 
-      {/* ⭐ More Drawer disabled until permission granted */}
+      {/* ⭐ More Drawer */}
       {showMore && locationPermissionGranted && (
         <>
           <div
@@ -114,13 +125,13 @@ export default function AppShell({
 
           <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 mx-auto w-full max-w-[42rem] px-3">
             <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d2260] shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
-              {/* drawer content unchanged */}
+              {/* drawer content */}
             </div>
           </div>
         </>
       )}
 
-      {/* ⭐ Bottom Nav hidden until permission granted */}
+      {/* ⭐ Bottom Nav */}
       {locationPermissionGranted && (
         <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#08194A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#08194A]/88">
           <div className="mx-auto w-full max-w-[42rem] px-2 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-3 sm:pt-3">

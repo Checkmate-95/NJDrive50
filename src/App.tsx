@@ -117,6 +117,10 @@ function isBrowser() {
   return typeof window !== "undefined"
 }
 
+function isNativePlatform() {
+  return !!(window as any).Capacitor?.isNativePlatform
+}
+
 function isValidScreen(value: unknown): value is Screen {
   return typeof value === "string" && VALID_SCREENS.includes(value as Screen)
 }
@@ -140,6 +144,13 @@ export default function App() {
   // ⭐ NEW — required for HomeDashboardContent
   const [_locationPermissionGranted, setLocationPermissionGranted] = useState(false)
 
+
+  // ⭐ PATCH — auto‑grant permission in browser
+  useEffect(() => {
+    if (!isNativePlatform()) {
+      setLocationPermissionGranted(true)
+    }
+  }, [])
 
   const safeScreen: Screen = isValidScreen(screen) ? screen : "landing"
 

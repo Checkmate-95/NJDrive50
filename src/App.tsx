@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from "react"
+import { Suspense, lazy, useEffect, useRef, useState, useCallback } from "react"
 
 import AppShell from "./layout/AppShell"
 import ErrorBoundary from "./components/ErrorBoundary"
@@ -161,11 +161,17 @@ export default function App() {
     console.log("[App] locationPermissionGranted:", locationPermissionGranted)
   }, [safeScreen, locationPermissionGranted])
 
-  const setScreenCompat = (nextScreen: Screen | ((prev: Screen) => Screen)) => {
-    const next = typeof nextScreen === "function" ? nextScreen(safeScreen) : nextScreen
-    setScreen(next)
-  }
+  // ⭐ FIX — stabilize setScreenCompat
+  const setScreenCompat = useCallback(
+    (nextScreen: Screen | ((prev: Screen) => Screen)) => {
+      const next =
+        typeof nextScreen === "function" ? nextScreen(safeScreen) : nextScreen
+      setScreen(next)
+    },
+    [safeScreen, setScreen]
+  )
 
+  // ⭐ Initialize reminders
   useEffect(() => {
     const data = loadOnboardingData()
     if (!data?.teenName) return
@@ -174,7 +180,7 @@ export default function App() {
     initializeReminders(prefs)
   }, [])
 
-  // ⭐ BOOTSTRAP FIXED SECTION
+  // ⭐ FIX — Bootstrap runs ONCE, not on every render
   useEffect(() => {
     let cancelled = false
 
@@ -183,11 +189,9 @@ export default function App() {
         const nav = useNav.getState()
         const current = isValidScreen(nav.screen) ? nav.screen : "landing"
 
-        // ⭐ DIAGNOSTIC LOGS
         console.log("[Bootstrap] running bootstrap")
         console.log("[Bootstrap] current screen:", current)
 
-        // ⭐ CRITICAL FIX — protect ActiveDrive from being overridden
         if (current === "activeDrive" || current === "active") {
           console.log("[Bootstrap] skipping — user is in ActiveDrive")
           setBootstrapped(true)
@@ -253,9 +257,9 @@ export default function App() {
       cancelled = true
       unsubscribe?.()
     }
-  }, [setScreen])
+  }, []) // ⭐ FIXED — empty array
 
-  // ⭐ SCROLL RESET (unchanged)
+  // ⭐ SCROLL RESET
   useEffect(() => {
     if (!isBrowser()) return
 

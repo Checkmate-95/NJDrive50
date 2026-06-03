@@ -29,12 +29,14 @@
             android:name="com.getcapacitor.BridgeActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|density|uiMode|locale|layoutDirection|fontScale"
             android:windowSoftInputMode="adjustResize">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
         </activity>
 
         <provider
@@ -47,7 +49,6 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- NO SERVICE BLOCK NEEDED FOR COMMUNITY PLUGIN -->
-
     </application>
+
 </manifest>

@@ -69,58 +69,61 @@ export default function HomeDashboardContent({
   }, [hasActiveDrive, activeSession?.isRunning])
 
   useEffect(() => {
-    if (!showLocationDisclosure) return
+  if (!showLocationDisclosure) return;
 
-    lastFocusedElementRef.current = document.activeElement as HTMLElement | null
+  // Save the element that had focus before the modal opened
+  lastFocusedElementRef.current = document.activeElement as HTMLElement | null;
 
-    const frame = window.requestAnimationFrame(() => {
-      allowButtonRef.current?.focus()
-    })
+  // Focus the Allow button on next frame
+  const frame = window.requestAnimationFrame(() => {
+    allowButtonRef.current?.focus();
+  });
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        setShowLocationDisclosure(false)
-        return
-      }
-
-      if (event.key !== "Tab") return
-
-      const focusable = [
-        cancelButtonRef.current,
-        allowButtonRef.current,
-      ].filter(isNonNullButton)
-
-      const first = focusable.at(0)
-      const last = focusable.at(-1)
-
-      if (!first || !last) return
-
-      const active = document.activeElement
-      const activeIsTrackedElement =
-        active instanceof HTMLButtonElement && focusable.includes(active)
-
-      if (event.shiftKey) {
-        if (active === first || !activeIsTrackedElement) {
-          event.preventDefault()
-          last.focus()
-        }
-      } else {
-        if (active === last || !activeIsTrackedElement) {
-          event.preventDefault()
-          first.focus()
-        }
-      }
+  const handleKeyDown = (event: KeyboardEvent) => {
+    // ⭐ Do NOT close the modal here — only close it from button handlers
+    if (event.key === "Escape") {
+      event.preventDefault();
+      return; // keep modal open so Android permission dialog doesn't break JS
     }
 
-    document.addEventListener("keydown", handleKeyDown)
+    if (event.key !== "Tab") return;
 
-    return () => {
-      window.cancelAnimationFrame(frame)
-      document.removeEventListener("keydown", handleKeyDown)
-      lastFocusedElementRef.current?.focus?.()
+    const focusable = [
+      cancelButtonRef.current,
+      allowButtonRef.current,
+    ].filter(isNonNullButton);
+
+    const first = focusable.at(0);
+    const last = focusable.at(-1);
+
+    if (!first || !last) return;
+
+    const active = document.activeElement;
+    const activeIsTrackedElement =
+      active instanceof HTMLButtonElement && focusable.includes(active);
+
+    if (event.shiftKey) {
+      if (active === first || !activeIsTrackedElement) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (active === last || !activeIsTrackedElement) {
+        event.preventDefault();
+        first.focus();
+      }
     }
-  }, [showLocationDisclosure])
+  };
+
+  document.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    window.cancelAnimationFrame(frame);
+    document.removeEventListener("keydown", handleKeyDown);
+    lastFocusedElementRef.current?.focus?.();
+  };
+}, [showLocationDisclosure]);
+
 
   const onboarding = useMemo(() => loadOnboardingData(), [])
 

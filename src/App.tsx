@@ -169,6 +169,7 @@ export default function App() {
     initializeReminders(prefs)
   }, [])
 
+  // ⭐ BOOTSTRAP FIXED SECTION
   useEffect(() => {
     let cancelled = false
 
@@ -176,6 +177,11 @@ export default function App() {
       try {
         const nav = useNav.getState()
         const current = isValidScreen(nav.screen) ? nav.screen : "landing"
+
+        // ⭐ CRITICAL FIX — do NOT override navigation when user is entering ActiveDrive
+        if (current === "activeDrive") {
+          return
+        }
 
         let hasOnboardingData = false
         const result = await Preferences.get({ key: "onboardingData" })
@@ -194,7 +200,11 @@ export default function App() {
         if (!isValidScreen(nav.screen)) {
           nav.setScreen("landing")
         } else if (hasOnboardingData) {
-          if (current === "landing" || current === "intro" || current === "onboarding") {
+          if (
+            current === "landing" ||
+            current === "intro" ||
+            current === "onboarding"
+          ) {
             nav.setScreen("home")
           }
         } else if (
@@ -234,6 +244,7 @@ export default function App() {
     }
   }, [setScreen])
 
+  // ⭐ SCROLL RESET (unchanged)
   useEffect(() => {
     if (!isBrowser()) return
 
@@ -247,6 +258,7 @@ export default function App() {
     }
   }, [safeScreen, stack.length])
 
+  // ⭐ SCREEN RENDERER
   const renderScreen = () => {
     switch (safeScreen) {
       case "landing":
@@ -257,13 +269,12 @@ export default function App() {
         return <Onboarding setScreen={setScreenCompat} />
 
       case "home":
-  return (
-    <HomeDashboardContent
-      setScreen={setScreenCompat}
-      setLocationPermissionGranted={setLocationPermissionGranted}
-    />
-  )
-
+        return (
+          <HomeDashboardContent
+            setScreen={setScreenCompat}
+            setLocationPermissionGranted={setLocationPermissionGranted}
+          />
+        )
 
       case "active":
       case "activeDrive":
@@ -340,7 +351,22 @@ export default function App() {
     }
   }
 
+  // ⭐ LOADING STATE
   if (!bootstrapped) {
+    return (
+      <AppShell
+        setScreen={setScreenCompat}
+        active={safeScreen}
+        locationPermissionGranted={_locationPermissionGranted}
+      >
+        <MapProvider>
+          <ScreenLoader />
+        </MapProvider>
+      </AppShell>
+    )
+  }
+
+  // ⭐ MAIN RENDER
   return (
     <AppShell
       setScreen={setScreenCompat}
@@ -348,38 +374,20 @@ export default function App() {
       locationPermissionGranted={_locationPermissionGranted}
     >
       <MapProvider>
-        <ScreenLoader />
+        <ErrorBoundary
+          key={safeScreen}
+          onReloadApp={() => {
+            setScreen("landing")
+            if (isBrowser()) {
+              window.location.reload()
+            }
+          }}
+        >
+          <Suspense fallback={<ScreenLoader />}>
+            {renderScreen()}
+          </Suspense>
+        </ErrorBoundary>
       </MapProvider>
     </AppShell>
   )
-}
-
-
-
-  return (
-  <AppShell
-  setScreen={setScreenCompat}
-  active={safeScreen}
-  locationPermissionGranted={_locationPermissionGranted}
->
-
-    <MapProvider>
-      <ErrorBoundary
-        key={safeScreen}
-        onReloadApp={() => {
-          setScreen("landing")
-          if (isBrowser()) {
-            window.location.reload()
-          }
-        }}
-      >
-        <Suspense fallback={<ScreenLoader />}>
-          {renderScreen()}
-        </Suspense>
-      </ErrorBoundary>
-    </MapProvider>
-  </AppShell>
-)
-
-
 }

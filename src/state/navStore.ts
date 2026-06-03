@@ -74,9 +74,10 @@ function isScreen(value: unknown): value is Screen {
 
 
 
-function normalizeScreen(value: unknown, fallback: Screen = "home"): Screen {
+function normalizeScreen(value: unknown, fallback: Screen = "landing"): Screen {
   return isScreen(value) ? value : fallback
 }
+
 
 function normalizeStack(value: unknown): Screen[] {
   if (!Array.isArray(value)) return []
@@ -93,7 +94,8 @@ function normalizePersistedNavState(
   const raw = (value ?? null) as PersistedNavState | null
 
   return {
-    screen: normalizeScreen(raw?.screen, "home"),
+    screen: normalizeScreen(raw?.screen, "landing"),
+
     stack: normalizeStack(raw?.stack),
     previousScreen: normalizePreviousScreen(raw?.previousScreen),
   }

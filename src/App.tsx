@@ -145,7 +145,8 @@ export default function App() {
   const prevStackLengthRef = useRef(stack.length)
 
   // ⭐ NEW — required for HomeDashboardContent
-  const [_locationPermissionGranted, setLocationPermissionGranted] = useState(false)
+  const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
+
 
   // ⭐ PATCH — auto‑grant permission in browser
   useEffect(() => {
@@ -357,7 +358,7 @@ export default function App() {
       <AppShell
         setScreen={setScreenCompat}
         active={safeScreen}
-        locationPermissionGranted={_locationPermissionGranted}
+        locationPermissionGranted={locationPermissionGranted}
       >
         <MapProvider>
           <ScreenLoader />
@@ -371,7 +372,7 @@ export default function App() {
     <AppShell
       setScreen={setScreenCompat}
       active={safeScreen}
-      locationPermissionGranted={_locationPermissionGranted}
+      locationPermissionGranted={locationPermissionGranted}
     >
       <MapProvider>
         <ErrorBoundary

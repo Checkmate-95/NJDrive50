@@ -222,50 +222,69 @@ export default function HomeDashboardContent({
   }
 
   const beginDrive = async () => {
-    setStartingDrive(true)
-    try {
-      navigate("home", "startDrive", setScreen)
-    } finally {
-      setStartingDrive(false)
-    }
+  setStartingDrive(true)
+  try {
+    // Start a fresh drive session
+    useActiveDriveStore.getState().startDrive(Date.now(), null, {
+      override: "auto",
+      weather: null,
+      sunrise: null,
+      sunset: null,
+    })
+
+    // Navigate to Active Drive screen
+    setScreen("activeDrive")
+  } finally {
+    setStartingDrive(false)
   }
+}
+
+
 
   const handleStartDrive = async () => {
   if (startingDrive) return;
 
-  // Check existing permission
+  // 1. Check if permission already granted
   const perm = await queryLocationPermission();
 
   if (perm === "granted") {
     setLocationPermissionGranted(true);
-    await beginDrive();
+    await beginDrive(); // safe to start drive
     return;
   }
 
-  // Not granted → show disclosure modal
+  // 2. Not granted → show disclosure modal
   setShowLocationDisclosure(true);
 };
 
 
+
 const handleAllowAndContinue = async () => {
   try {
+    // Close the modal immediately
+    setShowLocationDisclosure(false);
+
+    // Request permission BEFORE starting the drive
     const perm = await Geolocation.requestPermissions({
       permissions: ["location"],
     });
 
     if (perm.location === "granted") {
+      // Update global permission state
       setLocationPermissionGranted(true);
-      setShowLocationDisclosure(false);
+
+      // Now it's safe to start the drive
       await beginDrive();
     } else {
       console.warn("Location permission denied");
-      setShowLocationDisclosure(false);
+      setLocationPermissionGranted(false);
     }
   } catch (err) {
     console.error("Location permission error:", err);
-    setShowLocationDisclosure(false);
+    setLocationPermissionGranted(false);
   }
 };
+
 
 
 

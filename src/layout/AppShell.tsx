@@ -1,4 +1,5 @@
-import React, { useState, isValidElement, useEffect } from "react"
+import { useState } from "react"
+
 import type { PropsWithChildren } from "react"
 import type { Screen } from "../App"
 import FloatingAIButton from "../components/FloatingAIButton"
@@ -6,7 +7,9 @@ import FloatingAIButton from "../components/FloatingAIButton"
 type AppShellProps = PropsWithChildren<{
   setScreen: (s: Screen | ((prev: Screen) => Screen)) => void
   active: Screen
+  locationPermissionGranted: boolean
 }>
+
 
 const CHROMELESS_SCREENS: Screen[] = [
   "landing",
@@ -29,26 +32,14 @@ const MORE_SCREENS: Screen[] = [
   "about",
 ]
 
-function isNativePlatform() {
-  return !!(window as any).Capacitor?.isNativePlatform
-}
-
 export default function AppShell({
   children,
   setScreen,
   active,
+  locationPermissionGranted,
 }: AppShellProps) {
+
   const [showMore, setShowMore] = useState(false)
-
-  // ⭐ Permission state (but browser auto-grants)
-  const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
-
-  // ⭐ Browser ALWAYS gets permission
-  useEffect(() => {
-    if (!isNativePlatform()) {
-      setLocationPermissionGranted(true)
-    }
-  }, [])
 
   const chromeHidden = CHROMELESS_SCREENS.includes(active)
   const isLegal = active === "privacy" || active === "terms"
@@ -74,11 +65,7 @@ export default function AppShell({
             : "relative min-h-dvh w-full overflow-x-hidden bg-[#08194A]"
         }
       >
-        {isValidElement(children)
-          ? React.cloneElement(children as React.ReactElement<any>, {
-              setLocationPermissionGranted,
-            })
-          : children}
+        {children}
       </div>
     )
   }
@@ -98,11 +85,7 @@ export default function AppShell({
 
       <main className="flex min-h-0 flex-1 justify-center px-3 sm:px-4">
         <section className="min-h-0 w-full max-w-[42rem] overflow-y-auto pb-[calc(6.5rem+env(safe-area-inset-bottom))]">
-          {isValidElement(children)
-            ? React.cloneElement(children as React.ReactElement<any>, {
-                setLocationPermissionGranted,
-              })
-            : children}
+          {children}
         </section>
       </main>
 

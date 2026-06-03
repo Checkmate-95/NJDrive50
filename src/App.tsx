@@ -1,4 +1,5 @@
-import React, { Suspense, lazy, useEffect, useRef, useState } from "react"
+import { Suspense, lazy, useEffect, useRef, useState } from "react"
+
 
 import AppShell from "./layout/AppShell"
 import ErrorBoundary from "./components/ErrorBoundary"
@@ -340,17 +341,28 @@ export default function App() {
   }
 
   if (!bootstrapped) {
-    return (
-      <AppShell setScreen={setScreenCompat} active={safeScreen}>
-        <MapProvider>
-          <ScreenLoader />
-        </MapProvider>
-      </AppShell>
-    )
-  }
+  return (
+    <AppShell
+      setScreen={setScreenCompat}
+      active={safeScreen}
+      locationPermissionGranted={_locationPermissionGranted}
+    >
+      <MapProvider>
+        <ScreenLoader />
+      </MapProvider>
+    </AppShell>
+  )
+}
+
+
 
   return (
-  <AppShell setScreen={setScreenCompat} active={safeScreen}>
+  <AppShell
+  setScreen={setScreenCompat}
+  active={safeScreen}
+  locationPermissionGranted={_locationPermissionGranted}
+>
+
     <MapProvider>
       <ErrorBoundary
         key={safeScreen}
@@ -362,15 +374,12 @@ export default function App() {
         }}
       >
         <Suspense fallback={<ScreenLoader />}>
-          {safeScreen === "home"
-            ? React.cloneElement(
-                renderScreen() as React.ReactElement<any>,
-                { setLocationPermissionGranted }
-              )
-            : renderScreen()}
+          {renderScreen()}
         </Suspense>
       </ErrorBoundary>
     </MapProvider>
   </AppShell>
-  )
+)
+
+
 }

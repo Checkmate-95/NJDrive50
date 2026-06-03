@@ -47,6 +47,7 @@ function isScreen(value: unknown): value is Screen {
     value === "onboarding" ||
     value === "home" ||
     value === "active" ||
+    value === "activeDrive" ||   // ⭐ ADD THIS
     value === "todaysDrive" ||
     value === "summary" ||
     value === "milestones" ||
@@ -66,10 +67,11 @@ function isScreen(value: unknown): value is Screen {
     value === "practiceTest" ||
     value === "manageProfile" ||
     value === "pricing" ||
-    value === "privacy" ||      // ← ADD THIS
-    value === "terms"           // ← ADD THIS
+    value === "privacy" ||
+    value === "terms"
   )
 }
+
 
 
 function normalizeScreen(value: unknown, fallback: Screen = "home"): Screen {

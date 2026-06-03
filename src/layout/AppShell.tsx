@@ -1,5 +1,4 @@
 import { useState } from "react"
-
 import type { PropsWithChildren } from "react"
 import type { Screen } from "../App"
 import FloatingAIButton from "../components/FloatingAIButton"
@@ -9,7 +8,6 @@ type AppShellProps = PropsWithChildren<{
   active: Screen
   locationPermissionGranted: boolean
 }>
-
 
 const CHROMELESS_SCREENS: Screen[] = [
   "landing",
@@ -28,8 +26,56 @@ const MORE_SCREENS: Screen[] = [
   "parentInfo",
   "settings",
   "aiFaq",
+  "aiHelper",
   "helpFaq",
   "about",
+  "share",
+  "dmv",
+  "reminderSettings",
+]
+
+// ⭐ Drawer section config
+type DrawerItem = { label: string; screen: Screen }
+type DrawerSection = { title: string; items: DrawerItem[] }
+
+const DRAWER_SECTIONS: DrawerSection[] = [
+  {
+    title: "👤 Profile",
+    items: [
+      { label: "Teen Info", screen: "teenInfo" },
+      { label: "Parent Info", screen: "parentInfo" },
+    ],
+  },
+  {
+    title: "📊 Progress & Logs",
+    items: [
+      { label: "Milestones", screen: "milestones" },
+      { label: "Export Logs", screen: "exportLogs" },
+      { label: "Share Log", screen: "share" },
+    ],
+  },
+  {
+    title: "📋 DMV & Paperwork",
+    items: [
+      { label: "Paperwork", screen: "paperwork" },
+      { label: "DMV Bundle", screen: "dmv" },
+    ],
+  },
+  {
+    title: "❓ Help & Support",
+    items: [
+      { label: "Help & FAQ", screen: "helpFaq" },
+      { label: "AI Assistant", screen: "aiHelper" },
+    ],
+  },
+  {
+    title: "⚙️ Settings",
+    items: [
+      { label: "Settings", screen: "settings" },
+      { label: "Reminders", screen: "reminderSettings" },
+      { label: "About", screen: "about" },
+    ],
+  },
 ]
 
 export default function AppShell({
@@ -38,12 +84,16 @@ export default function AppShell({
   active,
   locationPermissionGranted,
 }: AppShellProps) {
-
   const [showMore, setShowMore] = useState(false)
 
   const chromeHidden = CHROMELESS_SCREENS.includes(active)
   const isLegal = active === "privacy" || active === "terms"
   const moreIsActive = MORE_SCREENS.includes(active)
+
+  const go = (screen: Screen) => {
+    setScreen(screen)
+    setShowMore(false)
+  }
 
   const itemClasses = (screen: Screen | "more") =>
     [
@@ -101,14 +151,59 @@ export default function AppShell({
       {/* ⭐ More Drawer */}
       {showMore && locationPermissionGranted && (
         <>
+          {/* Backdrop */}
           <div
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowMore(false)}
           />
 
+          {/* Drawer panel */}
           <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 mx-auto w-full max-w-[42rem] px-3">
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0d2260] shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
-              {/* drawer content */}
+            <div className="max-h-[70dvh] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-[#0d2260] shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
+
+              {/* Drag handle */}
+              <div className="flex justify-center pb-1 pt-3">
+                <div className="h-1 w-10 rounded-full bg-white/20" />
+              </div>
+
+              <div className="px-3 pb-4 pt-2">
+                {DRAWER_SECTIONS.map((section, si) => (
+                  <div key={section.title} className={si > 0 ? "mt-4" : ""}>
+
+                    {/* Section header */}
+                    <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+                      {section.title}
+                    </p>
+
+                    {/* Section items */}
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {section.items.map((item) => {
+                        const isActive = active === item.screen
+                        return (
+                          <button
+                            key={item.screen}
+                            type="button"
+                            onClick={() => go(item.screen)}
+                            className={[
+                              "min-h-[44px] rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition-colors duration-150",
+                              isActive
+                                ? "bg-[#f9c80e] text-[#08194A]"
+                                : "bg-white/8 text-white/90 hover:bg-white/14 active:bg-white/20",
+                            ].join(" ")}
+                          >
+                            {item.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Divider between sections */}
+                    {si < DRAWER_SECTIONS.length - 1 && (
+                      <div className="mt-4 h-px bg-white/8" />
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </>
@@ -123,7 +218,7 @@ export default function AppShell({
               <button
                 type="button"
                 className={itemClasses("home")}
-                onClick={() => { setScreen("home"); setShowMore(false) }}
+                onClick={() => go("home")}
               >
                 <span className="block truncate">Home</span>
               </button>
@@ -131,7 +226,7 @@ export default function AppShell({
               <button
                 type="button"
                 className={itemClasses("driveHistory")}
-                onClick={() => { setScreen("driveHistory"); setShowMore(false) }}
+                onClick={() => go("driveHistory")}
               >
                 <span className="block sm:hidden">Driving</span>
                 <span className="block sm:hidden">Log</span>
@@ -141,7 +236,7 @@ export default function AppShell({
               <button
                 type="button"
                 className={itemClasses("activeDrive")}
-                onClick={() => { setScreen("activeDrive"); setShowMore(false) }}
+                onClick={() => go("activeDrive")}
               >
                 <span className="block sm:hidden">Start</span>
                 <span className="block sm:hidden">Drive</span>
@@ -151,7 +246,7 @@ export default function AppShell({
               <button
                 type="button"
                 className={itemClasses("practiceTest")}
-                onClick={() => { setScreen("practiceTest"); setShowMore(false) }}
+                onClick={() => go("practiceTest")}
               >
                 <span className="block sm:hidden">Practice</span>
                 <span className="block sm:hidden">Test</span>

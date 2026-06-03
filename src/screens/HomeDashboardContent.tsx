@@ -224,20 +224,25 @@ export default function HomeDashboardContent({
   const beginDrive = async () => {
   setStartingDrive(true)
   try {
-    // Start a fresh drive session
-    useActiveDriveStore.getState().startDrive(Date.now(), null, {
-      override: "auto",
-      weather: null,
-      sunrise: null,
-      sunset: null,
-    })
+    const activeDriveStore = useActiveDriveStore.getState()
 
-    // Navigate to Active Drive screen
+    // ⭐ Only start a new drive if one is NOT already active
+    if (!activeDriveStore.session?.isActive) {
+      activeDriveStore.startDrive(Date.now(), null, {
+        override: "auto",
+        weather: null,
+        sunrise: null,
+        sunset: null,
+      })
+    }
+
+    // ⭐ Direct navigation — required for Android stability
     setScreen("activeDrive")
   } finally {
     setStartingDrive(false)
   }
 }
+
 
 
 

@@ -1,6 +1,5 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react"
 
-
 import AppShell from "./layout/AppShell"
 import ErrorBoundary from "./components/ErrorBoundary"
 
@@ -147,7 +146,6 @@ export default function App() {
   // ⭐ NEW — required for HomeDashboardContent
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
 
-
   // ⭐ PATCH — auto‑grant permission in browser
   useEffect(() => {
     if (!isNativePlatform()) {
@@ -156,6 +154,12 @@ export default function App() {
   }, [])
 
   const safeScreen: Screen = isValidScreen(screen) ? screen : "landing"
+
+  // ⭐ DIAGNOSTIC LOGS — screen + permission
+  useEffect(() => {
+    console.log("[App] screen changed to:", safeScreen)
+    console.log("[App] locationPermissionGranted:", locationPermissionGranted)
+  }, [safeScreen, locationPermissionGranted])
 
   const setScreenCompat = (nextScreen: Screen | ((prev: Screen) => Screen)) => {
     const next = typeof nextScreen === "function" ? nextScreen(safeScreen) : nextScreen
@@ -179,8 +183,14 @@ export default function App() {
         const nav = useNav.getState()
         const current = isValidScreen(nav.screen) ? nav.screen : "landing"
 
-        // ⭐ CRITICAL FIX — do NOT override navigation when user is entering ActiveDrive
-        if (current === "activeDrive") {
+        // ⭐ DIAGNOSTIC LOGS
+        console.log("[Bootstrap] running bootstrap")
+        console.log("[Bootstrap] current screen:", current)
+
+        // ⭐ CRITICAL FIX — protect ActiveDrive from being overridden
+        if (current === "activeDrive" || current === "active") {
+          console.log("[Bootstrap] skipping — user is in ActiveDrive")
+          setBootstrapped(true)
           return
         }
 

@@ -224,27 +224,18 @@ export default function HomeDashboardContent({
     }
   }
 
-  const beginDrive = async () => {
-  setStartingDrive(true)
+  // --- BeginDrive: only resumes existing drives ---
+const beginDrive = async () => {
+  setStartingDrive(true);
   try {
-    const activeDriveStore = useActiveDriveStore.getState()
-
-    // ⭐ Only start a new drive if one is NOT already active
-    if (!activeDriveStore.session?.isActive) {
-      activeDriveStore.startDrive(Date.now(), null, {
-        override: "auto",
-        weather: null,
-        sunrise: null,
-        sunset: null,
-      })
-    }
-
-    // ⭐ Direct navigation — required for Android stability
-    setScreen("activeDrive")
+    // ✅ No need to get activeDriveStore here anymore
+    setScreen("activeDrive"); // navigate only
   } finally {
-    setStartingDrive(false)
+    setStartingDrive(false);
   }
-}
+};
+
+
 
 
 
@@ -292,6 +283,7 @@ const handleAllowAndContinue = async () => {
     setLocationPermissionGranted(false);
   }
 };
+
 
 
 
@@ -488,32 +480,17 @@ const handleAllowAndContinue = async () => {
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => navigate("home", "history", setScreen)}
-                  className="w-full rounded-xl border border-[#0A1E5E]/15 bg-white px-4 py-3 text-sm font-semibold text-[#0A1E5E] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_0_16px_rgba(249,200,14,0.18)] sm:flex-1"
-                >
-                  View History
-                </button>
+              <div className="mt-4">
+  <button
+  type="button"
+  onClick={() => navigate("home", "history", setScreen)}
+  className="w-full rounded-xl border border-[#0A1E5E]/15 bg-[#0A1E5E] px-4 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-[1px] hover:brightness-110 hover:shadow-[0_0_16px_rgba(249,200,14,0.25)]"
+>
+  View History
+</button>
 
-                <button
-                  type="button"
-                  onClick={handleStartDrive}
-                  disabled={startingDrive}
-                  className={`w-full rounded-xl border border-[#0A1E5E]/15 px-4 py-3 text-sm font-semibold transition duration-200 sm:flex-1 ${
-                    startingDrive
-                      ? "cursor-not-allowed bg-[#08194A]/[0.03] text-[#0A1E5E]/45"
-                      : "bg-[#08194A]/[0.03] text-[#0A1E5E] hover:-translate-y-[1px] hover:shadow-[0_0_16px_rgba(249,200,14,0.18)]"
-                  }`}
-                >
-                  {hasActiveDrive
-                    ? activeSession?.isRunning
-                      ? "Return to Active Drive"
-                      : "Resume Paused Drive"
-                    : "Start Drive"}
-                </button>
-              </div>
+</div>
+
             </div>
 
             <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white shadow-[0_14px_34px_rgba(10,30,94,0.18)] sm:p-5">

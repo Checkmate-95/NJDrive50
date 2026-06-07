@@ -15,7 +15,12 @@ export type Profile = {
   carMake: string
   carModel: string
   carYear: number | null
+
+  // ✅ Add these two flags
+  isOnboarded: boolean
+  profileComplete: boolean
 }
+
 
 const defaultProfile: Profile = {
   teenName: "",
@@ -24,6 +29,8 @@ const defaultProfile: Profile = {
   carMake: "",
   carModel: "",
   carYear: null,
+  isOnboarded: false,
+  profileComplete: false,
 }
 
 function freezeProfile(profile: Profile): Profile {
@@ -73,13 +80,16 @@ function normalizeProfile(value: unknown): Profile {
   const raw = value as Record<string, unknown>
 
   return freezeProfile({
-    teenName: normalizeString(raw.teenName),
-    parentName: normalizeString(raw.parentName),
-    teenAge: normalizeTeenAge(raw.teenAge),
-    carMake: normalizeString(raw.carMake),
-    carModel: normalizeString(raw.carModel),
-    carYear: normalizeCarYear(raw.carYear),
-  })
+  teenName: normalizeString(raw.teenName),
+  parentName: normalizeString(raw.parentName),
+  teenAge: normalizeTeenAge(raw.teenAge),
+  carMake: normalizeString(raw.carMake),
+  carModel: normalizeString(raw.carModel),
+  carYear: normalizeCarYear(raw.carYear),
+  isOnboarded: Boolean(raw.isOnboarded),
+  profileComplete: Boolean(raw.profileComplete),
+})
+
 }
 
 function emitPhotoChange() {

@@ -89,7 +89,6 @@ function normalizeProfile(value: unknown): Profile {
   isOnboarded: Boolean(raw.isOnboarded),
   profileComplete: Boolean(raw.profileComplete),
 })
-
 }
 
 function emitPhotoChange() {

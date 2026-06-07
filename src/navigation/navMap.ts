@@ -142,6 +142,9 @@ export const NAV = {
   about: {
     home: "home",
   },
+  deleteAccount: {
+    home: "home",
+  },
 } as const satisfies NavShape
 
 export type NavMap = typeof NAV

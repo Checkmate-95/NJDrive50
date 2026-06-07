@@ -47,7 +47,7 @@ function isScreen(value: unknown): value is Screen {
     value === "onboarding" ||
     value === "home" ||
     value === "active" ||
-    value === "activeDrive" ||   // ⭐ ADD THIS
+    value === "activeDrive" ||
     value === "todaysDrive" ||
     value === "summary" ||
     value === "milestones" ||
@@ -68,7 +68,8 @@ function isScreen(value: unknown): value is Screen {
     value === "manageProfile" ||
     value === "pricing" ||
     value === "privacy" ||
-    value === "terms"
+    value === "terms" ||
+    value === "deleteAccount"
   )
 }
 

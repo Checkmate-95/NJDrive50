@@ -3,8 +3,10 @@ import { useNav } from "../state/navStore"
 import { useSettingsStore } from "../state/settingsStore"
 import { devResetAll } from "../utils/devReset"
 
+
 export default function Settings() {
   const { setScreen, goBack } = useNav()
+
 
   const {
     notifications,
@@ -13,12 +15,15 @@ export default function Settings() {
     setAutoExport,
   } = useSettingsStore()
 
+
   const isDev = import.meta.env.DEV
+
 
   const handleDevReset = async () => {
     await devResetAll()
     setScreen("intro")
   }
+
 
   return (
     <main className="min-h-screen bg-[#F7F9FC] px-3 pb-24 pt-4 text-[#08194A] sm:px-4 lg:px-6">
@@ -34,19 +39,23 @@ export default function Settings() {
                 ← Back
               </button>
 
+
               <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.18em] text-[#08194A]/45">
                 Preferences
               </p>
 
+
               <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-[#08194A] sm:text-3xl">
                 Settings
               </h1>
+
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#08194A]/65 sm:text-base">
                 Manage reminders, exports, profile tools, DMV helpers, and
                 support options for NJDrive50 in one organized place.
               </p>
             </div>
+
 
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-1 text-xs font-semibold text-[#08194A]/65">
@@ -58,6 +67,7 @@ export default function Settings() {
             </div>
           </div>
         </header>
+
 
         <div className="mt-6 space-y-6">
           <section className="grid grid-cols-1 auto-rows-fr gap-6 lg:grid-cols-2">
@@ -74,6 +84,7 @@ export default function Settings() {
                   onToggle={() => setNotifications(!notifications)}
                 />
 
+
                 <ToggleRow
                   title="Auto-export logs"
                   description="Automatically prepare your log data for quicker export workflows."
@@ -82,6 +93,7 @@ export default function Settings() {
                 />
               </div>
             </SettingsCard>
+
 
             <SettingsCard
               eyebrow="Reminders"
@@ -102,6 +114,7 @@ export default function Settings() {
               </div>
             </SettingsCard>
 
+
             <SettingsCard
               eyebrow="Profile"
               title="Account & profile"
@@ -117,8 +130,14 @@ export default function Settings() {
                   label="Sign Out"
                   tone="secondary"
                 />
+                <ActionButton
+                  label="Delete Account"
+                  tone="danger"
+                  onClick={() => setScreen("deleteAccount")}
+                />
               </div>
             </SettingsCard>
+
 
             <SettingsCard
               eyebrow="DMV"
@@ -144,6 +163,7 @@ export default function Settings() {
               </div>
             </SettingsCard>
 
+
             <SettingsCard
               eyebrow="Support"
               title="Help & contact"
@@ -160,6 +180,7 @@ export default function Settings() {
                   </p>
                 </div>
 
+
                 <div className="mt-4">
                   <a
                     href="mailto:support@njdrive50.com"
@@ -170,6 +191,7 @@ export default function Settings() {
                 </div>
               </div>
             </SettingsCard>
+
 
             <SettingsCard
               eyebrow="Status"
@@ -196,6 +218,7 @@ export default function Settings() {
             </SettingsCard>
           </section>
 
+
           <SettingsCard
             eyebrow="AI Assistant"
             title="NJDrive50 Q&A"
@@ -214,6 +237,7 @@ export default function Settings() {
               />
             </div>
           </SettingsCard>
+
 
           {/* ── Legal ──────────────────────────────────────────────────────── */}
           <SettingsCard
@@ -241,6 +265,7 @@ export default function Settings() {
             </div>
           </SettingsCard>
 
+
           {isDev && (
             <SettingsCard
               eyebrow="Internal"
@@ -259,6 +284,7 @@ export default function Settings() {
                 </p>
               </div>
 
+
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <ActionButton
                   label="Developer Reset (Wipe All Data)"
@@ -273,6 +299,7 @@ export default function Settings() {
     </main>
   )
 }
+
 
 function SettingsCard({
   eyebrow,
@@ -292,6 +319,7 @@ function SettingsCard({
       ? "h-full rounded-[28px] border border-red-200 bg-white p-5 shadow-[0_8px_24px_rgba(0,0,0,0.06)] sm:p-6"
       : "h-full rounded-[28px] border border-[#08194A]/10 bg-white p-5 shadow-[0_8px_24px_rgba(0,0,0,0.06)] sm:p-6"
 
+
   return (
     <section className={cardClasses}>
       {eyebrow ? (
@@ -304,18 +332,22 @@ function SettingsCard({
         </p>
       ) : null}
 
+
       <h2 className="mt-2 text-xl font-extrabold tracking-tight text-[#08194A]">
         {title}
       </h2>
+
 
       {description ? (
         <p className="mt-2 text-sm leading-6 text-[#08194A]/65">{description}</p>
       ) : null}
 
+
       <div className="mt-4">{children}</div>
     </section>
   )
 }
+
 
 function ActionButton({
   label,
@@ -337,12 +369,14 @@ function ActionButton({
       "min-h-[48px] w-full rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm font-extrabold text-red-700 transition hover:bg-red-100",
   }
 
+
   return (
     <button type="button" onClick={onClick} className={classMap[tone]}>
       {label}
     </button>
   )
 }
+
 
 function ToggleRow({
   title,
@@ -370,6 +404,7 @@ function ToggleRow({
         </span>
       </span>
 
+
       <span
         className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition ${
           checked ? "bg-[#08194A]" : "bg-[#CBD5E1]"
@@ -386,6 +421,7 @@ function ToggleRow({
   )
 }
 
+
 function SidebarStat({
   label,
   value,
@@ -401,6 +437,7 @@ function SidebarStat({
       : tone === "muted"
         ? "border-[#08194A]/10 bg-[#F7F9FC] text-[#08194A]/70"
         : "border-[#f9c80e]/30 bg-[#FFF7DB] text-[#8A6500]"
+
 
   return (
     <div className={`rounded-2xl border px-4 py-3 ${toneClasses}`}>

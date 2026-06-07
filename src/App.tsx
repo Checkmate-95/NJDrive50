@@ -79,6 +79,8 @@ export type Screen =
   | "terms"
   | "about"
   | "deleteAccount"
+  | "deleteData"
+
 
 
 const VALID_SCREENS: readonly Screen[] = [

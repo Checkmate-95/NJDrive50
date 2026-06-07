@@ -4,8 +4,10 @@ import { useSettingsStore } from "../state/settingsStore"
 import { devResetAll } from "../utils/devReset"
 
 
+
 export default function Settings() {
   const { setScreen, goBack } = useNav()
+
 
 
   const {
@@ -16,13 +18,16 @@ export default function Settings() {
   } = useSettingsStore()
 
 
+
   const isDev = import.meta.env.DEV
+
 
 
   const handleDevReset = async () => {
     await devResetAll()
     setScreen("intro")
   }
+
 
 
   return (
@@ -40,9 +45,11 @@ export default function Settings() {
               </button>
 
 
+
               <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.18em] text-[#08194A]/45">
                 Preferences
               </p>
+
 
 
               <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-[#08194A] sm:text-3xl">
@@ -50,11 +57,13 @@ export default function Settings() {
               </h1>
 
 
+
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[#08194A]/65 sm:text-base">
                 Manage reminders, exports, profile tools, DMV helpers, and
                 support options for NJDrive50 in one organized place.
               </p>
             </div>
+
 
 
             <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -67,6 +76,7 @@ export default function Settings() {
             </div>
           </div>
         </header>
+
 
 
         <div className="mt-6 space-y-6">
@@ -85,6 +95,7 @@ export default function Settings() {
                 />
 
 
+
                 <ToggleRow
                   title="Auto-export logs"
                   description="Automatically prepare your log data for quicker export workflows."
@@ -93,6 +104,7 @@ export default function Settings() {
                 />
               </div>
             </SettingsCard>
+
 
 
             <SettingsCard
@@ -115,6 +127,7 @@ export default function Settings() {
             </SettingsCard>
 
 
+
             <SettingsCard
               eyebrow="Profile"
               title="Account & profile"
@@ -135,8 +148,14 @@ export default function Settings() {
                   tone="danger"
                   onClick={() => setScreen("deleteAccount")}
                 />
+                <ActionButton
+                  label="Delete My Data"
+                  tone="danger"
+                  onClick={() => setScreen("deleteData")}
+                />
               </div>
             </SettingsCard>
+
 
 
             <SettingsCard
@@ -164,6 +183,7 @@ export default function Settings() {
             </SettingsCard>
 
 
+
             <SettingsCard
               eyebrow="Support"
               title="Help & contact"
@@ -181,6 +201,7 @@ export default function Settings() {
                 </div>
 
 
+
                 <div className="mt-4">
                   <a
                     href="mailto:support@njdrive50.com"
@@ -191,6 +212,7 @@ export default function Settings() {
                 </div>
               </div>
             </SettingsCard>
+
 
 
             <SettingsCard
@@ -219,6 +241,7 @@ export default function Settings() {
           </section>
 
 
+
           <SettingsCard
             eyebrow="AI Assistant"
             title="NJDrive50 Q&A"
@@ -237,6 +260,7 @@ export default function Settings() {
               />
             </div>
           </SettingsCard>
+
 
 
           {/* ── Legal ──────────────────────────────────────────────────────── */}
@@ -266,6 +290,7 @@ export default function Settings() {
           </SettingsCard>
 
 
+
           {isDev && (
             <SettingsCard
               eyebrow="Internal"
@@ -285,6 +310,7 @@ export default function Settings() {
               </div>
 
 
+
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <ActionButton
                   label="Developer Reset (Wipe All Data)"
@@ -299,6 +325,7 @@ export default function Settings() {
     </main>
   )
 }
+
 
 
 function SettingsCard({
@@ -320,6 +347,7 @@ function SettingsCard({
       : "h-full rounded-[28px] border border-[#08194A]/10 bg-white p-5 shadow-[0_8px_24px_rgba(0,0,0,0.06)] sm:p-6"
 
 
+
   return (
     <section className={cardClasses}>
       {eyebrow ? (
@@ -333,9 +361,11 @@ function SettingsCard({
       ) : null}
 
 
+
       <h2 className="mt-2 text-xl font-extrabold tracking-tight text-[#08194A]">
         {title}
       </h2>
+
 
 
       {description ? (
@@ -343,10 +373,12 @@ function SettingsCard({
       ) : null}
 
 
+
       <div className="mt-4">{children}</div>
     </section>
   )
 }
+
 
 
 function ActionButton({
@@ -370,12 +402,14 @@ function ActionButton({
   }
 
 
+
   return (
     <button type="button" onClick={onClick} className={classMap[tone]}>
       {label}
     </button>
   )
 }
+
 
 
 function ToggleRow({
@@ -405,6 +439,7 @@ function ToggleRow({
       </span>
 
 
+
       <span
         className={`relative inline-flex h-7 w-12 shrink-0 rounded-full transition ${
           checked ? "bg-[#08194A]" : "bg-[#CBD5E1]"
@@ -422,6 +457,7 @@ function ToggleRow({
 }
 
 
+
 function SidebarStat({
   label,
   value,
@@ -437,6 +473,7 @@ function SidebarStat({
       : tone === "muted"
         ? "border-[#08194A]/10 bg-[#F7F9FC] text-[#08194A]/70"
         : "border-[#f9c80e]/30 bg-[#FFF7DB] text-[#8A6500]"
+
 
 
   return (

@@ -2,8 +2,10 @@ import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 import type { Screen } from "../App"
 
+
 const MAX_STACK_SIZE = 20
 const NAV_STORAGE_KEY = "njdrive50_nav"
+
 
 type PersistedNavState = {
   screen?: unknown
@@ -11,15 +13,18 @@ type PersistedNavState = {
   previousScreen?: unknown
 }
 
+
 type NavState = {
   screen: Screen
   stack: Screen[]
   previousScreen: Screen | null
 
+
   setScreen: (s: Screen) => void
   goBack: (fallback?: Screen) => void
   resetTo: (s: Screen) => void
 }
+
 
 const noopStorage = {
   getItem: () => null,
@@ -27,8 +32,10 @@ const noopStorage = {
   removeItem: () => {},
 }
 
+
 function getSafeSessionStorage() {
   if (typeof window === "undefined") return noopStorage
+
 
   try {
     const testKey = "__njdrive50_nav_test__"
@@ -39,6 +46,7 @@ function getSafeSessionStorage() {
     return noopStorage
   }
 }
+
 
 function isScreen(value: unknown): value is Screen {
   return (
@@ -69,10 +77,10 @@ function isScreen(value: unknown): value is Screen {
     value === "pricing" ||
     value === "privacy" ||
     value === "terms" ||
-    value === "deleteAccount"
+    value === "deleteAccount" ||
+    value === "deleteData"
   )
 }
-
 
 
 function normalizeScreen(value: unknown, fallback: Screen = "landing"): Screen {
@@ -85,22 +93,25 @@ function normalizeStack(value: unknown): Screen[] {
   return value.filter(isScreen).slice(-MAX_STACK_SIZE)
 }
 
+
 function normalizePreviousScreen(value: unknown): Screen | null {
   return isScreen(value) ? value : null
 }
+
 
 function normalizePersistedNavState(
   value: unknown
 ): Pick<NavState, "screen" | "stack" | "previousScreen"> {
   const raw = (value ?? null) as PersistedNavState | null
 
+
   return {
     screen: normalizeScreen(raw?.screen, "landing"),
-
     stack: normalizeStack(raw?.stack),
     previousScreen: normalizePreviousScreen(raw?.previousScreen),
   }
 }
+
 
 export const useNav = create<NavState>()(
   persist(
@@ -109,12 +120,16 @@ export const useNav = create<NavState>()(
       stack: [],
       previousScreen: null,
 
+
       setScreen: (nextScreen: Screen) => {
         const { screen, stack } = get()
 
+
         if (nextScreen === screen) return
 
+
         const nextStack = [...stack, screen].slice(-MAX_STACK_SIZE)
+
 
         set({
           screen: nextScreen,
@@ -123,8 +138,10 @@ export const useNav = create<NavState>()(
         })
       },
 
+
       goBack: (fallback: Screen = "home") => {
         const { stack } = get()
+
 
         if (stack.length === 0) {
           set({
@@ -135,10 +152,12 @@ export const useNav = create<NavState>()(
           return
         }
 
+
         const nextStack = [...stack]
         const destination = nextStack.pop() ?? fallback
         const previousScreen =
           nextStack.length > 0 ? nextStack[nextStack.length - 1] : null
+
 
         set({
           screen: destination,
@@ -146,6 +165,7 @@ export const useNav = create<NavState>()(
           previousScreen,
         })
       },
+
 
       resetTo: (screen: Screen) => {
         set({
@@ -170,5 +190,6 @@ export const useNav = create<NavState>()(
     }
   )
 )
+
 
 export const useNavPreviousScreen = () => useNav((s) => s.previousScreen)

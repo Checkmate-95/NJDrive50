@@ -123,6 +123,9 @@ const VALID_SCREENS: readonly Screen[] = [
   "privacy",
   "terms",
   "about",
+  "login",
+  "register",
+  "forgotPassword",
 ] as const
 
 function isBrowser() {

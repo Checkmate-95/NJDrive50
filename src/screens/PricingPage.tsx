@@ -229,8 +229,8 @@ export default function PricingPage() {
   }
 
   const handleStartTrial = (_cycle: BillingCycle) => {
-    setScreen("onboarding")
-  }
+  setScreen("register")
+}
 
   const primaryPlan: Plan =
     billing === "yearly"

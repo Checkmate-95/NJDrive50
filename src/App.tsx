@@ -14,6 +14,7 @@ import TermsOfUse from "./legal/TermsOfUse"
 
 import { Preferences } from "@capacitor/preferences"
 import ForgotPassword from "./ForgotPassword"
+import Register from "./Register"
  
 
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
@@ -294,6 +295,9 @@ export default function App() {
 
       case "forgotPassword":
         return <ForgotPassword />
+
+      case "register":
+        return <Register /> 
 
       case "home":
         return (

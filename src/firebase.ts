@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDxUJJIMqLeEdU8MMlIicd6GvWcguL7PwQ",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "njdrive50-app.firebaseapp.com",
   projectId: "njdrive50-app",
   storageBucket: "njdrive50-app.firebasestorage.app",

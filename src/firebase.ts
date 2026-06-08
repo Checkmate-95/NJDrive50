@@ -6,7 +6,7 @@ const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "njdrive50-app.firebaseapp.com",
   projectId: "njdrive50-app",
-  storageBucket: "njdrive50-app.firebasestorage.app",
+  storageBucket: "njdrive50-app.appspot.com",
   messagingSenderId: "378235645280",
   appId: "1:378235645280:web:044f1f4ffe05820ab90205"
 };

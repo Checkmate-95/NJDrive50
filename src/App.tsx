@@ -13,6 +13,8 @@ import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
 
 import { Preferences } from "@capacitor/preferences"
+import ForgotPassword from "./ForgotPassword"
+ 
 
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
 const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"))
@@ -80,6 +82,9 @@ export type Screen =
   | "about"
   | "deleteAccount"
   | "deleteData"
+  | "login"
+  | "register"
+  | "forgotPassword"
 
 
 
@@ -286,6 +291,9 @@ export default function App() {
         return <HomeIntro setScreen={setScreenCompat} />
       case "onboarding":
         return <Onboarding setScreen={setScreenCompat} />
+
+      case "forgotPassword":
+        return <ForgotPassword />
 
       case "home":
         return (

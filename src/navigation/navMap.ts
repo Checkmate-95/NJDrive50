@@ -1,8 +1,8 @@
-import type { Screen } from "../App"
+import type { Screen } from "../App";
 
 type NavShape = {
-  [K in Screen]: Partial<Record<string, Screen>>
-}
+  [K in Screen]: Partial<Record<string, Screen>>;
+};
 
 export const NAV = {
   landing: {
@@ -44,6 +44,12 @@ export const NAV = {
     startNew: "active",
   },
 
+  activeDrive: {
+    confirm: "todaysDrive",
+    summary: "summary",
+    startNew: "activeDrive",
+  },
+
   todaysDrive: {
     startNew: "active",
     confirm: "summary",
@@ -79,6 +85,10 @@ export const NAV = {
     history: "driveHistory",
   },
 
+  exportLogs: {
+    history: "driveHistory",
+  },
+
   settings: {
     summary: "summary",
     history: "driveHistory",
@@ -111,63 +121,80 @@ export const NAV = {
 
   dmvPrep: {},
 
-  share: {},
-  helpFaq: {},
-  aiHelper: {},
-  teenDriverRules: {},
-  practiceTest: {},
-
-  privacy: {},
-  terms: {},
-
-  // ✅ NEW — added to satisfy NavShape
-  activeDrive: {
-    confirm: "todaysDrive",
-    summary: "summary",
-    startNew: "activeDrive",
-  },
-  exportLogs: {
-    history: "driveHistory",
-  },
   paperwork: {
     home: "home",
   },
+
+  share: {},
+  helpFaq: {},
+  aiHelper: {},
   aiFaq: {},
+  teenDriverRules: {},
+  practiceTest: {},
+
   teenInfo: {
     home: "home",
   },
+
   parentInfo: {
     home: "home",
   },
+
   about: {
     home: "home",
   },
+
   deleteAccount: {
     home: "home",
   },
+
   deleteData: {
-  back: "settings",
-},
+    back: "settings",
+  },
 
-} as const satisfies NavShape
+  // ✅ Added authentication screens
+  login: {
+    continue: "home",
+    forgotPassword: "forgotPassword",
+    register: "register",
+  },
 
-export type NavMap = typeof NAV
-export type NavScreen = keyof NavMap
-export type NavAction<S extends NavScreen> = Extract<keyof NavMap[S], string>
-export type NextScreen<S extends NavScreen, A extends NavAction<S>> = NavMap[S][A]
+  register: {
+    continue: "intro",
+    login: "login",
+  },
+
+  forgotPassword: {
+    continue: "login",
+  },
+
+  // ✅ Added missing privacy and terms screens
+  privacy: {
+    home: "home",
+  },
+
+  terms: {
+    home: "home",
+  },
+} as const satisfies NavShape;
+
+export type NavMap = typeof NAV;
+export type NavScreen = keyof NavMap;
+export type NavAction<S extends NavScreen> = Extract<keyof NavMap[S], string>;
+export type NextScreen<S extends NavScreen, A extends NavAction<S>> = NavMap[S][A];
 
 export function canNavigate<S extends NavScreen>(
   current: S,
   action: string
 ): action is NavAction<S> {
-  return action in NAV[current]
+  return action in NAV[current];
 }
 
 export function getNextScreen<
   S extends NavScreen,
   A extends NavAction<S>,
 >(current: S, action: A): NextScreen<S, A> {
-  return NAV[current][action]
+  return NAV[current][action];
 }
 
 export function navigate<
@@ -178,9 +205,9 @@ export function navigate<
   action: A,
   setScreen: (screen: Screen) => void
 ): NextScreen<S, A> {
-  const next = getNextScreen(current, action)
-  setScreen(next as Screen)
-  return next
+  const next = getNextScreen(current, action);
+  setScreen(next as Screen);
+  return next;
 }
 
 export function tryNavigate(
@@ -189,11 +216,11 @@ export function tryNavigate(
   setScreen: (screen: Screen) => void
 ): Screen | undefined {
   if (!canNavigate(current, action)) {
-    console.warn(`No route for action "${action}" from screen "${current}"`)
-    return undefined
+    console.warn(`No route for action "${action}" from screen "${current}"`);
+    return undefined;
   }
 
-  const next = getNextScreen(current, action)
-  setScreen(next as Screen)
-  return next as Screen
+  const next = getNextScreen(current, action);
+  setScreen(next as Screen);
+  return next as Screen;
 }

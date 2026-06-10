@@ -15,6 +15,10 @@ function getFriendlyError(code: string): string {
       return "Password must be at least 6 characters.";
     case "auth/network-request-failed":
       return "Network error. Please check your connection and try again.";
+    case "auth/operation-not-allowed":
+      return "Account registration is not enabled. Please contact support.";
+    case "auth/admin-restricted-operation":
+      return "Sign-up is currently restricted. Please contact support.";
     default:
       return "Something went wrong. Please try again.";
   }
@@ -59,6 +63,9 @@ export default function Register() {
       setScreen("intro");
     } catch (err: unknown) {
       const firebaseErr = err as FirebaseError;
+      // 🔴 Temporary debug log — remove before production
+      console.log("🔴 Firebase error code:", firebaseErr.code);
+      console.log("🔴 Firebase error message:", firebaseErr.message);
       setError(getFriendlyError(firebaseErr.code));
     } finally {
       setLoading(false);

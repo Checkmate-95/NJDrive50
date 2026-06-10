@@ -61,24 +61,33 @@ function isScreen(value: unknown): value is Screen {
     value === "milestones" ||
     value === "driveHistory" ||
     value === "export" ||
+    value === "exportLogs" ||
     value === "settings" ||
     value === "reminderSettings" ||
     value === "reminderLog" ||
     value === "dmv" ||
     value === "dmvPrep" ||
+    value === "paperwork" ||
     value === "share" ||
     value === "helpFaq" ||
     value === "aiHelper" ||
+    value === "aiFaq" ||
     value === "teenDriverRules" ||
+    value === "teenInfo" ||
+    value === "parentInfo" ||
+    value === "manageProfile" ||
     value === "restartOnboarding" ||
     value === "dataCleared" ||
     value === "practiceTest" ||
-    value === "manageProfile" ||
     value === "pricing" ||
     value === "privacy" ||
     value === "terms" ||
+    value === "about" ||
     value === "deleteAccount" ||
-    value === "deleteData"
+    value === "deleteData" ||
+    value === "login" ||
+    value === "register" ||
+    value === "forgotPassword"
   )
 }
 

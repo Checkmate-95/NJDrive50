@@ -128,33 +128,39 @@ export default function Settings() {
 
 
 
-            <SettingsCard
-              eyebrow="Profile"
-              title="Account & profile"
-              description="Manage your profile details and account access."
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                <ActionButton
-                  label="Manage Profile"
-                  tone="secondary"
-                  onClick={() => setScreen("manageProfile")}
-                />
-                <ActionButton
-                  label="Sign Out"
-                  tone="secondary"
-                />
-                <ActionButton
-                  label="Delete Account"
-                  tone="danger"
-                  onClick={() => setScreen("deleteAccount")}
-                />
-                <ActionButton
-                  label="Delete My Data"
-                  tone="danger"
-                  onClick={() => setScreen("deleteData")}
-                />
-              </div>
-            </SettingsCard>
+            // AFTER
+<SettingsCard
+  eyebrow="Profile"
+  title="Account & profile"
+  description="Manage your profile details and account access."
+>
+  <div className="grid gap-3 sm:grid-cols-2">
+    <ActionButton
+      label="Manage Profile"
+      tone="secondary"
+      onClick={() => setScreen("manageProfile")}
+    />
+    <ActionButton
+      label="Change Password"
+      tone="secondary"
+      onClick={() => setScreen("forgotPassword")}
+    />
+    <ActionButton
+      label="Sign Out"
+      tone="secondary"
+    />
+    <ActionButton
+      label="Delete Account"
+      tone="danger"
+      onClick={() => setScreen("deleteAccount")}
+    />
+    <ActionButton
+      label="Delete My Data"
+      tone="danger"
+      onClick={() => setScreen("deleteData")}
+    />
+  </div>
+</SettingsCard>
 
 
 

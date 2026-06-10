@@ -1,51 +1,61 @@
 import { Suspense, lazy, useEffect, useRef, useState, useCallback } from "react"
 
+// ─── Layout & Core Components ─────────────────────────────────────────────────
 import AppShell from "./layout/AppShell"
 import ErrorBoundary from "./components/ErrorBoundary"
 
+// ─── Eager Screens (always needed on first render) ────────────────────────────
 import HomeDashboardContent from "./screens/HomeDashboardContent"
-
 import ActiveDrive from "./screens/ActiveDriveContent"
 import Onboarding from "./screens/OnboardingContent"
 import HomeIntro from "./screens/HomeIntroContent"
 
+// ─── Auth Screens ─────────────────────────────────────────────────────────────
+import Login from "./Login"
+import Register from "./Register"
+import ForgotPassword from "./ForgotPassword"
+
+// ─── Legal (small, no reason to lazy-load) ────────────────────────────────────
 import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
 
+// ─── Capacitor ────────────────────────────────────────────────────────────────
+import { Capacitor } from "@capacitor/core"
 import { Preferences } from "@capacitor/preferences"
-import ForgotPassword from "./ForgotPassword"
-import Register from "./Register"
- 
 
-const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
-const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"))
-const MilestonesContent = lazy(() => import("./screens/MilestonesContent"))
-const ExportLog = lazy(() => import("./screens/ExportLog"))
-const Settings = lazy(() => import("./screens/Settings"))
-const TeenDriverRules = lazy(() => import("./screens/TeenDriverRules"))
-const ReminderSettings = lazy(() => import("./screens/ReminderSettings"))
-const DMVBundle = lazy(() => import("./screens/DMVBundle"))
-const DMVAppointmentPrep = lazy(() => import("./screens/DMVAppointmentPrep"))
-const ReminderLog = lazy(() => import("./screens/ReminderLog"))
-const ShareLogView = lazy(() => import("./screens/ShareLogView"))
-const TodaysDrive = lazy(() => import("./screens/TodaysDrive"))
-const HelpFaq = lazy(() => import("./screens/HelpFAQ"))
-const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
+// ─── Lazy Screens ─────────────────────────────────────────────────────────────
+const LandingPage            = lazy(() => import("./landing/LandingPage"))
+const DriveSummary           = lazy(() => import("./screens/DriveSummaryContent"))
+const DriveHistoryContent    = lazy(() => import("./screens/DriveHistoryContent"))
+const MilestonesContent      = lazy(() => import("./screens/MilestonesContent"))
+const ExportLog              = lazy(() => import("./screens/ExportLog"))
+const Settings               = lazy(() => import("./screens/Settings"))
+const TeenDriverRules        = lazy(() => import("./screens/TeenDriverRules"))
+const ReminderSettings       = lazy(() => import("./screens/ReminderSettings"))
+const ReminderLog            = lazy(() => import("./screens/ReminderLog"))
+const DMVBundle              = lazy(() => import("./screens/DMVBundle"))
+const DMVAppointmentPrep     = lazy(() => import("./screens/DMVAppointmentPrep"))
+const ShareLogView           = lazy(() => import("./screens/ShareLogView"))
+const TodaysDrive            = lazy(() => import("./screens/TodaysDrive"))
+const HelpFaq                = lazy(() => import("./screens/HelpFAQ"))
+const AIHelperScreen         = lazy(() => import("./screens/AIHelperScreen"))
 const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPage"))
-const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
-const DataCleared = lazy(() => import("./screens/DataCleared"))
-const PricingPage = lazy(() => import("./screens/PricingPage"))
-const LandingPage = lazy(() => import("./landing/LandingPage"))
+const RestartOnboarding      = lazy(() => import("./screens/RestartOnboarding"))
+const DataCleared            = lazy(() => import("./screens/DataCleared"))
+const PricingPage            = lazy(() => import("./screens/PricingPage"))
+// TODO: uncomment when screens are created
+// const DeleteAccount       = lazy(() => import("./screens/DeleteAccount"))
+// const DeleteData          = lazy(() => import("./screens/DeleteData"))
 
+// ─── State, Types & Utilities ─────────────────────────────────────────────────
+import { useNav } from "./state/navStore"
+import { MapProvider } from "./components/map/MapProvider"
+import type { DriveEntry } from "./state/driveStore"
 import {
   loadReminderPreferences,
   initializeReminders,
   loadOnboardingData,
 } from "../core/ReminderEngine"
-
-import { useNav } from "./state/navStore"
-import type { DriveEntry } from "./state/driveStore"
-import { MapProvider } from "./components/map/MapProvider"
 
 export type Screen =
   | "landing"
@@ -133,7 +143,7 @@ function isBrowser() {
 }
 
 function isNativePlatform() {
-  return !!(window as any).Capacitor?.isNativePlatform
+  return Capacitor.isNativePlatform()
 }
 
 function isValidScreen(value: unknown): value is Screen {
@@ -168,12 +178,7 @@ export default function App() {
 
   const safeScreen: Screen = isValidScreen(screen) ? screen : "landing"
 
-  // ⭐ DIAGNOSTIC LOGS — screen + permission
-  useEffect(() => {
-    console.log("[App] screen changed to:", safeScreen)
-    console.log("[App] locationPermissionGranted:", locationPermissionGranted)
-  }, [safeScreen, locationPermissionGranted])
-
+  
   // ⭐ FIX — stabilize setScreenCompat
   const setScreenCompat = useCallback(
     (nextScreen: Screen | ((prev: Screen) => Screen)) => {
@@ -193,84 +198,84 @@ export default function App() {
     initializeReminders(prefs)
   }, [])
 
-  // ⭐ FIX — Bootstrap runs ONCE, not on every render
-  useEffect(() => {
-    let cancelled = false
+  // Bootstrap runs ONCE after hydration — never on re-renders
+useEffect(() => {
+  let cancelled = false
 
-    const runBootstrap = async () => {
-      try {
-        const nav = useNav.getState()
-        const current = isValidScreen(nav.screen) ? nav.screen : "landing"
+  const runBootstrap = async () => {
+    try {
+      const nav = useNav.getState()
+      const current = isValidScreen(nav.screen) ? nav.screen : "landing"
 
-        console.log("[Bootstrap] running bootstrap")
-        console.log("[Bootstrap] current screen:", current)
+      // Skip bootstrap entirely if user is mid-drive
+      if (current === "activeDrive" || current === "active") {
+        setBootstrapped(true)
+        return
+      }
 
-        if (current === "activeDrive" || current === "active") {
-          console.log("[Bootstrap] skipping — user is in ActiveDrive")
-          setBootstrapped(true)
-          return
+      let hasOnboardingData = false
+      const result = await Preferences.get({ key: "onboardingData" })
+
+      if (cancelled) return
+
+      if (result.value) {
+        try {
+          const data = JSON.parse(result.value)
+          hasOnboardingData = !!data?.teenName
+        } catch {
+          hasOnboardingData = false
         }
+      }
 
-        let hasOnboardingData = false
-        const result = await Preferences.get({ key: "onboardingData" })
-
-        if (cancelled) return
-
-        if (result.value) {
-          try {
-            const data = JSON.parse(result.value)
-            hasOnboardingData = !!data?.teenName
-          } catch {
-            hasOnboardingData = false
-          }
-        }
-
-        if (!isValidScreen(nav.screen)) {
-          nav.setScreen("landing")
-        } else if (hasOnboardingData) {
-          if (
-            current === "landing" ||
-            current === "intro" ||
-            current === "onboarding"
-          ) {
-            nav.setScreen("home")
-          }
-        } else if (
-          current !== "landing" &&
-          current !== "pricing" &&
-          current !== "intro" &&
-          current !== "onboarding"
+      if (!isValidScreen(nav.screen)) {
+        nav.setScreen("landing")
+      } else if (hasOnboardingData) {
+        if (
+          current === "landing" ||
+          current === "intro" ||
+          current === "onboarding"
         ) {
-          nav.setScreen("intro")
+          nav.setScreen("home")
         }
-      } catch (err) {
-        console.warn("App bootstrap failed:", err)
-        if (!cancelled) {
-          setScreen("landing")
-        }
-      } finally {
-        if (!cancelled) {
-          setBootstrapped(true)
-        }
+      } else if (
+        current !== "landing" &&
+        current !== "pricing" &&
+        current !== "intro" &&
+        current !== "onboarding" &&
+        current !== "login" &&
+        current !== "register" &&
+        current !== "forgotPassword"
+      ) {
+        nav.setScreen("intro")
+      }
+    } catch (err) {
+      console.warn("App bootstrap failed:", err)
+      if (!cancelled) {
+        setScreen("landing")
+      }
+    } finally {
+      if (!cancelled) {
+        setBootstrapped(true)
       }
     }
+  }
 
-    if (useNav.persist.hasHydrated()) {
-      void runBootstrap()
-      return () => {
-        cancelled = true
-      }
-    }
-
-    const unsubscribe = useNav.persist.onFinishHydration(() => {
-      void runBootstrap()
-    })
-
+  if (useNav.persist.hasHydrated()) {
+    void runBootstrap()
     return () => {
       cancelled = true
-      unsubscribe?.()
     }
-  }, []) // ⭐ FIXED — empty array
+  }
+
+  const unsubscribe = useNav.persist.onFinishHydration(() => {
+    void runBootstrap()
+  })
+
+  return () => {
+    cancelled = true
+    unsubscribe?.()
+  }
+}, []) // Empty array — intentional, runs once only
 
   // ⭐ SCROLL RESET
   useEffect(() => {
@@ -287,103 +292,121 @@ export default function App() {
   }, [safeScreen, stack.length])
 
   // ⭐ SCREEN RENDERER
-  const renderScreen = () => {
-    switch (safeScreen) {
-      case "landing":
-        return <LandingPage />
-      case "intro":
-        return <HomeIntro setScreen={setScreenCompat} />
-      case "onboarding":
-        return <Onboarding setScreen={setScreenCompat} />
+const renderScreen = () => {
+  switch (safeScreen) {
 
-      case "forgotPassword":
-        return <ForgotPassword />
+    // ─── Public / Entry Screens ─────────────────────────────────────────────
+    case "landing":
+      return <LandingPage />
+    case "intro":
+      return <HomeIntro setScreen={setScreenCompat} />
+    case "login":
+      return <Login />
+    case "register":
+      return <Register />
+    case "forgotPassword":
+      return <ForgotPassword />
 
-      case "register":
-        return <Register /> 
+    // ─── Onboarding Flow ────────────────────────────────────────────────────
+    case "onboarding":
+      return <Onboarding setScreen={setScreenCompat} />
+    case "restartOnboarding":
+      return <RestartOnboarding />
+    case "dataCleared":
+      return <DataCleared />
 
-      case "home":
-        return (
-          <HomeDashboardContent
-            setScreen={setScreenCompat}
-            setLocationPermissionGranted={setLocationPermissionGranted}
-          />
-        )
+    // ─── Main App Screens ────────────────────────────────────────────────────
+    case "home":
+      return (
+        <HomeDashboardContent
+          setScreen={setScreenCompat}
+          setLocationPermissionGranted={setLocationPermissionGranted}
+        />
+      )
 
-      case "active":
-      case "activeDrive":
-        return (
-          <ActiveDrive
-            setScreen={setScreenCompat}
-            setCurrentDrive={setCurrentDrive}
-          />
-        )
+    case "active":
+    case "activeDrive":
+      return (
+        <ActiveDrive
+          setScreen={setScreenCompat}
+          setCurrentDrive={setCurrentDrive}
+        />
+      )
 
-      case "todaysDrive":
-        return <TodaysDrive drive={currentDrive} />
-      case "summary":
-        return <DriveSummary setScreen={setScreenCompat} />
-      case "driveHistory":
-        return <DriveHistoryContent />
+    case "todaysDrive":
+      return <TodaysDrive drive={currentDrive} />
+    case "summary":
+      return <DriveSummary setScreen={setScreenCompat} />
+    case "driveHistory":
+      return <DriveHistoryContent />
 
-      case "export":
-      case "exportLogs":
-        return <ExportLog setScreen={setScreenCompat} />
+    // ─── Exporting ───────────────────────────────────────────────────────────
+    case "export":
+    case "exportLogs":
+      return <ExportLog setScreen={setScreenCompat} />
 
-      case "settings":
-        return <Settings />
-      case "teenDriverRules":
-        return <TeenDriverRules />
-      case "manageProfile":
-        return <Onboarding setScreen={setScreenCompat} />
-      case "reminderSettings":
-        return <ReminderSettings />
-      case "reminderLog":
-        return <ReminderLog />
-      case "milestones":
-        return <MilestonesContent />
-      case "dmv":
-        return <DMVBundle />
-      case "dmvPrep":
-        return <DMVAppointmentPrep />
+    // ─── Settings & Profile ──────────────────────────────────────────────────
+    case "settings":
+      return <Settings />
+    case "teenDriverRules":
+      return <TeenDriverRules />
+    case "reminderSettings":
+      return <ReminderSettings />
+    case "reminderLog":
+      return <ReminderLog />
+    case "milestones":
+      return <MilestonesContent />
 
-      case "paperwork":
-        return <DMVBundle />
+    // Account management
+    case "deleteAccount":
+case "deleteData":
+  return <Settings /> // TODO: replace when DeleteAccount/DeleteData screens are built
 
-      case "share":
-        return <ShareLogView />
-      case "helpFaq":
-        return <HelpFaq />
+    // Profile editing (grouped)
+    case "teenInfo":
+    case "parentInfo":
+    case "manageProfile":
+      return <Onboarding setScreen={setScreenCompat} />
 
-      case "aiHelper":
-      case "aiFaq":
-        return <AIHelperScreen />
+    // ─── DMV / Paperwork ─────────────────────────────────────────────────────
+    case "dmv":
+      return <DMVBundle />
+    case "dmvPrep":
+      return <DMVAppointmentPrep />
+    case "paperwork":
+      return <DMVBundle /> // TODO: replace with dedicated Paperwork screen
 
-      case "teenInfo":
-      case "parentInfo":
-      case "manageProfile":
-        return <Onboarding setScreen={setScreenCompat} />
+    // ─── Sharing / Help / AI ─────────────────────────────────────────────────
+    case "share":
+      return <ShareLogView />
+    case "helpFaq":
+      return <HelpFaq />
+    case "aiHelper":
+    case "aiFaq":
+      return <AIHelperScreen />
 
-      case "practiceTest":
-        return <PublicPracticeTestPage />
-      case "restartOnboarding":
-        return <RestartOnboarding />
-      case "dataCleared":
-        return <DataCleared />
-      case "pricing":
-        return <PricingPage />
-      case "privacy":
-        return <PrivacyPolicy />
-      case "terms":
-        return <TermsOfUse />
+    // ─── Practice Test ───────────────────────────────────────────────────────
+    case "practiceTest":
+      return <PublicPracticeTestPage />
 
-      case "about":
-        return <Settings />
+    // ─── Legal / Info Pages ──────────────────────────────────────────────────
+    case "pricing":
+      return <PricingPage />
+    case "privacy":
+      return <PrivacyPolicy />
+    case "terms":
+      return <TermsOfUse />
+    case "about":
+      return <Settings /> // TODO: replace with dedicated About screen
 
-      default:
-        return null
-    }
+    // ─── Fallback ────────────────────────────────────────────────────────────
+    default:
+      // Should never reach here if navStore + VALID_SCREENS stay in sync
+      setScreen("landing")
+      return null
   }
+}
+
 
   // ⭐ LOADING STATE
   if (!bootstrapped) {

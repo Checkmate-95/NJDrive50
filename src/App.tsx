@@ -97,8 +97,6 @@ export type Screen =
   | "register"
   | "forgotPassword"
 
-
-
 const VALID_SCREENS: readonly Screen[] = [
   "landing",
   "intro",
@@ -166,10 +164,8 @@ export default function App() {
   const [bootstrapped, setBootstrapped] = useState(false)
   const prevStackLengthRef = useRef(stack.length)
 
-  // ⭐ NEW — required for HomeDashboardContent
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
 
-  // ⭐ PATCH — auto‑grant permission in browser
   useEffect(() => {
     if (!isNativePlatform()) {
       setLocationPermissionGranted(true)
@@ -178,8 +174,6 @@ export default function App() {
 
   const safeScreen: Screen = isValidScreen(screen) ? screen : "landing"
 
-  
-  // ⭐ FIX — stabilize setScreenCompat
   const setScreenCompat = useCallback(
     (nextScreen: Screen | ((prev: Screen) => Screen)) => {
       const next =
@@ -189,7 +183,6 @@ export default function App() {
     [safeScreen, setScreen]
   )
 
-  // ⭐ Initialize reminders
   useEffect(() => {
     const data = loadOnboardingData()
     if (!data?.teenName) return
@@ -198,86 +191,79 @@ export default function App() {
     initializeReminders(prefs)
   }, [])
 
-  // Bootstrap runs ONCE after hydration — never on re-renders
-useEffect(() => {
-  let cancelled = false
+  // ─── Bootstrap ────────────────────────────────────────────────────────────
+  // No persist middleware — store is synchronous, so we run bootstrap directly.
+  useEffect(() => {
+    let cancelled = false
 
-  const runBootstrap = async () => {
-    try {
-      const nav = useNav.getState()
-      const current = isValidScreen(nav.screen) ? nav.screen : "landing"
+    const runBootstrap = async () => {
+      try {
+        const nav = useNav.getState()
+        const current = isValidScreen(nav.screen) ? nav.screen : "landing"
 
-      // Skip bootstrap entirely if user is mid-drive
-      if (current === "activeDrive" || current === "active") {
-        setBootstrapped(true)
-        return
-      }
-
-      let hasOnboardingData = false
-      const result = await Preferences.get({ key: "onboardingData" })
-
-      if (cancelled) return
-
-      if (result.value) {
-        try {
-          const data = JSON.parse(result.value)
-          hasOnboardingData = !!data?.teenName
-        } catch {
-          hasOnboardingData = false
+        // Skip bootstrap entirely if user is mid-drive
+        if (current === "activeDrive" || current === "active") {
+          setBootstrapped(true)
+          return
         }
-      }
 
-      if (!isValidScreen(nav.screen)) {
-        nav.setScreen("landing")
-      } else if (hasOnboardingData) {
-        if (
-          current === "landing" ||
-          current === "intro" ||
-          current === "onboarding"
+        let hasOnboardingData = false
+        const result = await Preferences.get({ key: "onboardingData" })
+
+        if (cancelled) return
+
+        if (result.value) {
+          try {
+            const data = JSON.parse(result.value)
+            hasOnboardingData = !!data?.teenName
+          } catch {
+            hasOnboardingData = false
+          }
+        }
+
+        if (!isValidScreen(nav.screen)) {
+          nav.setScreen("landing")
+        } else if (hasOnboardingData) {
+          if (
+            current === "landing" ||
+            current === "intro" ||
+            current === "onboarding"
+          ) {
+            nav.setScreen("home")
+          }
+        } else if (
+          current !== "landing" &&
+          current !== "pricing" &&
+          current !== "intro" &&
+          current !== "onboarding" &&
+          current !== "login" &&
+          current !== "register" &&
+          current !== "forgotPassword"
         ) {
-          nav.setScreen("home")
+          nav.setScreen("intro")
         }
-      } else if (
-        current !== "landing" &&
-        current !== "pricing" &&
-        current !== "intro" &&
-        current !== "onboarding" &&
-        current !== "login" &&
-        current !== "register" &&
-        current !== "forgotPassword"
-      ) {
-        nav.setScreen("intro")
-      }
-    } catch (err) {
-      console.warn("App bootstrap failed:", err)
-      if (!cancelled) {
-        setScreen("landing")
-      }
-    } finally {
-      if (!cancelled) {
-        setBootstrapped(true)
+      } catch (err) {
+        console.warn("App bootstrap failed:", err)
+        if (!cancelled) {
+          setScreen("landing")
+        }
+      } finally {
+        if (!cancelled) {
+          setBootstrapped(true)
+        }
       }
     }
-  }
 
-  if (useNav.persist.hasHydrated()) {
+    // Store is now non-persistent — state is always ready synchronously.
+    // No hydration check needed; run bootstrap immediately.
     void runBootstrap()
+
     return () => {
       cancelled = true
     }
-  }
+  }, []) // Empty array — intentional, runs once only
 
-  const unsubscribe = useNav.persist.onFinishHydration(() => {
-    void runBootstrap()
-  })
-
-  return () => {
-    cancelled = true
-    unsubscribe?.()
-  }
-}, []) // Empty array — intentional, runs once only
-
-  // ⭐ SCROLL RESET
+  // ─── Scroll Reset ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isBrowser()) return
 
@@ -291,124 +277,122 @@ useEffect(() => {
     }
   }, [safeScreen, stack.length])
 
-  // ⭐ SCREEN RENDERER
-const renderScreen = () => {
-  switch (safeScreen) {
+  // ─── Screen Renderer ──────────────────────────────────────────────────────
+  const renderScreen = () => {
+    switch (safeScreen) {
 
-    // ─── Public / Entry Screens ─────────────────────────────────────────────
-    case "landing":
-      return <LandingPage />
-    case "intro":
-      return <HomeIntro setScreen={setScreenCompat} />
-    case "login":
-      return <Login />
-    case "register":
-      return <Register />
-    case "forgotPassword":
-      return <ForgotPassword />
+      // ─── Public / Entry Screens ───────────────────────────────────────────
+      case "landing":
+        return <LandingPage />
+      case "intro":
+        return <HomeIntro setScreen={setScreenCompat} />
+      case "login":
+        return <Login />
+      case "register":
+        return <Register />
+      case "forgotPassword":
+        return <ForgotPassword />
 
-    // ─── Onboarding Flow ────────────────────────────────────────────────────
-    case "onboarding":
-      return <Onboarding setScreen={setScreenCompat} />
-    case "restartOnboarding":
-      return <RestartOnboarding />
-    case "dataCleared":
-      return <DataCleared />
+      // ─── Onboarding Flow ──────────────────────────────────────────────────
+      case "onboarding":
+        return <Onboarding setScreen={setScreenCompat} />
+      case "restartOnboarding":
+        return <RestartOnboarding />
+      case "dataCleared":
+        return <DataCleared />
 
-    // ─── Main App Screens ────────────────────────────────────────────────────
-    case "home":
-      return (
-        <HomeDashboardContent
-          setScreen={setScreenCompat}
-          setLocationPermissionGranted={setLocationPermissionGranted}
-        />
-      )
+      // ─── Main App Screens ─────────────────────────────────────────────────
+      case "home":
+        return (
+          <HomeDashboardContent
+            setScreen={setScreenCompat}
+            setLocationPermissionGranted={setLocationPermissionGranted}
+          />
+        )
 
-    case "active":
-    case "activeDrive":
-      return (
-        <ActiveDrive
-          setScreen={setScreenCompat}
-          setCurrentDrive={setCurrentDrive}
-        />
-      )
+      case "active":
+      case "activeDrive":
+        return (
+          <ActiveDrive
+            setScreen={setScreenCompat}
+            setCurrentDrive={setCurrentDrive}
+          />
+        )
 
-    case "todaysDrive":
-      return <TodaysDrive drive={currentDrive} />
-    case "summary":
-      return <DriveSummary setScreen={setScreenCompat} />
-    case "driveHistory":
-      return <DriveHistoryContent />
+      case "todaysDrive":
+        return <TodaysDrive drive={currentDrive} />
+      case "summary":
+        return <DriveSummary setScreen={setScreenCompat} />
+      case "driveHistory":
+        return <DriveHistoryContent />
 
-    // ─── Exporting ───────────────────────────────────────────────────────────
-    case "export":
-    case "exportLogs":
-      return <ExportLog setScreen={setScreenCompat} />
+      // ─── Exporting ────────────────────────────────────────────────────────
+      case "export":
+      case "exportLogs":
+        return <ExportLog setScreen={setScreenCompat} />
 
-    // ─── Settings & Profile ──────────────────────────────────────────────────
-    case "settings":
-      return <Settings />
-    case "teenDriverRules":
-      return <TeenDriverRules />
-    case "reminderSettings":
-      return <ReminderSettings />
-    case "reminderLog":
-      return <ReminderLog />
-    case "milestones":
-      return <MilestonesContent />
+      // ─── Settings & Profile ───────────────────────────────────────────────
+      case "settings":
+        return <Settings />
+      case "teenDriverRules":
+        return <TeenDriverRules />
+      case "reminderSettings":
+        return <ReminderSettings />
+      case "reminderLog":
+        return <ReminderLog />
+      case "milestones":
+        return <MilestonesContent />
 
-    // Account management
-    case "deleteAccount":
-case "deleteData":
-  return <Settings /> // TODO: replace when DeleteAccount/DeleteData screens are built
+      // Account management
+      case "deleteAccount":
+      case "deleteData":
+        return <Settings /> // TODO: replace when DeleteAccount/DeleteData screens are built
 
-    // Profile editing (grouped)
-    case "teenInfo":
-    case "parentInfo":
-    case "manageProfile":
-      return <Onboarding setScreen={setScreenCompat} />
+      // Profile editing (grouped)
+      case "teenInfo":
+      case "parentInfo":
+      case "manageProfile":
+        return <Onboarding setScreen={setScreenCompat} />
 
-    // ─── DMV / Paperwork ─────────────────────────────────────────────────────
-    case "dmv":
-      return <DMVBundle />
-    case "dmvPrep":
-      return <DMVAppointmentPrep />
-    case "paperwork":
-      return <DMVBundle /> // TODO: replace with dedicated Paperwork screen
+      // ─── DMV / Paperwork ──────────────────────────────────────────────────
+      case "dmv":
+        return <DMVBundle />
+      case "dmvPrep":
+        return <DMVAppointmentPrep />
+      case "paperwork":
+        return <DMVBundle /> // TODO: replace with dedicated Paperwork screen
 
-    // ─── Sharing / Help / AI ─────────────────────────────────────────────────
-    case "share":
-      return <ShareLogView />
-    case "helpFaq":
-      return <HelpFaq />
-    case "aiHelper":
-    case "aiFaq":
-      return <AIHelperScreen />
+      // ─── Sharing / Help / AI ──────────────────────────────────────────────
+      case "share":
+        return <ShareLogView />
+      case "helpFaq":
+        return <HelpFaq />
+      case "aiHelper":
+      case "aiFaq":
+        return <AIHelperScreen />
 
-    // ─── Practice Test ───────────────────────────────────────────────────────
-    case "practiceTest":
-      return <PublicPracticeTestPage />
+      // ─── Practice Test ────────────────────────────────────────────────────
+      case "practiceTest":
+        return <PublicPracticeTestPage />
 
-    // ─── Legal / Info Pages ──────────────────────────────────────────────────
-    case "pricing":
-      return <PricingPage />
-    case "privacy":
-      return <PrivacyPolicy />
-    case "terms":
-      return <TermsOfUse />
-    case "about":
-      return <Settings /> // TODO: replace with dedicated About screen
+      // ─── Legal / Info Pages ───────────────────────────────────────────────
+      case "pricing":
+        return <PricingPage />
+      case "privacy":
+        return <PrivacyPolicy />
+      case "terms":
+        return <TermsOfUse />
+      case "about":
+        return <Settings /> // TODO: replace with dedicated About screen
 
-    // ─── Fallback ────────────────────────────────────────────────────────────
-    default:
-      // Should never reach here if navStore + VALID_SCREENS stay in sync
-      setScreen("landing")
-      return null
+      // ─── Fallback ─────────────────────────────────────────────────────────
+      default:
+        setScreen("landing")
+        return null
+    }
   }
-}
 
-
-  // ⭐ LOADING STATE
+  // ─── Loading State ────────────────────────────────────────────────────────
   if (!bootstrapped) {
     return (
       <AppShell
@@ -423,7 +407,7 @@ case "deleteData":
     )
   }
 
-  // ⭐ MAIN RENDER
+  // ─── Main Render ──────────────────────────────────────────────────────────
   return (
     <AppShell
       setScreen={setScreenCompat}

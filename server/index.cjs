@@ -91,13 +91,15 @@ app.use(
 app.use(compression())
 app.use(express.json({ limit: "1mb" }))
 
+// FIX 3 — CORS callback returns createHttpError(403) instead of a plain
+// Error so the global error handler sends 403, not 500, on blocked origins.
 const corsOptions = {
   origin(origin, callback) {
     try {
       if (!origin) return callback(null, true)
       if (!isProd && allowedOrigins.length === 0) return callback(null, true)
       if (allowedOrigins.includes(origin)) return callback(null, true)
-      return callback(new Error(`CORS blocked for origin: ${origin}`))
+      return callback(createHttpError(403, `CORS blocked for origin: ${origin}`))
     } catch (err) {
       return callback(err instanceof Error ? err : new Error(String(err)))
     }
@@ -174,6 +176,14 @@ function safeTokenEqual(a, b) {
   return timingSafeEqual(aBuf, bBuf)
 }
 
+// NOTE: createHttpError is defined before corsOptions uses it — moved up here
+// so the CORS callback can reference it safely at call time (not at parse time).
+function createHttpError(statusCode, message) {
+  const err = new Error(message)
+  err.statusCode = statusCode
+  return err
+}
+
 function requireBearerToken(req, res, next) {
   if (!REQUIRE_API_AUTH) return next()
 
@@ -226,12 +236,6 @@ function requireTrustedBrowserOrigin(req, res, next) {
   }
 
   next()
-}
-
-function createHttpError(statusCode, message) {
-  const err = new Error(message)
-  err.statusCode = statusCode
-  return err
 }
 
 // ------------------------------
@@ -317,7 +321,8 @@ Tone: warm, reassuring, detailed when needed.
   })
 )
 
-app.post("/api/computeRoutes", requireBearerToken, (req, res) => {
+// FIX 4 — aiRateLimiter added now so it's enforced when this is implemented
+app.post("/api/computeRoutes", requireBearerToken, aiRateLimiter, (req, res) => {
   res.json({
     status: "ok",
     message: "computeRoutes placeholder active",
@@ -355,10 +360,11 @@ app.use((err, req, res, _next) => {
 
   console.error(JSON.stringify(errorLog))
 
+  // FIX 2 — details now exposes stack trace in dev instead of duplicating message
   res.status(status).json({
     error: message,
     requestId: req.id,
-    details: isProd || status < 500 ? undefined : message,
+    details: isProd || status < 500 ? undefined : err?.stack,
   })
 })
 
@@ -368,7 +374,10 @@ app.use((err, req, res, _next) => {
 const server = http.createServer(app)
 
 server.listen(PORT, "0.0.0.0", () => {
-  const keyHint = `sk-...${process.env.OPENAI_API_KEY.slice(-4)}`
+  // FIX 1 — guard against keys shorter than 8 chars to avoid slice crash
+  const key = process.env.OPENAI_API_KEY
+  const keyHint = key.length > 8 ? `sk-...${key.slice(-4)}` : "[set]"
+
   console.log(`NJDrive50 AI server running on http://localhost:${PORT}`)
   console.log(`OPENAI_API_KEY : ${keyHint}`)
   console.log(`OPENAI_MODEL   : ${OPENAI_MODEL}`)
@@ -397,10 +406,11 @@ function shutdown(signal) {
     process.exit(0)
   })
 
+  // FIX 5 — reduced from 10s to 5s; stateless server has no DB to drain
   setTimeout(() => {
     console.error("Forced shutdown after timeout.")
     process.exit(1)
-  }, 10000).unref()
+  }, 5000).unref()
 }
 
 process.on("SIGINT", () => shutdown("SIGINT"))

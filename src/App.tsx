@@ -23,6 +23,10 @@ import TermsOfUse from "./legal/TermsOfUse"
 import { Capacitor } from "@capacitor/core"
 import { Preferences } from "@capacitor/preferences"
 
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase";
+
+
 // ─── Lazy Screens ─────────────────────────────────────────────────────────────
 const LandingPage            = lazy(() => import("./landing/LandingPage"))
 const DriveSummary           = lazy(() => import("./screens/DriveSummaryContent"))
@@ -165,6 +169,22 @@ export default function App() {
   const prevStackLengthRef = useRef(stack.length)
 
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
+
+    // ─── Firebase Auth Check ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // ✅ User already signed in
+        setScreen("login") // or "home" if you want to skip login entirely
+      } else {
+        // 🚪 No user, show registration
+        setScreen("register")
+      }
+    })
+
+    return () => unsubscribe()
+  }, [])
+
 
   useEffect(() => {
     if (!isNativePlatform()) {

@@ -2,6 +2,8 @@ import { useState } from "react"
 import type { PropsWithChildren } from "react"
 import type { Screen } from "../App"
 import FloatingAIButton from "../components/FloatingAIButton"
+import { signOut } from "firebase/auth"
+import { auth } from "../firebase"
 
 type AppShellProps = PropsWithChildren<{
   setScreen: (s: Screen | ((prev: Screen) => Screen)) => void
@@ -85,6 +87,7 @@ export default function AppShell({
   locationPermissionGranted,
 }: AppShellProps) {
   const [showMore, setShowMore] = useState(false)
+  const [logoutError, setLogoutError] = useState<string | null>(null)
 
   const chromeHidden = CHROMELESS_SCREENS.includes(active)
   const isLegal = active === "privacy" || active === "terms"
@@ -93,6 +96,19 @@ export default function AppShell({
   const go = (screen: Screen) => {
     setScreen(screen)
     setShowMore(false)
+  }
+
+  // ─── Logout ───────────────────────────────────────────────────────────────
+  const handleLogout = async () => {
+    setLogoutError(null)
+    try {
+      await signOut(auth)
+      setShowMore(false)
+      setScreen("login")
+    } catch (error) {
+      console.error("Logout failed:", error)
+      setLogoutError("Logout failed. Please try again.")
+    }
   }
 
   const itemClasses = (screen: Screen | "more") =>
@@ -166,6 +182,24 @@ export default function AppShell({
                 <div className="h-1 w-10 rounded-full bg-white/20" />
               </div>
 
+              {/* Drag handle */}
+<div className="flex justify-center pb-1 pt-3">
+  <div className="h-1 w-10 rounded-full bg-white/20" />
+</div>
+
+{/* ─── Close (X) button ─────────────────────────────────────────────── */}
+<div className="absolute right-5 top-3 z-50">
+  <button
+    type="button"
+    onClick={() => setShowMore(false)}
+    className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 active:bg-white/30"
+    aria-label="Close drawer"
+  >
+    ✕
+  </button>
+</div>
+
+
               <div className="px-3 pb-4 pt-2">
                 {DRAWER_SECTIONS.map((section, si) => (
                   <div key={section.title} className={si > 0 ? "mt-4" : ""}>
@@ -176,31 +210,56 @@ export default function AppShell({
                     </p>
 
                     {/* Section items */}
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {section.items.map((item) => {
-                        const isActive = active === item.screen
-                        return (
-                          <button
-                            key={item.screen}
-                            type="button"
-                            onClick={() => go(item.screen)}
-                            className={[
-                              "min-h-[44px] rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition-colors duration-150",
-                              isActive
-                                ? "bg-[#f9c80e] text-[#08194A]"
-                                : "bg-white/8 text-white/90 hover:bg-white/14 active:bg-white/20",
-                            ].join(" ")}
-                          >
-                            {item.label}
-                          </button>
-                        )
-                      })}
-                    </div>
+<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+  {section.items.map((item) => {
+    const isActive = active === item.screen
+    return (
+      <button
+        key={item.screen}
+        type="button"
+        onClick={() => go(item.screen)}
+        className={[
+          "min-h-[44px] rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition-colors duration-150",
+          isActive
+            ? "bg-[#f9c80e] text-[#08194A]"
+            : "bg-white/8 text-white/90 hover:bg-white/14 active:bg-white/20",
+        ].join(" ")}
+      >
+        {item.label}
+      </button>
+    )
+  })}
+</div>
 
-                    {/* Divider between sections */}
-                    {si < DRAWER_SECTIONS.length - 1 && (
-                      <div className="mt-4 h-px bg-white/8" />
-                    )}
+{/* ─── Log Out button — appended after Settings section items ── */}
+{section.title === "⚙️ Settings" && (
+  <>
+    {/* Divider above logout for visual separation */}
+    <div className="mt-3 h-px bg-white/10" />
+
+    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="col-span-2 min-h-[44px] rounded-xl bg-red-500/15 px-3 py-2.5 text-left text-[13px] font-semibold text-red-400 transition-colors duration-150 hover:bg-red-500/25 active:bg-red-500/35 sm:col-span-3"
+      >
+        🚪 Log Out
+      </button>
+      {logoutError && (
+        <p className="col-span-2 px-1 text-[11px] text-red-400 sm:col-span-3">
+          {logoutError}
+        </p>
+      )}
+    </div>
+  </>
+)}
+
+{/* Divider between sections */}
+{si < DRAWER_SECTIONS.length - 1 && (
+  <div className="mt-4 h-px bg-white/8" />
+)}
+
+
                   </div>
                 ))}
               </div>

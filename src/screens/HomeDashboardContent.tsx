@@ -13,6 +13,8 @@ import { useDriveHistory } from "../state/driveStore"
 import { loadOnboardingData } from "../../core/ReminderEngine"
 import { navigate } from "../navigation/navMap"
 import { useActiveDriveStore } from "../state/activeDriveStore"
+import { Capacitor } from '@capacitor/core'
+
 
 type HomeDashboardContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
@@ -260,29 +262,38 @@ const beginDrive = async () => {
 
 const handleAllowAndContinue = async () => {
   try {
-    // Close the modal immediately
-    setShowLocationDisclosure(false);
+    setShowLocationDisclosure(false)
 
-    // Request permission BEFORE starting the drive
-    const perm = await Geolocation.requestPermissions({
-      permissions: ["location"],
-    });
+    if (!Capacitor.isNativePlatform()) {
+      // 🌐 Browser fallback
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          console.log("Web position:", position.coords)
+          setLocationPermissionGranted(true)
+          beginDrive()
+        },
+        error => {
+          console.error("Web geolocation error:", error)
+          setLocationPermissionGranted(false)
+        }
+      )
+      return
+    }
 
+    // 📱 Native (Android/iOS)
+    const perm = await Geolocation.requestPermissions({ permissions: ["location"] })
     if (perm.location === "granted") {
-      // Update global permission state
-      setLocationPermissionGranted(true);
-
-      // Now it's safe to start the drive
-      await beginDrive();
+      setLocationPermissionGranted(true)
+      await beginDrive()
     } else {
-      console.warn("Location permission denied");
-      setLocationPermissionGranted(false);
+      console.warn("Location permission denied")
+      setLocationPermissionGranted(false)
     }
   } catch (err) {
-    console.error("Location permission error:", err);
-    setLocationPermissionGranted(false);
+    console.error("Location permission error:", err)
+    setLocationPermissionGranted(false)
   }
-};
+}
 
 
 

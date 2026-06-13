@@ -302,54 +302,55 @@ const handleAllowAndContinue = async () => {
   return (
     <>
       {showLocationDisclosure && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="location-disclosure-title"
-            aria-describedby="location-disclosure-description"
-            className="w-full max-w-md rounded-2xl bg-white p-6 text-slate-800 shadow-xl"
+  <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 p-4 backdrop-blur-sm">
+    <div className="flex min-h-[100dvh] items-center justify-center">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="location-disclosure-title"
+        aria-describedby="location-disclosure-description"
+        className="w-full max-w-md max-h-[85dvh] overflow-y-auto rounded-2xl bg-white p-5 text-slate-800 shadow-xl sm:p-6"
+      >
+        <h2 id="location-disclosure-title" className="mb-3 text-xl font-bold">
+          Why NJDrive50 Needs Your Location
+        </h2>
+
+        <p
+          id="location-disclosure-description"
+          className="mb-6 text-sm leading-6 text-slate-600"
+        >
+          NJDrive50 tracks your supervised driving sessions to create accurate
+          mileage logs. To keep tracking even when the screen is off, the app
+          needs location permission while you&apos;re driving.
+          <br />
+          <br />
+          Location is only used during active drives and never when a drive is
+          not running.
+        </p>
+
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            ref={cancelButtonRef}
+            type="button"
+            className="min-h-[44px] w-full rounded-lg bg-slate-200 px-4 py-2 text-slate-700 sm:w-auto"
+            onClick={() => setShowLocationDisclosure(false)}
           >
-            <h2 id="location-disclosure-title" className="mb-3 text-xl font-bold">
-              Why NJDrive50 Needs Your Location
-            </h2>
+            Not Now
+          </button>
 
-            <p
-              id="location-disclosure-description"
-              className="mb-6 text-sm leading-6 text-slate-600"
-            >
-              NJDrive50 tracks your supervised driving sessions to create accurate
-              mileage logs. To keep tracking even when the screen is off, the app
-              needs location permission while you&apos;re driving.
-              <br />
-              <br />
-              Location is only used during active drives and never when a drive is
-              not running.
-            </p>
-
-            <div className="flex justify-end gap-3">
-              <button
-                ref={cancelButtonRef}
-                type="button"
-                className="min-h-[44px] rounded-lg bg-slate-200 px-4 py-2 text-slate-700"
-                onClick={() => setShowLocationDisclosure(false)}
-              >
-                Not Now
-              </button>
-
-              <button
-                ref={allowButtonRef}
-                type="button"
-                className="min-h-[44px] rounded-lg bg-blue-600 px-4 py-2 text-white"
-                onClick={handleAllowAndContinue}
-              >
-                Allow & Continue
-              </button>
-            </div>
-          </div>
+          <button
+            ref={allowButtonRef}
+            type="button"
+            className="min-h-[44px] w-full rounded-lg bg-blue-600 px-4 py-2 text-white sm:w-auto"
+            onClick={handleAllowAndContinue}
+          >
+            Allow & Continue
+          </button>
         </div>
-      )}
-
+      </div>
+    </div>
+  </div>
+)}
       <div className="flex w-full justify-center px-3 pb-28 pt-4 text-[#0A1E5E] sm:px-4">
         <section className="relative w-full max-w-[46rem] overflow-hidden rounded-[28px] border border-white/15 bg-[#F8FAFD] shadow-[0_20px_55px_rgba(0,0,0,0.18)]">
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#f9c80e] via-white/80 to-[#0A1E5E]" />

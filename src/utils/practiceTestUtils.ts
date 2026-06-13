@@ -53,6 +53,7 @@ export const buildTestQuestions = (
     .map(shuffleAnswersForQuestion)
 }
 
+
 export const calcScorePercent = (score: number, total: number): number =>
   total === 0 ? 0 : Math.round((score / total) * 100)
 

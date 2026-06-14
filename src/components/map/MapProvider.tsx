@@ -40,6 +40,7 @@ const MapProviderInner = ({ apiKey, children }: MapProviderInnerProps) => {
     () => ({
       googleMapsApiKey: apiKey,
       libraries: LIBRARIES,
+      version: "weekly", // ⭐ FORCE NEW PLACES API
     }),
     [apiKey]
   )

@@ -851,34 +851,37 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
               </div>
 
               <div>
-                <label className={labelClass}>Permit Number</label>
-                <input
-                  type="text"
-                  placeholder="Ex: P123-456-789-000"
-                  value={permitNumber}
-                  onChange={(e) => setPermitNumber(e.target.value)}
-                  className={panelInput}
-                />
-              </div>
+  <label className={labelClass}>Permit Number</label>
+  <input
+    type="text"
+    placeholder="Ex: P123-456-789-000"
+    value={permitNumber}
+    onChange={(e) => setPermitNumber(e.target.value)}
+    className={panelInput}
+  />
+</div>
 
-              <div>
-                <label className={labelClass} htmlFor="homeAddress">
-                  Home Address
-                </label>
+<div>
+  <label className={labelClass} htmlFor="homeAddress">
+    Home Address
+  </label>
 
-                <AddressAutocomplete
-  onChange={handleAddressManualChange}
-  onPlaceSelect={handleAddressSelect}
-  placeholder="Enter address"
-/>
+  <div className="rounded-xl border border-[#0A1E5E]/15 bg-white p-1 shadow-sm transition focus-within:border-[#f9c80e] focus-within:ring-2 focus-within:ring-[#f9c80e]/40">
+    <div className="rounded-[14px] bg-white px-2 py-1">
+      <AddressAutocomplete
+        onChange={handleAddressManualChange}
+        onPlaceSelect={handleAddressSelect}
+        placeholder="Enter address"
+      />
+    </div>
+  </div>
 
-
-                <p id="homeAddressHelp" className={helperClass}>
-                  {isLoaded
-                    ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
-                    : "Address search is loading…"}
-                </p>
-              </div>
+  <p id="homeAddressHelp" className={helperClass}>
+    {isLoaded
+      ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
+      : "Address search is loading…"}
+  </p>
+</div>
 
               {hasAddressResolution && (
                 <div className="grid gap-4 sm:grid-cols-2">

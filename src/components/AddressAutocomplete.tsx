@@ -16,8 +16,7 @@ export default function AddressAutocomplete({
   className,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null)
-  const autoRef = useRef<google.maps.places.Autocomplete | null>(null)
-  const listenerRef = useRef<google.maps.MapsEventListener | null>(null)
+  const autoRef = useRef<any>(null) // TS-safe wrapper
   const onChangeRef = useRef(onChange)
   const onPlaceSelectRef = useRef(onPlaceSelect)
 
@@ -33,7 +32,9 @@ export default function AddressAutocomplete({
     if (!inputRef.current) return
     if (autoRef.current) return
 
-    const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+    // ⭐ NEW API — wrapped in `any` because TS types are outdated
+    const autocomplete = new (google.maps.places as any).PlaceAutocompleteElement({
+      inputElement: inputRef.current,
       fields: [
         "formatted_address",
         "address_components",
@@ -41,27 +42,25 @@ export default function AddressAutocomplete({
         "name",
         "place_id",
       ],
-      types: ["address"],
     })
 
     autoRef.current = autocomplete
 
-    listenerRef.current = autocomplete.addListener("place_changed", () => {
-      window.setTimeout(() => {
-        const place = autoRef.current?.getPlace()
-        if (!place) return
+    const handler = () => {
+      const place = (autocomplete as any).getPlace()
+      if (!place) return
 
-        if (place.formatted_address) {
-          onChangeRef.current(place.formatted_address)
-        }
+      if (place.formatted_address) {
+        onChangeRef.current(place.formatted_address)
+      }
 
-        onPlaceSelectRef.current?.(place)
-      }, 200)
-    })
+      onPlaceSelectRef.current?.(place)
+    }
+
+    autocomplete.addEventListener("place_changed", handler)
 
     return () => {
-      listenerRef.current?.remove()
-      listenerRef.current = null
+      autocomplete.removeEventListener("place_changed", handler)
       autoRef.current = null
     }
   }, [])

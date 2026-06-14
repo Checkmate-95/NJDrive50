@@ -867,12 +867,11 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
                 </label>
 
                 <AddressAutocomplete
-                  value={address}
-                  onChange={handleAddressManualChange}
-                  onPlaceSelect={handleAddressSelect}
-                  placeholder={isLoaded ? "123 Main St" : "Loading address search..."}
-                  className={panelInput}
-                />
+  onChange={handleAddressManualChange}
+  onPlaceSelect={handleAddressSelect}
+  placeholder="Enter address"
+/>
+
 
                 <p id="homeAddressHelp" className={helperClass}>
                   {isLoaded

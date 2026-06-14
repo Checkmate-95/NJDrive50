@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react"
 
 interface Props {
-  value: string
   onChange: (value: string) => void
   onPlaceSelect?: (place: google.maps.places.PlaceResult) => void
   placeholder?: string
@@ -9,14 +8,13 @@ interface Props {
 }
 
 export default function AddressAutocomplete({
-  value,
   onChange,
   onPlaceSelect,
   placeholder,
   className,
 }: Props) {
-  const inputRef = useRef<HTMLInputElement | null>(null)
-  const autoRef = useRef<any>(null) // TS-safe wrapper
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const widgetRef = useRef<any>(null)
   const onChangeRef = useRef(onChange)
   const onPlaceSelectRef = useRef(onPlaceSelect)
 
@@ -29,55 +27,88 @@ export default function AddressAutocomplete({
   }, [onPlaceSelect])
 
   useEffect(() => {
-    if (!inputRef.current) return
-    if (autoRef.current) return
+    if (!containerRef.current) return
+    if (widgetRef.current) return
+    if (!google?.maps?.places?.PlaceAutocompleteElement) {
+      if (import.meta.env.DEV) {
+        console.error(
+          "[AddressAutocomplete] PlaceAutocompleteElement is unavailable. Check that Maps JavaScript API and Places API (New) are enabled."
+        )
+      }
+      return
+    }
 
-    // ⭐ NEW API — wrapped in `any` because TS types are outdated
-    const autocomplete = new (google.maps.places as any).PlaceAutocompleteElement({
-      inputElement: inputRef.current,
-      fields: [
-        "formatted_address",
-        "address_components",
-        "geometry",
-        "name",
-        "place_id",
-      ],
+    const widget = new (google.maps.places as any).PlaceAutocompleteElement({
+      includedRegionCodes: ["us"],
     })
 
-    autoRef.current = autocomplete
-
-    const handler = () => {
-      const place = (autocomplete as any).getPlace()
-      if (!place) return
-
-      if (place.formatted_address) {
-        onChangeRef.current(place.formatted_address)
-      }
-
-      onPlaceSelectRef.current?.(place)
+    if (placeholder) {
+      widget.setAttribute("placeholder", placeholder)
     }
 
-    autocomplete.addEventListener("place_changed", handler)
+    if (className) {
+      widget.className = className
+    }
+
+    containerRef.current.innerHTML = ""
+    containerRef.current.appendChild(widget)
+    widgetRef.current = widget
+
+    const handleSelect = async (event: any) => {
+      try {
+        const placePrediction = event?.placePrediction
+        if (!placePrediction?.toPlace) return
+
+        const place = placePrediction.toPlace()
+
+        await place.fetchFields({
+          fields: [
+            "id",
+            "displayName",
+            "formattedAddress",
+            "addressComponents",
+            "location",
+          ],
+        })
+
+        const formattedAddress = place.formattedAddress ?? ""
+
+        if (formattedAddress) {
+          onChangeRef.current(formattedAddress)
+        }
+
+        const mappedPlace: google.maps.places.PlaceResult = {
+          place_id: place.id,
+          name: place.displayName,
+          formatted_address: place.formattedAddress,
+          address_components: place.addressComponents as any,
+          geometry: place.location
+            ? {
+                location: place.location,
+              }
+            : undefined,
+        }
+
+        onPlaceSelectRef.current?.(mappedPlace)
+      } catch (error) {
+        console.error(
+          "[AddressAutocomplete] Failed to fetch place details:",
+          error
+        )
+      }
+    }
+
+    widget.addEventListener("gmp-select", handleSelect)
 
     return () => {
-      autocomplete.removeEventListener("place_changed", handler)
-      autoRef.current = null
-    }
-  }, [])
+      widget.removeEventListener("gmp-select", handleSelect)
+      widgetRef.current = null
 
-  return (
-    <input
-      ref={inputRef}
-      type="text"
-      value={value}
-      placeholder={placeholder}
-      onChange={(e) => onChange(e.target.value)}
-      autoComplete="street-address"
-      autoCorrect="off"
-      autoCapitalize="words"
-      spellCheck={false}
-      enterKeyHint="done"
-      className={className}
-    />
-  )
+      if (containerRef.current) {
+        containerRef.current.innerHTML = ""
+      }
+    }
+  }, [className, placeholder])
+
+  return <div ref={containerRef} />
 }

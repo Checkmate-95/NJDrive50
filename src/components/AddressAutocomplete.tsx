@@ -29,6 +29,7 @@ export default function AddressAutocomplete({
   useEffect(() => {
     if (!containerRef.current) return
     if (widgetRef.current) return
+
     if (!google?.maps?.places?.PlaceAutocompleteElement) {
       if (import.meta.env.DEV) {
         console.error(
@@ -78,13 +79,25 @@ export default function AddressAutocomplete({
         }
 
         const mappedPlace: google.maps.places.PlaceResult = {
-          place_id: place.id,
-          name: place.displayName,
-          formatted_address: place.formattedAddress,
-          address_components: place.addressComponents as any,
+          place_id: place.id ?? "",
+          formatted_address: formattedAddress,
+          name:
+            typeof place.displayName === "string"
+              ? place.displayName
+              : place.displayName?.text ?? "",
+          address_components: Array.isArray(place.addressComponents)
+            ? place.addressComponents.map((component: any) => ({
+                long_name: component.longText ?? component.long_name ?? "",
+                short_name: component.shortText ?? component.short_name ?? "",
+                types: component.types ?? [],
+              }))
+            : [],
           geometry: place.location
             ? {
-                location: place.location,
+                location: new google.maps.LatLng(
+                  place.location.lat(),
+                  place.location.lng()
+                ),
               }
             : undefined,
         }

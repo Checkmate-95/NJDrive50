@@ -1,10 +1,13 @@
 import { Suspense, lazy, useEffect, useRef, useState, useCallback } from "react"
+import type { User } from "firebase/auth"
+import { onAuthStateChanged } from "firebase/auth"
+import { auth } from "./firebase"
 
 // ─── Layout & Core Components ─────────────────────────────────────────────────
 import AppShell from "./layout/AppShell"
 import ErrorBoundary from "./components/ErrorBoundary"
 
-// ─── Eager Screens (always needed on first render) ────────────────────────────
+// ─── Eager Screens ────────────────────────────────────────────────────────────
 import HomeDashboardContent from "./screens/HomeDashboardContent"
 import ActiveDrive from "./screens/ActiveDriveContent"
 import Onboarding from "./screens/OnboardingContent"
@@ -15,17 +18,13 @@ import Login from "./Login"
 import Register from "./Register"
 import ForgotPassword from "./ForgotPassword"
 
-// ─── Legal (small, no reason to lazy-load) ────────────────────────────────────
+// ─── Legal ────────────────────────────────────────────────────────────────────
 import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
 
 // ─── Capacitor ────────────────────────────────────────────────────────────────
 import { Capacitor } from "@capacitor/core"
 import { Preferences } from "@capacitor/preferences"
-
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./firebase";
-
 
 // ─── Lazy Screens ─────────────────────────────────────────────────────────────
 const LandingPage            = lazy(() => import("./landing/LandingPage"))
@@ -47,9 +46,6 @@ const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPa
 const RestartOnboarding      = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared            = lazy(() => import("./screens/DataCleared"))
 const PricingPage            = lazy(() => import("./screens/PricingPage"))
-// TODO: uncomment when screens are created
-// const DeleteAccount       = lazy(() => import("./screens/DeleteAccount"))
-// const DeleteData          = lazy(() => import("./screens/DeleteData"))
 
 // ─── State, Types & Utilities ─────────────────────────────────────────────────
 import { useNav } from "./state/navStore"
@@ -102,42 +98,13 @@ export type Screen =
   | "forgotPassword"
 
 const VALID_SCREENS: readonly Screen[] = [
-  "landing",
-  "intro",
-  "onboarding",
-  "home",
-  "active",
-  "activeDrive",
-  "todaysDrive",
-  "summary",
-  "milestones",
-  "driveHistory",
-  "export",
-  "exportLogs",
-  "settings",
-  "reminderSettings",
-  "reminderLog",
-  "dmv",
-  "dmvPrep",
-  "paperwork",
-  "share",
-  "helpFaq",
-  "aiHelper",
-  "aiFaq",
-  "teenDriverRules",
-  "teenInfo",
-  "parentInfo",
-  "manageProfile",
-  "restartOnboarding",
-  "dataCleared",
-  "practiceTest",
-  "pricing",
-  "privacy",
-  "terms",
-  "about",
-  "login",
-  "register",
-  "forgotPassword",
+  "landing", "intro", "onboarding", "home", "active", "activeDrive",
+  "todaysDrive", "summary", "milestones", "driveHistory", "export",
+  "exportLogs", "settings", "reminderSettings", "reminderLog", "dmv",
+  "dmvPrep", "paperwork", "share", "helpFaq", "aiHelper", "aiFaq",
+  "teenDriverRules", "teenInfo", "parentInfo", "manageProfile",
+  "restartOnboarding", "dataCleared", "practiceTest", "pricing",
+  "privacy", "terms", "about", "login", "register", "forgotPassword",
 ] as const
 
 function isBrowser() {
@@ -162,28 +129,41 @@ function ScreenLoader() {
   )
 }
 
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-dvh w-full items-center justify-center bg-[#08194A]">
+      <div className="rounded-2xl bg-white/10 px-6 py-4 text-sm font-semibold text-white backdrop-blur-sm">
+        Loading…
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const { screen, setScreen, stack } = useNav()
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const [bootstrapped, setBootstrapped] = useState(false)
+  const [authUser, setAuthUser] = useState<User | null>(null)
+  const [authReady, setAuthReady] = useState(false)
   const prevStackLengthRef = useRef(stack.length)
 
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
 
-    // ─── Firebase Auth Check ─────────────────────────────────────────────────────
+  // ─── Firebase Auth ─────────────────────────────────────────────────────────
   useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, (user) => {
-    if (user) {
-      useNav.getState().resetTo("home")
-    } else {
-      useNav.getState().resetTo("landing")
-    }
-  })
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user)
+      setAuthReady(true)
 
-  return () => unsubscribe()
-}, [])
+      if (user) {
+        useNav.getState().resetTo("home")
+      } else {
+        useNav.getState().resetTo("landing")
+      }
+    })
 
-
+    return () => unsubscribe()
+  }, [])
 
   useEffect(() => {
     if (!isNativePlatform()) {
@@ -205,13 +185,11 @@ export default function App() {
   useEffect(() => {
     const data = loadOnboardingData()
     if (!data?.teenName) return
-
     const prefs = loadReminderPreferences()
     initializeReminders(prefs)
   }, [])
 
   // ─── Bootstrap ────────────────────────────────────────────────────────────
-  // No persist middleware — store is synchronous, so we run bootstrap directly.
   useEffect(() => {
     let cancelled = false
 
@@ -220,7 +198,6 @@ export default function App() {
         const nav = useNav.getState()
         const current = isValidScreen(nav.screen) ? nav.screen : "landing"
 
-        // Skip bootstrap entirely if user is mid-drive
         if (current === "activeDrive" || current === "active") {
           setBootstrapped(true)
           return
@@ -273,14 +250,12 @@ export default function App() {
       }
     }
 
-    // Store is now non-persistent — state is always ready synchronously.
-    // No hydration check needed; run bootstrap immediately.
     void runBootstrap()
 
     return () => {
       cancelled = true
     }
-  }, []) // Empty array — intentional, runs once only
+  }, [])
 
   // ─── Scroll Reset ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -299,28 +274,16 @@ export default function App() {
   // ─── Screen Renderer ──────────────────────────────────────────────────────
   const renderScreen = () => {
     switch (safeScreen) {
+      case "landing":        return <LandingPage />
+      case "intro":          return <HomeIntro setScreen={setScreenCompat} />
+      case "login":          return <Login />
+      case "register":       return <Register />
+      case "forgotPassword": return <ForgotPassword />
 
-      // ─── Public / Entry Screens ───────────────────────────────────────────
-      case "landing":
-        return <LandingPage />
-      case "intro":
-        return <HomeIntro setScreen={setScreenCompat} />
-      case "login":
-        return <Login />
-      case "register":
-        return <Register />
-      case "forgotPassword":
-        return <ForgotPassword />
+      case "onboarding":        return <Onboarding setScreen={setScreenCompat} />
+      case "restartOnboarding": return <RestartOnboarding />
+      case "dataCleared":       return <DataCleared />
 
-      // ─── Onboarding Flow ──────────────────────────────────────────────────
-      case "onboarding":
-        return <Onboarding setScreen={setScreenCompat} />
-      case "restartOnboarding":
-        return <RestartOnboarding />
-      case "dataCleared":
-        return <DataCleared />
-
-      // ─── Main App Screens ─────────────────────────────────────────────────
       case "home":
         return (
           <HomeDashboardContent
@@ -338,83 +301,58 @@ export default function App() {
           />
         )
 
-      case "todaysDrive":
-        return <TodaysDrive drive={currentDrive} />
-      case "summary":
-        return <DriveSummary setScreen={setScreenCompat} />
-      case "driveHistory":
-        return <DriveHistoryContent />
+      case "todaysDrive":   return <TodaysDrive drive={currentDrive} />
+      case "summary":       return <DriveSummary setScreen={setScreenCompat} />
+      case "driveHistory":  return <DriveHistoryContent />
 
-      // ─── Exporting ────────────────────────────────────────────────────────
       case "export":
-      case "exportLogs":
-        return <ExportLog setScreen={setScreenCompat} />
+      case "exportLogs":    return <ExportLog setScreen={setScreenCompat} />
 
-      // ─── Settings & Profile ───────────────────────────────────────────────
-      case "settings":
-        return <Settings />
-      case "teenDriverRules":
-        return <TeenDriverRules />
-      case "reminderSettings":
-        return <ReminderSettings />
-      case "reminderLog":
-        return <ReminderLog />
-      case "milestones":
-        return <MilestonesContent />
+      case "settings":         return <Settings />
+      case "teenDriverRules":  return <TeenDriverRules />
+      case "reminderSettings": return <ReminderSettings />
+      case "reminderLog":      return <ReminderLog />
+      case "milestones":       return <MilestonesContent />
 
-      // Account management
       case "deleteAccount":
-      case "deleteData":
-        return <Settings /> // TODO: replace when DeleteAccount/DeleteData screens are built
+      case "deleteData":    return <Settings />
 
-      // Profile editing (grouped)
       case "teenInfo":
       case "parentInfo":
-      case "manageProfile":
-        return <Onboarding setScreen={setScreenCompat} />
+      case "manageProfile": return <Onboarding setScreen={setScreenCompat} />
 
-      // ─── DMV / Paperwork ──────────────────────────────────────────────────
-      case "dmv":
-        return <DMVBundle />
-      case "dmvPrep":
-        return <DMVAppointmentPrep />
-      case "paperwork":
-        return <DMVBundle /> // TODO: replace with dedicated Paperwork screen
+      case "dmv":           return <DMVBundle />
+      case "dmvPrep":       return <DMVAppointmentPrep />
+      case "paperwork":     return <DMVBundle />
 
-      // ─── Sharing / Help / AI ──────────────────────────────────────────────
-      case "share":
-        return <ShareLogView />
-      case "helpFaq":
-        return <HelpFaq />
+      case "share":         return <ShareLogView />
+      case "helpFaq":       return <HelpFaq />
       case "aiHelper":
-      case "aiFaq":
-        return <AIHelperScreen />
+      case "aiFaq":         return <AIHelperScreen />
 
-      // ─── Practice Test ────────────────────────────────────────────────────
-      case "practiceTest":
-        return <PublicPracticeTestPage />
+      case "practiceTest":  return <PublicPracticeTestPage />
 
-      // ─── Legal / Info Pages ───────────────────────────────────────────────
-      case "pricing":
-        return <PricingPage />
-      case "privacy":
-        return <PrivacyPolicy />
-      case "terms":
-        return <TermsOfUse />
-      case "about":
-        return <Settings /> // TODO: replace with dedicated About screen
+      case "pricing":       return <PricingPage />
+      case "privacy":       return <PrivacyPolicy />
+      case "terms":         return <TermsOfUse />
+      case "about":         return <Settings />
 
-      // ─── Fallback ─────────────────────────────────────────────────────────
       default:
         setScreen("landing")
         return null
     }
   }
 
+  // ─── Block render until Firebase resolves ─────────────────────────────────
+  if (!authReady) {
+    return <LoadingScreen />
+  }
+
   // ─── Loading State ────────────────────────────────────────────────────────
   if (!bootstrapped) {
     return (
       <AppShell
+        user={authUser}
         setScreen={setScreenCompat}
         active={safeScreen}
         locationPermissionGranted={locationPermissionGranted}
@@ -429,6 +367,7 @@ export default function App() {
   // ─── Main Render ──────────────────────────────────────────────────────────
   return (
     <AppShell
+      user={authUser}
       setScreen={setScreenCompat}
       active={safeScreen}
       locationPermissionGranted={locationPermissionGranted}
@@ -438,9 +377,7 @@ export default function App() {
           key={safeScreen}
           onReloadApp={() => {
             setScreen("landing")
-            if (isBrowser()) {
-              window.location.reload()
-            }
+            if (isBrowser()) window.location.reload()
           }}
         >
           <Suspense fallback={<ScreenLoader />}>

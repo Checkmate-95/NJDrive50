@@ -1,11 +1,13 @@
 import { useState } from "react"
 import type { PropsWithChildren } from "react"
+import type { User } from "firebase/auth"
 import type { Screen } from "../App"
 import FloatingAIButton from "../components/FloatingAIButton"
 import { signOut } from "firebase/auth"
 import { auth } from "../firebase"
 
 type AppShellProps = PropsWithChildren<{
+  user: User | null
   setScreen: (s: Screen | ((prev: Screen) => Screen)) => void
   active: Screen
   locationPermissionGranted: boolean
@@ -18,6 +20,9 @@ const CHROMELESS_SCREENS: Screen[] = [
   "onboarding",
   "privacy",
   "terms",
+  "login",
+  "register",
+  "forgotPassword",
 ]
 
 const MORE_SCREENS: Screen[] = [
@@ -36,7 +41,6 @@ const MORE_SCREENS: Screen[] = [
   "reminderSettings",
 ]
 
-// ⭐ Drawer section config
 type DrawerItem = { label: string; screen: Screen }
 type DrawerSection = { title: string; items: DrawerItem[] }
 
@@ -82,6 +86,7 @@ const DRAWER_SECTIONS: DrawerSection[] = [
 
 export default function AppShell({
   children,
+  user,
   setScreen,
   active,
   locationPermissionGranted,
@@ -98,7 +103,6 @@ export default function AppShell({
     setShowMore(false)
   }
 
-  // ─── Logout ───────────────────────────────────────────────────────────────
   const handleLogout = async () => {
     setLogoutError(null)
     try {
@@ -121,7 +125,7 @@ export default function AppShell({
         : "text-white/88 hover:text-[#f9c80e]",
     ].join(" ")
 
-  // ⭐ CHROMELESS MODE
+  // ─── Chromeless Mode ──────────────────────────────────────────────────────
   if (chromeHidden) {
     return (
       <div
@@ -136,7 +140,7 @@ export default function AppShell({
     )
   }
 
-  // ⭐ FULL APP MODE
+  // ─── Full App Mode ────────────────────────────────────────────────────────
   return (
     <div className="relative flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#08194A]">
       <header className="w-full shrink-0 bg-[#08194A] px-4 pb-3 pt-5 sm:pb-4 sm:pt-6">
@@ -155,8 +159,8 @@ export default function AppShell({
         </section>
       </main>
 
-      {/* ⭐ AI Bubble */}
-      {locationPermissionGranted && (
+      {/* AI Bubble */}
+      {user && locationPermissionGranted && (
         <div className="pointer-events-none fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40">
           <div className="pointer-events-auto">
             <FloatingAIButton />
@@ -164,102 +168,83 @@ export default function AppShell({
         </div>
       )}
 
-      {/* ⭐ More Drawer */}
-      {showMore && locationPermissionGranted && (
+      {/* More Drawer */}
+      {user && showMore && locationPermissionGranted && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowMore(false)}
           />
 
-          {/* Drawer panel */}
           <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-50 mx-auto w-full max-w-[42rem] px-3">
             <div className="max-h-[70dvh] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-[#0d2260] shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
 
-              {/* Drag handle */}
               <div className="flex justify-center pb-1 pt-3">
                 <div className="h-1 w-10 rounded-full bg-white/20" />
               </div>
 
-              {/* Drag handle */}
-<div className="flex justify-center pb-1 pt-3">
-  <div className="h-1 w-10 rounded-full bg-white/20" />
-</div>
-
-{/* ─── Close (X) button ─────────────────────────────────────────────── */}
-<div className="absolute right-5 top-3 z-50">
-  <button
-    type="button"
-    onClick={() => setShowMore(false)}
-    className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 active:bg-white/30"
-    aria-label="Close drawer"
-  >
-    ✕
-  </button>
-</div>
-
+              <div className="absolute right-5 top-3 z-50">
+                <button
+                  type="button"
+                  onClick={() => setShowMore(false)}
+                  className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 active:bg-white/30"
+                  aria-label="Close drawer"
+                >
+                  ✕
+                </button>
+              </div>
 
               <div className="px-3 pb-4 pt-2">
                 {DRAWER_SECTIONS.map((section, si) => (
                   <div key={section.title} className={si > 0 ? "mt-4" : ""}>
-
-                    {/* Section header */}
                     <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
                       {section.title}
                     </p>
 
-                    {/* Section items */}
-<div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-  {section.items.map((item) => {
-    const isActive = active === item.screen
-    return (
-      <button
-        key={item.screen}
-        type="button"
-        onClick={() => go(item.screen)}
-        className={[
-          "min-h-[44px] rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition-colors duration-150",
-          isActive
-            ? "bg-[#f9c80e] text-[#08194A]"
-            : "bg-white/8 text-white/90 hover:bg-white/14 active:bg-white/20",
-        ].join(" ")}
-      >
-        {item.label}
-      </button>
-    )
-  })}
-</div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {section.items.map((item) => {
+                        const isActive = active === item.screen
+                        return (
+                          <button
+                            key={item.screen}
+                            type="button"
+                            onClick={() => go(item.screen)}
+                            className={[
+                              "min-h-[44px] rounded-xl px-3 py-2.5 text-left text-[13px] font-semibold transition-colors duration-150",
+                              isActive
+                                ? "bg-[#f9c80e] text-[#08194A]"
+                                : "bg-white/8 text-white/90 hover:bg-white/14 active:bg-white/20",
+                            ].join(" ")}
+                          >
+                            {item.label}
+                          </button>
+                        )
+                      })}
+                    </div>
 
-{/* ─── Log Out button — appended after Settings section items ── */}
-{section.title === "⚙️ Settings" && (
-  <>
-    {/* Divider above logout for visual separation */}
-    <div className="mt-3 h-px bg-white/10" />
+                    {section.title === "⚙️ Settings" && (
+                      <>
+                        <div className="mt-3 h-px bg-white/10" />
+                        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="col-span-2 min-h-[44px] rounded-xl bg-red-500/15 px-3 py-2.5 text-left text-[13px] font-semibold text-red-400 transition-colors duration-150 hover:bg-red-500/25 active:bg-red-500/35 sm:col-span-3"
+                          >
+                            🚪 Log Out
+                          </button>
+                          {logoutError && (
+                            <p className="col-span-2 px-1 text-[11px] text-red-400 sm:col-span-3">
+                              {logoutError}
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    )}
 
-    <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-      <button
-        type="button"
-        onClick={handleLogout}
-        className="col-span-2 min-h-[44px] rounded-xl bg-red-500/15 px-3 py-2.5 text-left text-[13px] font-semibold text-red-400 transition-colors duration-150 hover:bg-red-500/25 active:bg-red-500/35 sm:col-span-3"
-      >
-        🚪 Log Out
-      </button>
-      {logoutError && (
-        <p className="col-span-2 px-1 text-[11px] text-red-400 sm:col-span-3">
-          {logoutError}
-        </p>
-      )}
-    </div>
-  </>
-)}
-
-{/* Divider between sections */}
-{si < DRAWER_SECTIONS.length - 1 && (
-  <div className="mt-4 h-px bg-white/8" />
-)}
-
-
+                    {si < DRAWER_SECTIONS.length - 1 && (
+                      <div className="mt-4 h-px bg-white/8" />
+                    )}
                   </div>
                 ))}
               </div>
@@ -268,55 +253,35 @@ export default function AppShell({
         </>
       )}
 
-      {/* ⭐ Bottom Nav */}
-      {locationPermissionGranted && (
+      {/* Bottom Nav */}
+      {user && locationPermissionGranted && (
         <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#08194A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#08194A]/88">
           <div className="mx-auto w-full max-w-[42rem] px-2 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-3 sm:pt-3">
             <div className="grid grid-cols-5 gap-1 sm:gap-2">
 
-              <button
-                type="button"
-                className={itemClasses("home")}
-                onClick={() => go("home")}
-              >
+              <button type="button" className={itemClasses("home")} onClick={() => go("home")}>
                 <span className="block truncate">Home</span>
               </button>
 
-              <button
-                type="button"
-                className={itemClasses("driveHistory")}
-                onClick={() => go("driveHistory")}
-              >
+              <button type="button" className={itemClasses("driveHistory")} onClick={() => go("driveHistory")}>
                 <span className="block sm:hidden">Driving</span>
                 <span className="block sm:hidden">Log</span>
                 <span className="hidden sm:block">Driving Log</span>
               </button>
 
-              <button
-                type="button"
-                className={itemClasses("activeDrive")}
-                onClick={() => go("activeDrive")}
-              >
+              <button type="button" className={itemClasses("activeDrive")} onClick={() => go("activeDrive")}>
                 <span className="block sm:hidden">Start</span>
                 <span className="block sm:hidden">Drive</span>
                 <span className="hidden sm:block">Start Drive</span>
               </button>
 
-              <button
-                type="button"
-                className={itemClasses("practiceTest")}
-                onClick={() => go("practiceTest")}
-              >
+              <button type="button" className={itemClasses("practiceTest")} onClick={() => go("practiceTest")}>
                 <span className="block sm:hidden">Practice</span>
                 <span className="block sm:hidden">Test</span>
                 <span className="hidden sm:block">Practice Test</span>
               </button>
 
-              <button
-                type="button"
-                className={itemClasses("more")}
-                onClick={() => setShowMore((prev) => !prev)}
-              >
+              <button type="button" className={itemClasses("more")} onClick={() => setShowMore((prev) => !prev)}>
                 <span className="block truncate">More</span>
               </button>
 

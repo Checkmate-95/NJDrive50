@@ -172,18 +172,17 @@ export default function App() {
 
     // ─── Firebase Auth Check ─────────────────────────────────────────────────────
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // ✅ User already signed in
-        setScreen("login") // or "home" if you want to skip login entirely
-      } else {
-        // 🚪 No user, show registration
-        setScreen("register")
-      }
-    })
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (user) {
+      useNav.getState().resetTo("home")
+    } else {
+      useNav.getState().resetTo("landing")
+    }
+  })
 
-    return () => unsubscribe()
-  }, [])
+  return () => unsubscribe()
+}, [])
+
 
 
   useEffect(() => {

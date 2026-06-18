@@ -271,6 +271,7 @@ export default function LandingPage() {
       </Helmet>
 
       <div className="min-h-screen bg-[#020617] pb-24 text-white md:pb-0">
+        {/* ── Header ── */}
         <header className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -279,7 +280,6 @@ export default function LandingPage() {
                 alt="NJDrive50 Logo"
                 className="h-12 w-auto shrink-0 object-contain sm:h-16"
               />
-
               <div className="min-w-0 leading-tight">
                 <span className="block truncate text-xs font-semibold tracking-[0.16em] text-[#38BDF8] sm:text-sm">
                   NJDRIVE50
@@ -290,7 +290,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <nav className="hidden gap-6 text-xs font-semibold text-white/60 md:flex">
+            {/* Desktop nav */}
+            <nav className="hidden items-center gap-5 text-xs font-semibold text-white/60 md:flex">
               <a href="#how-it-works" className="transition hover:text-white">
                 How it works
               </a>
@@ -310,11 +311,28 @@ export default function LandingPage() {
               >
                 Pricing
               </button>
+
+              {/* ── Auth buttons ── */}
+              <button
+                type="button"
+                onClick={() => setScreen("login")}
+                className={navTextButtonClass}
+              >
+                Log in
+              </button>
+              <button
+                type="button"
+                onClick={() => setScreen("register")}
+                className="rounded-lg bg-[#38BDF8] px-4 py-1.5 text-xs font-bold text-[#020617] transition hover:bg-[#0EA5E9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              >
+                Sign up
+              </button>
             </nav>
           </div>
         </header>
 
         <main>
+          {/* ── Hero ── */}
           <section className="relative overflow-hidden border-b border-white/10">
             <div className="pointer-events-none absolute inset-0 -top-32 flex justify-center">
               <div className="h-[420px] w-[420px] rounded-full bg-[#38BDF8]/5 blur-[120px] sm:h-[500px] sm:w-[700px]" />
@@ -371,7 +389,6 @@ export default function LandingPage() {
                   >
                     Get started free
                   </button>
-
                   <a href="#how-it-works" className={secondaryLinkClass}>
                     See how it works
                   </a>
@@ -383,99 +400,92 @@ export default function LandingPage() {
                 </p>
               </div>
 
+              {/* Phone mockup */}
               <div className="flex w-full flex-1 justify-center md:justify-end">
-  <div className="w-full max-w-[220px] sm:max-w-[250px] md:max-w-[270px]">
-    <div className="relative overflow-hidden rounded-[32px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.72)]">
-      <div className="flex flex-col gap-2.5 p-3.5 sm:p-4">
+                <div className="w-full max-w-[220px] sm:max-w-[250px] md:max-w-[270px]">
+                  <div className="relative overflow-hidden rounded-[32px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.72)]">
+                    <div className="flex flex-col gap-2.5 p-3.5 sm:p-4">
 
-        {/* Total Hours */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
-          <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
-            Total Hours
-          </p>
-          <p className="mt-1 text-[28px] font-extrabold tracking-tight text-[#38BDF8] sm:text-[30px]">
-            32.5
-          </p>
-          <p className="mt-1 text-[10px] text-white/50">17.5 hours left</p>
+                      {/* Total Hours */}
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
+                        <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+                          Total Hours
+                        </p>
+                        <p className="mt-1 text-[22px] font-extrabold tabular-nums tracking-tight text-[#38BDF8] sm:text-[28px]">
+                          32.5
+                        </p>
+                        <p className="mt-1 text-[10px] text-white/50">17.5 hours left</p>
+                        <div className="mt-2.5">
+                          <div
+                            className="h-2 w-full overflow-hidden rounded-full bg-white/10"
+                            role="progressbar"
+                            aria-valuemin={0}
+                            aria-valuemax={50}
+                            aria-valuenow={32.5}
+                          >
+                            <div
+                              className="h-full rounded-full bg-[#38BDF8]"
+                              style={{ width: "65%" }}
+                            />
+                          </div>
+                          <div className="mt-1.5 flex items-center justify-between text-[9px] text-white/45 sm:text-[10px]">
+                            <span>65% complete</span>
+                            <span>Goal: 50 hrs</span>
+                          </div>
+                        </div>
+                      </div>
 
-          <div className="mt-2.5">
-            <div
-              className="h-2 w-full overflow-hidden rounded-full bg-white/10"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={50}
-              aria-valuenow={32.5}
-            >
-              <div
-                className="h-full rounded-full bg-[#38BDF8]"
-                style={{ width: "65%" }}
-              />
-            </div>
-            <div className="mt-1.5 flex items-center justify-between text-[9px] text-white/45 sm:text-[10px]">
-              <span>65% complete</span>
-              <span>Goal: 50 hrs</span>
-            </div>
-          </div>
-        </div>
+                      {/* Day / Night */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
+                          <p className="text-sm font-extrabold tabular-nums text-yellow-400 sm:text-[15px]">
+                            26.5h
+                          </p>
+                          <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
+                            Day
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
+                          <p className="text-sm font-extrabold tabular-nums text-[#38BDF8] sm:text-[15px]">
+                            6.0h
+                          </p>
+                          <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
+                            Night
+                          </p>
+                        </div>
+                      </div>
 
-        {/* Day / Night */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
-            <p className="text-sm font-extrabold text-yellow-400 sm:text-[15px]">
-              26.5h
-            </p>
-            <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
-              Day
-            </p>
-          </div>
+                      {/* Road Test + Night Hrs Left */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center">
+                          <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+                            Road test
+                          </p>
+                          <p className="mt-1 text-sm font-bold leading-none text-white">
+                            47 days
+                          </p>
+                          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#38BDF8]">
+                            Left
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center">
+                          <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+                            Night hrs left
+                          </p>
+                          <p className="mt-1 text-sm font-bold tabular-nums text-yellow-400">
+                            4.0 hrs
+                          </p>
+                        </div>
+                      </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
-            <p className="text-sm font-extrabold text-[#38BDF8] sm:text-[15px]">
-              6.0h
-            </p>
-            <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
-              Night
-            </p>
-          </div>
-        </div>
-
-        {/* Road Test + Night Hrs Left */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center">
-  <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
-    Road test
-  </p>
-
-  {/* 47 days */}
-  <p className="mt-1 text-sm font-bold text-white leading-none">
-    47 days
-  </p>
-
-  {/* Bigger + blue + spaced like Day/Night labels */}
-  <p className="mt-1 text-[11px] font-semibold text-[#38BDF8] tracking-[0.12em] uppercase">
-    Left
-  </p>
-</div>
-
-
-
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center">
-            <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
-              Night hrs left
-            </p>
-            <p className="mt-1 text-sm font-bold text-yellow-400">4.0 hrs</p>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-</div>
-
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 
+          {/* ── How it works ── */}
           <section
             id="how-it-works"
             className="scroll-mt-24 border-b border-white/10 bg-white/[0.02]"
@@ -493,7 +503,6 @@ export default function LandingPage() {
                   on pace for the 50-hour requirement.
                 </p>
               </div>
-
               <div className="grid gap-4 md:grid-cols-2">
                 {steps.map(({ step, title, description }) => (
                   <div
@@ -511,6 +520,7 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* ── Features ── */}
           <section id="features" className="scroll-mt-24 border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
@@ -525,7 +535,6 @@ export default function LandingPage() {
                   practice, milestones, and road test readiness.
                 </p>
               </div>
-
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {features.map(({ icon, title, description }) => (
                   <div
@@ -543,6 +552,7 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* ── NJ Requirements ── */}
           <section
             id="nj-requirements"
             className="scroll-mt-24 border-b border-white/10 bg-[#38BDF8]/5"
@@ -555,12 +565,10 @@ export default function LandingPage() {
                 >
                   📋
                 </div>
-
                 <div>
                   <h2 className="text-lg font-extrabold text-[#38BDF8]">
                     What are the NJ teen driving requirements?
                   </h2>
-
                   <p className="mt-3 text-base leading-7 text-white/72">
                     Starting February 1, 2025, New Jersey requires permit holders under 21 with
                     permits issued on or after that date to complete{" "}
@@ -568,17 +576,15 @@ export default function LandingPage() {
                     including <strong className="text-white">10 hours at night</strong>, before
                     they can receive a probationary license.
                   </p>
-
                   <p className="mt-3 text-base leading-7 text-white/72">
-                    Drivers must also wait at least <strong className="text-white">6 months</strong>{" "}
-                    from permit issuance before taking the NJ road test, and they must bring a
-                    signed{" "}
+                    Drivers must also wait at least{" "}
+                    <strong className="text-white">6 months</strong> from permit issuance before
+                    taking the NJ road test, and they must bring a signed{" "}
                     <strong className="text-white">
                       Certification of Supervised Driving (Form BA-CSD)
                     </strong>{" "}
                     when applying for licensure.
                   </p>
-
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <h3 className="text-sm font-bold text-white">What NJDrive50 tracks</h3>
@@ -587,7 +593,6 @@ export default function LandingPage() {
                         road test eligibility timing, and BA-CSD preparation.
                       </p>
                     </div>
-
                     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <h3 className="text-sm font-bold text-white">
                         What you need for the NJ MVC
@@ -598,7 +603,6 @@ export default function LandingPage() {
                       </p>
                     </div>
                   </div>
-
                   <a
                     href="https://www.nj.gov/mvc/license/youngadult.htm"
                     target="_blank"
@@ -612,6 +616,7 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* ── Checklist ── */}
           <section className="border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
@@ -626,7 +631,6 @@ export default function LandingPage() {
                   rules and probationary license requirements.
                 </p>
               </div>
-
               <div className="grid gap-4 md:grid-cols-2">
                 {[
                   "Hold a valid New Jersey special learner's permit or examination permit.",
@@ -647,6 +651,7 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* ── FAQ ── */}
           <section id="faq" className="scroll-mt-24 border-b border-white/10">
             <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
@@ -661,12 +666,11 @@ export default function LandingPage() {
                   rules, road test readiness, and pricing.
                 </p>
               </div>
-
               <div className="space-y-3">
                 {faqs.map(({ question, answer }) => (
                   <details
                     key={question}
-                    className="group rounded-2xl border border-white/10 bg-white/[0.03] open:border-[#38BDF8]/20 open:bg-white/[0.05]"
+                    className="group rounded-2xl border border-white/10 bg-white/[0.03] open:border-[#38BDF8]/20 open:bg-white/[0.05] [&>summary::-webkit-details-marker]:hidden"
                   >
                     <summary className="flex min-h-[52px] cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 text-left text-sm font-semibold text-white">
                       <span>{question}</span>
@@ -686,6 +690,7 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* ── Final CTA ── */}
           <section className="border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:py-20">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
@@ -698,7 +703,6 @@ export default function LandingPage() {
                 Start your 7-day free trial of NJDrive50 to track driving hours, monitor night
                 driving progress, and stay ready for the NJ road test and NJMVC Form BA-CSD.
               </p>
-
               <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:justify-center">
                 <button
                   type="button"
@@ -707,7 +711,6 @@ export default function LandingPage() {
                 >
                   Start 7-Day Free Trial
                 </button>
-
                 <a href="#faq" className={secondaryLinkClass}>
                   Check NJ permit FAQs
                 </a>
@@ -716,6 +719,7 @@ export default function LandingPage() {
           </section>
         </main>
 
+        {/* ── Footer ── */}
         <footer className="border-t border-white/10 bg-black/40">
           <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -729,7 +733,6 @@ export default function LandingPage() {
                   NJDRIVE50
                 </span>
               </div>
-
               <p className="mt-2 max-w-[32ch] text-xs leading-6 text-white/40">
                 The New Jersey 50-hour driving log app built for parents and teens tracking NJ
                 supervised driving hours, night driving hours, and BA-CSD readiness.
@@ -739,21 +742,19 @@ export default function LandingPage() {
             <div className="flex flex-col gap-2 text-sm text-white/40">
               <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">Legal</p>
               <button
-  type="button"
-  onClick={() => setScreen("privacy")}
-  className="min-h-[44px] py-1 text-left hover:text-white/70"
->
-  Privacy Policy
-</button>
-
-<button
-  type="button"
-  onClick={() => setScreen("terms")}
-  className="min-h-[44px] py-1 text-left hover:text-white/70"
->
-  Terms of Use
-</button>
-
+                type="button"
+                onClick={() => setScreen("privacy")}
+                className="min-h-[44px] py-1 text-left hover:text-white/70"
+              >
+                Privacy Policy
+              </button>
+              <button
+                type="button"
+                onClick={() => setScreen("terms")}
+                className="min-h-[44px] py-1 text-left hover:text-white/70"
+              >
+                Terms of Use
+              </button>
             </div>
 
             <div className="flex flex-col gap-2 text-sm text-white/40">
@@ -793,14 +794,24 @@ export default function LandingPage() {
           </div>
         </footer>
 
+        {/* ── Mobile sticky CTA ── */}
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#020617]/95 p-3 backdrop-blur md:hidden">
-          <button
-            type="button"
-            onClick={() => setScreen("pricing")}
-            className="inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-5 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
-          >
-            Start 7-Day Free Trial
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setScreen("pricing")}
+              className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-xl bg-[#38BDF8] px-5 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
+            >
+              Start 7-Day Free Trial
+            </button>
+            <button
+              type="button"
+              onClick={() => setScreen("login")}
+              className="inline-flex min-h-[52px] items-center justify-center rounded-xl border border-white/20 px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            >
+              Log in
+            </button>
+          </div>
         </div>
       </div>
     </>

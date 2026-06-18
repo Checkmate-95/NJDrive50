@@ -422,23 +422,16 @@ export default function Register() {
         </div>
 
         {/* Footer links */}
-        <div className="mt-6 flex flex-col items-center gap-3 text-center text-sm text-[#08194A]/50">
-          <button
-            type="button"
-            onClick={() => setScreen("login")}
-            className="font-semibold text-[#08194A] underline-offset-2 hover:underline"
-          >
-            ← Back to sign in
-          </button>
-          <button
-            type="button"
-            onClick={() => setScreen("landing")}
-            className="hover:text-[#08194A]/70"
-          >
-            ← Back to home
-          </button>
-        </div>
-      </div>
-    </main>
-  );
+<div className="mt-6 flex flex-col items-center gap-3 text-center text-sm text-[#08194A]/50">
+  <button
+    type="button"
+    onClick={() => setScreen("login")}
+    className="font-semibold text-[#08194A] underline-offset-2 hover:underline"
+  >
+    ← Back to sign in
+  </button>
+</div>
+</div>
+</main>
+);
 }

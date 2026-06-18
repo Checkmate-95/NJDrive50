@@ -39,7 +39,6 @@ export default function Login() {
     e.preventDefault();
     setError(null);
 
-    // Client-side empty field guard — avoids unnecessary network requests
     if (!email.trim() || !password) {
       setError("Please enter your email and password.");
       return;
@@ -50,10 +49,6 @@ export default function Login() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
 
-      // Read isOnboarded from store after login resolves.
-      // NOTE: If your profile store hydrates asynchronously from Firestore
-      // after onAuthStateChanged fires, consider moving this routing logic
-      // into an onAuthStateChanged listener at the app root instead.
       if (!isOnboarded) {
         setScreen("intro");
       } else {
@@ -142,7 +137,6 @@ export default function Login() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#08194A]/40 hover:text-[#08194A]/70 transition"
                 >
                   {showPassword ? (
-                    // Eye-off icon
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="18"
@@ -153,14 +147,12 @@ export default function Login() {
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      aria-hidden="true"
                     >
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
                       <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
                       <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
                   ) : (
-                    // Eye icon
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="18"
@@ -171,7 +163,6 @@ export default function Login() {
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      aria-hidden="true"
                     >
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
@@ -210,13 +201,6 @@ export default function Login() {
             className="font-semibold text-[#08194A] underline-offset-2 hover:underline"
           >
             Create an account
-          </button>
-          <button
-            type="button"
-            onClick={() => setScreen("landing")}
-            className="hover:text-[#08194A]/70"
-          >
-            ← Back to home
           </button>
         </div>
       </div>

@@ -5,6 +5,12 @@ type NavShape = {
 };
 
 export const NAV = {
+  // ⭐ NEW APP LANDING PAGE
+  landingApp: {
+    continue: "pricing",
+    login: "login",
+  },
+
   landing: {
     continue: "intro",
     pricing: "pricing",
@@ -152,7 +158,7 @@ export const NAV = {
     back: "settings",
   },
 
-  // ✅ Added authentication screens
+  // Authentication screens
   login: {
     continue: "home",
     forgotPassword: "forgotPassword",
@@ -168,7 +174,7 @@ export const NAV = {
     continue: "login",
   },
 
-  // ✅ Added missing privacy and terms screens
+  // Legal
   privacy: {
     home: "home",
   },

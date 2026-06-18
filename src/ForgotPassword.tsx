@@ -185,13 +185,6 @@ export default function ForgotPassword() {
           >
             ← Back
           </button>
-          <button
-            type="button"
-            onClick={() => setScreen("landing")}
-            className="hover:text-[#08194A]/70"
-          >
-            Back to home
-          </button>
         </div>
       </div>
     </main>

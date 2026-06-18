@@ -14,7 +14,8 @@ type NavState = {
 }
 
 export const useNav = create<NavState>()((set, get) => ({
-  screen: "landing",
+  // ⭐ App now starts on the new app landing page
+  screen: "landingApp",
   stack: [],
   previousScreen: null,
 

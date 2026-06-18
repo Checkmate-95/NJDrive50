@@ -18,6 +18,9 @@ import Login from "./Login"
 import Register from "./Register"
 import ForgotPassword from "./ForgotPassword"
 
+// ─── App Landing Page (NEW) ───────────────────────────────────────────────────
+import LandingPageApp from "./LandingPageApp"
+
 // ─── Legal ────────────────────────────────────────────────────────────────────
 import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
@@ -59,6 +62,7 @@ import {
 
 export type Screen =
   | "landing"
+  | "landingApp"
   | "intro"
   | "onboarding"
   | "home"
@@ -98,7 +102,7 @@ export type Screen =
   | "forgotPassword"
 
 const VALID_SCREENS: readonly Screen[] = [
-  "landing", "intro", "onboarding", "home", "active", "activeDrive",
+  "landing", "landingApp", "intro", "onboarding", "home", "active", "activeDrive",
   "todaysDrive", "summary", "milestones", "driveHistory", "export",
   "exportLogs", "settings", "reminderSettings", "reminderLog", "dmv",
   "dmvPrep", "paperwork", "share", "helpFaq", "aiHelper", "aiFaq",
@@ -106,6 +110,7 @@ const VALID_SCREENS: readonly Screen[] = [
   "restartOnboarding", "dataCleared", "practiceTest", "pricing",
   "privacy", "terms", "about", "login", "register", "forgotPassword",
 ] as const
+
 
 function isBrowser() {
   return typeof window !== "undefined"
@@ -156,10 +161,10 @@ export default function App() {
       setAuthReady(true)
 
       if (user) {
-        useNav.getState().resetTo("home")
-      } else {
-        useNav.getState().resetTo("landing")
-      }
+  useNav.getState().resetTo("home")
+} else {
+  useNav.getState().resetTo("landingApp")
+}
     })
 
     return () => unsubscribe()
@@ -171,7 +176,8 @@ export default function App() {
     }
   }, [])
 
-  const safeScreen: Screen = isValidScreen(screen) ? screen : "landing"
+  const safeScreen: Screen = isValidScreen(screen) ? screen : "landingApp"
+
 
   const setScreenCompat = useCallback(
     (nextScreen: Screen | ((prev: Screen) => Screen)) => {
@@ -194,61 +200,73 @@ export default function App() {
     let cancelled = false
 
     const runBootstrap = async () => {
+  try {
+    const nav = useNav.getState()
+    const current = isValidScreen(nav.screen) ? nav.screen : "landingApp"
+
+    // Do not override Active Drive
+    if (current === "activeDrive" || current === "active") {
+      setBootstrapped(true)
+      return
+    }
+
+    let hasOnboardingData = false
+    const result = await Preferences.get({ key: "onboardingData" })
+
+    if (cancelled) return
+
+    if (result.value) {
       try {
-        const nav = useNav.getState()
-        const current = isValidScreen(nav.screen) ? nav.screen : "landing"
-
-        if (current === "activeDrive" || current === "active") {
-          setBootstrapped(true)
-          return
-        }
-
-        let hasOnboardingData = false
-        const result = await Preferences.get({ key: "onboardingData" })
-
-        if (cancelled) return
-
-        if (result.value) {
-          try {
-            const data = JSON.parse(result.value)
-            hasOnboardingData = !!data?.teenName
-          } catch {
-            hasOnboardingData = false
-          }
-        }
-
-        if (!isValidScreen(nav.screen)) {
-          nav.setScreen("landing")
-        } else if (hasOnboardingData) {
-          if (
-            current === "landing" ||
-            current === "intro" ||
-            current === "onboarding"
-          ) {
-            nav.setScreen("home")
-          }
-        } else if (
-          current !== "landing" &&
-          current !== "pricing" &&
-          current !== "intro" &&
-          current !== "onboarding" &&
-          current !== "login" &&
-          current !== "register" &&
-          current !== "forgotPassword"
-        ) {
-          nav.setScreen("intro")
-        }
-      } catch (err) {
-        console.warn("App bootstrap failed:", err)
-        if (!cancelled) {
-          setScreen("landing")
-        }
-      } finally {
-        if (!cancelled) {
-          setBootstrapped(true)
-        }
+        const data = JSON.parse(result.value)
+        hasOnboardingData = !!data?.teenName
+      } catch {
+        hasOnboardingData = false
       }
     }
+
+    // Invalid screen fallback
+    if (!isValidScreen(nav.screen)) {
+      nav.setScreen("landingApp")
+    }
+
+    // User HAS onboarding data → skip landing and intro
+    else if (hasOnboardingData) {
+      if (
+        current === "landing" ||
+        current === "landingApp" ||
+        current === "intro" ||
+        current === "onboarding"
+      ) {
+        nav.setScreen("home")
+      }
+    }
+
+    // User does NOT have onboarding data → force intro unless allowed
+    else if (
+      current !== "landing" &&
+      current !== "landingApp" &&
+      current !== "pricing" &&
+      current !== "intro" &&
+      current !== "onboarding" &&
+      current !== "login" &&
+      current !== "register" &&
+      current !== "forgotPassword"
+    ) {
+      nav.setScreen("intro")
+    }
+
+  } catch (err) {
+    console.warn("App bootstrap failed:", err)
+    if (!cancelled) {
+      setScreen("landingApp")
+    }
+  } finally {
+    if (!cancelled) {
+      setBootstrapped(true)
+    }
+  }
+}
+
 
     void runBootstrap()
 
@@ -274,6 +292,7 @@ export default function App() {
   // ─── Screen Renderer ──────────────────────────────────────────────────────
   const renderScreen = () => {
     switch (safeScreen) {
+      case "landingApp":     return <LandingPageApp />
       case "landing":        return <LandingPage />
       case "intro":          return <HomeIntro setScreen={setScreenCompat} />
       case "login":          return <Login />
@@ -338,7 +357,7 @@ export default function App() {
       case "about":         return <Settings />
 
       default:
-        setScreen("landing")
+        setScreen("landingApp")
         return null
     }
   }
@@ -376,9 +395,10 @@ export default function App() {
         <ErrorBoundary
           key={safeScreen}
           onReloadApp={() => {
-            setScreen("landing")
-            if (isBrowser()) window.location.reload()
-          }}
+  setScreen("landingApp")
+  if (isBrowser()) window.location.reload()
+}}
+
         >
           <Suspense fallback={<ScreenLoader />}>
             {renderScreen()}

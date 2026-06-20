@@ -3,49 +3,336 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Delete Account - NJDrive50</title>
+  <title>Delete Account – NJDrive50</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Arial, sans-serif;
-      max-width: 700px;
-      margin: 40px auto;
-      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #F7F9FC;
+      color: #08194A;
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+    .container { max-width: 640px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      background: #08194A;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .header-badge {
+      display: inline-flex;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 12px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.2;
+    }
+    .header p {
+      margin-top: 8px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.65);
       line-height: 1.6;
     }
-    h1 {
-      color: #333;
+
+    /* Cards */
+    .card {
+      background: white;
+      border: 1px solid rgba(8,25,74,0.1);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
+    .eyebrow {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(8,25,74,0.4);
+      margin-bottom: 6px;
+    }
+    .card h2 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #08194A;
+      margin-bottom: 12px;
+    }
+
+    /* Steps */
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      background: #F7F9FC;
+      border: 1px solid rgba(8,25,74,0.08);
+      border-radius: 12px;
+      margin-bottom: 8px;
+    }
+    .step:last-child { margin-bottom: 0; }
+    .step-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      background: #08194A;
+      color: white;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .step strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #08194A;
+      margin-bottom: 2px;
+    }
+    .step span {
+      font-size: 12px;
+      color: rgba(8,25,74,0.6);
+      line-height: 1.5;
+    }
+
+    /* Data lists */
+    ul.dlist { list-style: none; }
+    ul.dlist li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(8,25,74,0.06);
+      font-size: 13px;
+      color: rgba(8,25,74,0.75);
+    }
+    ul.dlist li:last-child { border-bottom: none; }
+    ul.dlist li::before {
+      content: "";
+      display: block;
+      width: 6px;
+      height: 6px;
+      min-width: 6px;
+      background: #dc2626;
+      border-radius: 50%;
+    }
+    ul.rlist li::before { background: #f9c80e; }
+
+    /* Warning box */
+    .warn {
+      background: #FFF7DB;
+      border: 1px solid rgba(249,200,14,0.4);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+    }
+    .warn strong {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #8A6500;
+      margin-bottom: 4px;
+    }
+    .warn p {
+      font-size: 12px;
+      color: rgba(8,25,74,0.7);
+      line-height: 1.6;
+    }
+
+    /* Buttons */
+    .btn-p {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 48px;
+      background: #08194A;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      text-decoration: none;
+      margin-bottom: 8px;
+      transition: background 0.15s;
+    }
+    .btn-p:hover { background: #0A1E5E; }
+    .btn-s {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 48px;
+      background: #F7F9FC;
+      color: #08194A;
+      border: 1px solid rgba(8,25,74,0.12);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-s:hover { background: #EEF3FA; }
+
+    /* Badge */
+    .badge-g {
+      display: inline-flex;
+      background: #ECFDF3;
+      border: 1px solid rgba(22,163,74,0.2);
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #166534;
+      margin-bottom: 12px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 11px;
+      color: rgba(8,25,74,0.35);
+      line-height: 1.8;
+    }
+    .footer a { color: rgba(8,25,74,0.5); }
   </style>
 </head>
 <body>
+<div class="container">
 
-<h1>Delete Your NJDrive50 Account</h1>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">Account Management</div>
+    <h1>Delete Your NJDrive50 Account</h1>
+    <p>You have the right to delete your account and all associated data at any
+    time. Requests are processed within <strong style="color:white">30 days</strong>.</p>
+  </div>
 
-<p>You can delete your account in two ways:</p>
-<ul>
-  <li><strong>In-app:</strong> Go to Settings → Account → Delete Account</li>
-  <li><strong>Web request:</strong> Email <strong>admin@njdrive50.com</strong> 
-  or use the form below</li>
-</ul>
+  <!-- How to delete -->
+  <div class="card">
+    <p class="eyebrow">Step-by-Step</p>
+    <h2>How to Delete Your Account</h2>
 
-<p>Deletion requests are processed within <strong>30 days</strong>.</p>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <strong>In-App (Fastest)</strong>
+        <span>Open NJDrive50 &rarr; Settings &rarr; Account &amp; Profile &rarr;
+        Delete Account. Follow the on-screen confirmation.</span>
+      </div>
+    </div>
 
-<p>The following data will be permanently removed:</p>
-<ul>
-  <li>Teen and parent profile information</li>
-  <li>Driving logs</li>
-  <li>Driving summaries and milestones</li>
-  <li>Any app activity stored on our servers</li>
-</ul>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <strong>Email Request</strong>
+        <span>Email <a href="mailto:admin@njdrive50.com"
+        style="color:#08194A;font-weight:700">admin@njdrive50.com</a> from your
+        registered address with subject: <em>"Account Deletion Request"</em>.</span>
+      </div>
+    </div>
 
-<p>You may also request deletion of your data only, 
-without deleting your account, by specifying this in your request.</p>
+    <div class="step" style="margin-bottom:0">
+      <div class="step-num">3</div>
+      <div>
+        <strong>Web Request (below)</strong>
+        <span>Use the email link at the bottom of this page if you no longer
+        have access to the app.</span>
+      </div>
+    </div>
+  </div>
 
-<p>Some records may be retained for legal or financial compliance 
-(e.g. payment receipts or audit logs) for the minimum period required by law.</p>
+  <!-- What gets deleted -->
+  <div class="card">
+    <p class="eyebrow">Data Removal</p>
+    <h2>What Will Be Permanently Deleted</h2>
+    <ul class="dlist">
+      <li>Teen and parent profile information</li>
+      <li>All driving logs and session records</li>
+      <li>Drive summaries and permit milestones</li>
+      <li>GPS route data and coordinates</li>
+      <li>All app activity stored on our servers</li>
+      <li>Account credentials and authentication data</li>
+    </ul>
+  </div>
 
-<p>Once processed, you will receive a confirmation email. 
-Deleted data cannot be recovered.</p>
+  <!-- What's retained -->
+  <div class="card">
+    <p class="eyebrow">Legal Retention</p>
+    <h2>Data We May Retain</h2>
+    <div class="warn">
+      <strong>&#9888; Required by Law</strong>
+      <p>Some records may be retained for the minimum period required by
+      applicable law. This does not affect your personal driving data.</p>
+    </div>
+    <ul class="dlist rlist">
+      <li>Payment receipts and billing records (financial compliance)</li>
+      <li>Fraud prevention and security audit logs</li>
+      <li>Records required by applicable state or federal regulations</li>
+    </ul>
+  </div>
 
+  <!-- Partial deletion -->
+  <div class="card">
+    <p class="eyebrow">Partial Deletion</p>
+    <h2>Delete Data Only (Keep Account)</h2>
+    <p style="font-size:13px;color:rgba(8,25,74,0.65);line-height:1.6">
+      You may request deletion of your driving data only, without closing your
+      account. Specify <strong>"data deletion only"</strong> in your email
+      request, or use Settings &rarr; Account &amp; Profile &rarr; Delete My
+      Data inside the app.
+    </p>
+  </div>
+
+  <!-- CTA -->
+  <div class="card">
+    <p class="eyebrow">Submit Request</p>
+    <h2>Request Account Deletion</h2>
+    <div class="badge-g">
+      &#10003; Processed within 30 days &nbsp;&middot;&nbsp; Confirmation email sent
+    </div>
+    <a href="mailto:admin@njdrive50.com?subject=Account%20Deletion%20Request&body=Please%20delete%20my%20NJDrive50%20account%20and%20all%20associated%20data.%0A%0ARegistered%20email%3A%20%5Byour%20email%20here%5D%0ARequest%20type%3A%20Full%20account%20deletion"
+      class="btn-p">
+      Email Deletion Request
+    </a>
+    <a href="mailto:support@njdrive50.com" class="btn-s">
+      Contact Support
+    </a>
+    <p style="font-size:11px;color:rgba(8,25,74,0.4);margin-top:10px;text-align:center">
+      Once deleted, data cannot be recovered. You will receive a confirmation
+      email when complete.
+    </p>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>NJDrive50 is not affiliated with or endorsed by the New Jersey Motor
+    Vehicle Commission.</p>
+    <p style="margin-top:4px">
+      <a href="/privacy">Privacy Policy</a> &nbsp;&middot;&nbsp;
+      <a href="/terms">Terms of Use</a> &nbsp;&middot;&nbsp;
+      &copy; 2025 NJDrive50. All rights reserved.
+    </p>
+  </div>
+
+</div>
 </body>
 </html>

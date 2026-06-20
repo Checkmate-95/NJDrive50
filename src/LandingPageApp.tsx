@@ -41,7 +41,7 @@ export default function LandingPageApp() {
             </p>
 
             {/* Stats */}
-            <div className="mt-6 grid grid-cols-3 gap-3 max-w-xs">
+            <div className="mt-6 grid max-w-xs grid-cols-3 gap-3">
               {[
                 { value: "50", label: "Hours required" },
                 { value: "10", label: "Night hours" },
@@ -150,6 +150,50 @@ export default function LandingPageApp() {
 
         </div>
       </section>
+
+      {/* ── Footer ── */}
+      <footer className="border-t border-white/10 py-8">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-4">
+
+          {/* Legal links */}
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-white/45">
+            <button
+              type="button"
+              onClick={() => setScreen("privacy")}
+              className="transition hover:text-white/75 underline underline-offset-2"
+            >
+              Privacy Policy
+            </button>
+            <span className="text-white/20">·</span>
+            <button
+              type="button"
+              onClick={() => setScreen("terms")}
+              className="transition hover:text-white/75 underline underline-offset-2"
+            >
+              Terms of Service
+            </button>
+            <span className="text-white/20">·</span>
+            <a
+              href="mailto:support@njdrive50.com"
+              className="transition hover:text-white/75"
+            >
+              Support
+            </a>
+          </div>
+
+          {/* NJMVC Disclaimer */}
+          <p className="max-w-lg text-center text-[11px] leading-5 text-white/25">
+            NJDrive50 is not affiliated with or endorsed by the New Jersey Motor
+            Vehicle Commission (NJMVC). This app is an independent tool to help
+            families track supervised driving hours.
+          </p>
+
+          <p className="text-[11px] text-white/20">
+            © {new Date().getFullYear()} NJDrive50. All rights reserved.
+          </p>
+
+        </div>
+      </footer>
     </main>
   )
 }

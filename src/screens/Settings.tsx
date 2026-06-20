@@ -21,17 +21,17 @@ export default function Settings() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F9FC] px-3 pb-20 pt-3 text-[#08194A] sm:px-4">
+    <main className="min-h-screen bg-[#F7F9FC] px-3 pb-20 pt-3 text-[#08194A]">
       <div className="mx-auto w-full max-w-2xl">
 
         {/* ── Header ── */}
-        <header className="rounded-2xl border border-[#08194A]/8 bg-white px-4 py-3 shadow-sm sm:px-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
+        <header className="rounded-2xl border border-[#08194A]/8 bg-white px-4 py-3 shadow-sm">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <button
                 type="button"
                 onClick={() => goBack()}
-                className="inline-flex h-9 items-center rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/70 transition hover:bg-[#EEF3FA] shrink-0"
+                className="inline-flex h-9 shrink-0 items-center rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/70 transition hover:bg-[#EEF3FA]"
               >
                 ← Back
               </button>
@@ -44,7 +44,8 @@ export default function Settings() {
                 </h1>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
+            {/* Badges — stack vertically if needed */}
+            <div className="flex shrink-0 flex-col items-end gap-1">
               <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-2.5 py-0.5 text-[11px] font-semibold text-[#08194A]/55">
                 v1.0.0
               </span>
@@ -73,9 +74,9 @@ export default function Settings() {
             />
           </CompactCard>
 
-          {/* ── App Status (inline row) ── */}
+          {/* ── App Status — grid-cols-2 on small, cols-3 on sm+ ── */}
           <CompactCard eyebrow="Status" title="App Status">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <SidebarStat
                 label="Notifications"
                 value={notifications ? "On" : "Off"}
@@ -98,12 +99,12 @@ export default function Settings() {
           <CompactCard eyebrow="Reminders" title="Reminder Tools">
             <div className="grid grid-cols-2 gap-2">
               <ActionButton
-                label="Reminder Settings"
+                label="Reminders"
                 tone="secondary"
                 onClick={() => setScreen("reminderSettings")}
               />
               <ActionButton
-                label="Back to Summary"
+                label="Summary"
                 tone="primary"
                 onClick={() => setScreen("summary")}
               />
@@ -133,7 +134,6 @@ export default function Settings() {
                 onClick={() => setScreen("deleteAccount")}
               />
             </div>
-            {/* Delete data gets full width — stands out as more serious */}
             <div className="mt-2">
               <ActionButton
                 label="Delete My Data"
@@ -143,7 +143,7 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── DMV Tools ── */}
+          {/* ── DMV Tools — odd 3rd button gets full width ── */}
           <CompactCard eyebrow="DMV" title="DMV Tools & History">
             <div className="grid grid-cols-2 gap-2">
               <ActionButton
@@ -156,6 +156,8 @@ export default function Settings() {
                 tone="accent"
                 onClick={() => setScreen("driveHistory")}
               />
+            </div>
+            <div className="mt-2">
               <ActionButton
                 label="Restart Onboarding"
                 tone="secondary"
@@ -180,13 +182,13 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── Support ── */}
+          {/* ── Support — fixed: removed markdown link, uses plain JSX ── */}
           <CompactCard eyebrow="Support" title="Help & Contact">
             <a
               href="mailto:support@njdrive50.com"
               className="flex h-10 w-full items-center justify-center rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-4 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
             >
-              Contact Support — support@njdrive50.com
+              support@njdrive50.com
             </a>
           </CompactCard>
 
@@ -222,7 +224,7 @@ export default function Settings() {
                 </p>
               </div>
               <ActionButton
-                label="Developer Reset (Wipe All Data)"
+                label="Dev Reset — Wipe All Data"
                 tone="danger"
                 onClick={handleDevReset}
               />
@@ -249,7 +251,7 @@ function CompactCard({
 }) {
   return (
     <section
-      className={`rounded-2xl border bg-white px-4 py-3 shadow-sm sm:px-5 ${
+      className={`rounded-2xl border bg-white px-4 py-3 shadow-sm ${
         tone === "danger" ? "border-red-200" : "border-[#08194A]/10"
       }`}
     >
@@ -285,13 +287,13 @@ function ActionButton({
 }) {
   const classMap = {
     primary:
-      "h-10 w-full rounded-xl bg-[#08194A] px-3 text-xs font-extrabold text-white transition hover:bg-[#0A1E5E]",
+      "h-10 w-full rounded-xl bg-[#08194A] px-3 text-xs font-extrabold text-white transition hover:bg-[#0A1E5E] truncate",
     secondary:
-      "h-10 w-full rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-3 text-xs font-bold text-[#08194A] transition hover:bg-[#EEF3FA]",
+      "h-10 w-full rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-3 text-xs font-bold text-[#08194A] transition hover:bg-[#EEF3FA] truncate",
     accent:
-      "h-10 w-full rounded-xl bg-[#f9c80e] px-3 text-xs font-extrabold text-[#08194A] transition hover:bg-[#ffd84a]",
+      "h-10 w-full rounded-xl bg-[#f9c80e] px-3 text-xs font-extrabold text-[#08194A] transition hover:bg-[#ffd84a] truncate",
     danger:
-      "h-10 w-full rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-extrabold text-red-700 transition hover:bg-red-100",
+      "h-10 w-full rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-extrabold text-red-700 transition hover:bg-red-100 truncate",
   }
 
   return (
@@ -361,8 +363,8 @@ function SidebarStat({
         : "border-[#f9c80e]/30 bg-[#FFF7DB] text-[#8A6500]"
 
   return (
-    <div className={`rounded-xl border px-3 py-2 text-center ${toneClasses}`}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em]">{label}</p>
+    <div className={`rounded-xl border px-2 py-2 text-center ${toneClasses}`}>
+      <p className="truncate text-[10px] font-bold uppercase tracking-[0.12em]">{label}</p>
       <p className="mt-0.5 text-sm font-semibold">{value}</p>
     </div>
   )

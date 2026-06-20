@@ -24,7 +24,6 @@ type DriveSnapshot = DriveEntry & {
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
-// ✅ REMOVED: GPS_POLL_INTERVAL_MS no longer needed — watchPosition handles its own cadence
 const ROUTE_TIMEOUT_MS = 8000
 
 const safeNumber = (value: unknown) => {
@@ -152,7 +151,6 @@ function ActiveDriveContent({
   const [isPreparingStop, setIsPreparingStop] = useState(false)
   const [showWeatherHelp, setShowWeatherHelp] = useState(false)
 
-  // ✅ REMOVED: gpsRef no longer needed — watchPosition manages its own lifecycle via watchIdRef
   const watchIdRef = useRef<string | null>(null)
   const frozenSnapshotRef = useRef<Promise<DriveSnapshot | null> | null>(null)
   const isSavingRef = useRef(false)
@@ -176,7 +174,6 @@ function ActiveDriveContent({
     getCurrentMode,
   } = useActiveDriveStore()
 
-  // ✅ UPDATED: clears watchPosition instead of setInterval
   const clearGpsWatch = useCallback(async () => {
     if (watchIdRef.current !== null) {
       try {
@@ -236,8 +233,14 @@ function ActiveDriveContent({
             (pos) => {
               const lat = pos.coords.latitude
               const lng = pos.coords.longitude
-              if (!Number.isFinite(lat) || !Number.isFinite(lng)) { resolve(null); return }
-              if (lat === 0 && lng === 0) { resolve(null); return }
+              if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                resolve(null)
+                return
+              }
+              if (lat === 0 && lng === 0) {
+                resolve(null)
+                return
+              }
               resolve({ lat, lng })
             },
             () => resolve(null),
@@ -404,7 +407,6 @@ function ActiveDriveContent({
     }
   }, [])
 
-  // ✅ Display timer — unchanged
   useEffect(() => {
     const id = window.setInterval(() => {
       const s = useActiveDriveStore.getState().session
@@ -423,8 +425,6 @@ function ActiveDriveContent({
     return () => window.clearInterval(id)
   }, [])
 
-  // ✅ REPLACED: persistent watchPosition instead of polling interval
-  // Survives Android backgrounding — feeds coords directly into tick()
   useEffect(() => {
     void clearGpsWatch()
     if (!session.isRunning) return
@@ -475,7 +475,6 @@ function ActiveDriveContent({
         if (active) {
           watchIdRef.current = id
         } else {
-          // component unmounted before watch started — clean up immediately
           await Geolocation.clearWatch({ id })
         }
       } catch {
@@ -491,7 +490,6 @@ function ActiveDriveContent({
     }
   }, [session.isRunning, tick, clearGpsWatch])
 
-  // ✅ Prime initial coord when drive becomes active — unchanged logic, no GPS loop
   useEffect(() => {
     if (!session.isActive) return
 
@@ -514,7 +512,6 @@ function ActiveDriveContent({
     }
   }, [session.isActive, primeSessionCoord, requestAndGetLocation, tick])
 
-  // ✅ Cleanup on unmount
   useEffect(() => {
     return () => {
       clearAllLoops()
@@ -671,13 +668,6 @@ function ActiveDriveContent({
 
   const effectiveNight = effectiveMode === "night"
 
-  const modePillClasses = effectiveNight
-    ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40"
-    : "bg-white text-[#08194A]"
-
-  const modePillLabel =
-    effectiveMode === "night" ? "Night" : effectiveMode === "day" ? "Day" : "--"
-
   const statusClass = isRunning ? "text-[#00C851]" : "text-red-400"
   const statusText = isRunning
     ? "Drive Active"
@@ -688,104 +678,97 @@ function ActiveDriveContent({
   return (
     <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
       <div className="w-full max-w-[46rem]">
+
+        {/* ── TOP PANEL: Live Tracking ───────────────────────────────────── */}
         <div className="mx-auto w-full max-w-[42rem]">
           <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
             <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
 
             <div className="p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-white/60">
-                    Drive Progress
-                  </p>
-                  <p className="mt-1 text-xl font-extrabold leading-tight text-white sm:text-2xl">
-                    Live Tracking
-                  </p>
-                </div>
-                <div
-                  className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${modePillClasses}`}
-                >
-                  {modePillLabel}
-                </div>
-              </div>
+              <div className="rounded-[24px] border border-white/10 bg-[#08194A]/78 px-4 py-4 shadow-inner sm:px-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[clamp(1.6rem,5vw,2.5rem)] font-extrabold leading-none tracking-tight text-white">
+                      Live Tracking
+                    </p>
 
-              <div className="mt-4 rounded-2xl border border-white/10 bg-[#08194A]/70 p-4 shadow-inner">
-                <div className="flex items-center gap-3">
+                    <div className="mt-2 flex items-center gap-2">
+                      <p className="text-sm font-medium text-white/82 sm:text-base">
+                        {isRunning
+                          ? "Drive in Progress"
+                          : hasActiveDrive
+                            ? "Drive Paused"
+                            : "Ready to Start"}
+                      </p>
+
+                      <span className="relative flex h-3 w-3 items-center justify-center">
+                        <span
+                          className={`absolute h-3 w-3 rounded-full ${
+                            isRunning ? "bg-[#35ff69]/35 animate-live-ping" : "bg-white/15"
+                          }`}
+                        />
+                        <span
+                          className={`relative h-2.5 w-2.5 rounded-full ${
+                            isRunning
+                              ? "bg-[#35ff69] shadow-[0_0_12px_rgba(53,255,105,0.95)]"
+                              : "bg-white/35"
+                          }`}
+                        />
+                      </span>
+                    </div>
+                  </div>
+
                   <div
-                    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border shadow-[0_0_10px_rgba(249,200,14,0.18)] ${
+                    className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
                       effectiveNight
-                        ? "border-[#f9c80e]/50 bg-[#f9c80e]/10"
-                        : "border-white/20 bg-white/10"
+                        ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40"
+                        : "bg-white text-[#08194A]"
                     }`}
                   >
-                    {effectiveNight ? (
-                      <MoonIcon className="h-7 w-7 text-[#f9c80e]" />
-                    ) : (
-                      <SunIcon className="h-7 w-7 text-[#f9c80e]" />
-                    )}
+                    {effectiveNight ? "NIGHT" : "DAY"}
                   </div>
+                </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-block h-2 w-2 rounded-full ${
-                          effectiveNight ? "bg-[#f9c80e]" : "bg-white"
+                <div className="mt-4 rounded-full bg-[#06153E]/95 p-1">
+                  <div className="grid grid-cols-3 gap-1">
+                    {(["auto", "day", "night"] as NightOverride[]).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setNightOverride(mode)}
+                        aria-pressed={session.nightOverride === mode}
+                        className={`rounded-full px-2 py-2.5 text-sm font-extrabold transition ${
+                          session.nightOverride === mode
+                            ? mode === "auto"
+                              ? "bg-[#f9d65c] text-[#08194A] shadow-[0_8px_20px_rgba(249,214,92,0.26)]"
+                              : mode === "day"
+                                ? "bg-white text-[#08194A] shadow-md"
+                                : "bg-[#112869] text-white ring-1 ring-[#f9c80e]/35 shadow-md"
+                            : "bg-transparent text-white/88 hover:bg-white/8"
                         }`}
-                      />
-                      <p className="text-lg font-extrabold leading-tight text-white">
-                        Lighting Mode
-                      </p>
-                    </div>
-                    <p className="mt-1 text-xs text-white/70">
-                      Day or night conditions for this drive
-                    </p>
+                      >
+                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <div className="mb-1.5 flex justify-between text-[10px] uppercase tracking-[0.16em] text-white/45">
-                    <span>Day</span>
-                    <span>Night</span>
-                  </div>
-                  <div className="relative h-2 overflow-hidden rounded-full bg-white/10">
-                    <div
-                      className={`absolute top-0 h-full rounded-full transition-all duration-300 ${
-                        effectiveNight
-                          ? "left-1/2 w-1/2 bg-gradient-to-r from-[#f9c80e]/60 to-[#f9c80e]"
-                          : "left-0 w-1/2 bg-gradient-to-r from-white to-white/70"
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-                            <div className="mt-3 rounded-xl border border-white/10 bg-white/5 p-1">
-                <div className="grid grid-cols-3 gap-1">
-                  {(["auto", "day", "night"] as NightOverride[]).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setNightOverride(mode)}
-                      aria-pressed={session.nightOverride === mode}
-                      className={`rounded-lg px-2 py-1.5 text-xs font-bold transition ${
-                        session.nightOverride === mode
-                          ? mode === "auto"
-                            ? "bg-[#f9c80e] text-[#08194A] shadow-md"
-                            : mode === "day"
-                              ? "bg-white text-[#08194A] shadow-md"
-                              : "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40 shadow-md"
-                          : "bg-transparent text-white/80 hover:bg-white/10"
-                      }`}
-                    >
-                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                    </button>
-                  ))}
+                <div className="mt-4 flex items-center justify-center gap-2 text-center">
+                  {effectiveNight ? (
+                    <MoonIcon className="h-5 w-5 text-[#f9c80e]" />
+                  ) : (
+                    <SunIcon className="h-5 w-5 text-[#f9c80e]" />
+                  )}
+                  <p className="text-sm font-semibold text-white/84">
+                    {effectiveNight ? "Night Mode" : "Day Mode"}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* ── TIMER + PLAY/PAUSE ─────────────────────────────────────────── */}
         <div className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
           <p className={`text-sm uppercase tracking-[0.18em] ${statusClass}`}>
             {statusText}
@@ -823,21 +806,24 @@ function ActiveDriveContent({
           </div>
         </div>
 
+        {/* ── BOTTOM PANEL: Drive Summary (compact) ─────────────────────── */}
         <div className="mx-auto mt-4 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#0A1E5E] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#0A1E5E]" />
 
-          <div className="p-5 sm:p-6">
-            <div className="flex items-start justify-between gap-3">
+          <div className="p-4 sm:p-5">
+
+            {/* Header */}
+            <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#0A1E5E]/55">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-[#0A1E5E]/50">
                   Active Drive
                 </p>
-                <h3 className="mt-1 text-lg font-extrabold leading-tight text-[#08194A] sm:text-xl">
+                <h3 className="mt-0.5 text-base font-extrabold leading-tight text-[#08194A] sm:text-lg">
                   Drive Summary
                 </h3>
               </div>
               <div
-                className={`rounded-full px-3 py-1 text-[11px] font-bold tracking-[0.14em] ${
+                className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.14em] ${
                   effectiveNight
                     ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/35"
                     : "bg-[#F4F6FA] text-[#08194A] ring-1 ring-[#0A1E5E]/10"
@@ -847,36 +833,34 @@ function ActiveDriveContent({
               </div>
             </div>
 
-            <div className="mt-5 flex flex-col gap-3">
-              <div className="w-full rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+            {/* Duration + Distance side by side */}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
                   Duration
                 </p>
-                <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+                <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
                   {formattedElapsed}
                 </p>
               </div>
 
-              <div className="w-full rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F7F9FC] p-4 text-center shadow-sm">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
                   Distance
                 </p>
-                <p className="mt-2 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.35rem,5vw,2.25rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+                <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
                   {safeNumber(session.liveMiles).toFixed(1)}
-                  <span className="ml-1 text-sm font-bold text-[#0A1E5E]/65 sm:text-base">
-                    mi
-                  </span>
+                  <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">mi</span>
                 </p>
-                <p className="mt-1 text-[10px] text-[#0A1E5E]/40">
-                  Live GPS estimate
-                </p>
+                <p className="mt-0.5 text-[9px] text-[#0A1E5E]/35">Live GPS</p>
               </div>
             </div>
 
-            <div className="mt-4 rounded-2xl border-2 border-[#0A1E5E]/50 bg-[#F4F6FA] p-4 shadow-sm">
-              <div className="grid grid-cols-1 items-center gap-4 text-center sm:grid-cols-2">
+            {/* Start Time + Lighting */}
+            <div className="mt-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] px-3 py-3 shadow-sm">
+              <div className="grid grid-cols-2 gap-2 text-center">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
                     Start Time
                   </p>
                   <p className="mt-1 tabular-nums text-sm font-semibold text-[#08194A]">
@@ -885,101 +869,99 @@ function ActiveDriveContent({
                       : "--"}
                   </p>
                 </div>
-
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
                     Lighting
                   </p>
                   <p className="mt-1 text-sm font-semibold text-[#08194A]">
                     {effectiveNight ? "Night driving" : "Day driving"}
                   </p>
                 </div>
-
-                <div className="flex flex-col items-center sm:col-span-2">
-                  <div
-                    ref={weatherHelpRef}
-                    className="relative flex items-center justify-center gap-1"
-                  >
-                    <p className="text-[11px] uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                      Weather Conditions
-                    </p>
-
-                    <button
-                      id={weatherHelpButtonId}
-                      type="button"
-                      aria-label="Weather conditions help"
-                      aria-expanded={showWeatherHelp}
-                      aria-controls={weatherHelpPanelId}
-                      onClick={() => setShowWeatherHelp((prev) => !prev)}
-                      className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-sm font-bold text-[#0A1E5E]/50 transition hover:bg-[#0A1E5E]/5 hover:text-[#0A1E5E]/80"
-                    >
-                      ⓘ
-                    </button>
-
-                    {showWeatherHelp && (
-                      <div
-                        id={weatherHelpPanelId}
-                        aria-labelledby={weatherHelpButtonId}
-                        className="absolute left-1/2 top-full z-20 mt-2 w-64 max-w-[80vw] -translate-x-1/2 rounded-lg bg-white p-3 text-left text-xs text-[#08194A] shadow-lg ring-1 ring-black/10"
-                      >
-                        <p className="font-semibold text-[#0A1E5E]">
-                          Optional Weather Tag
-                        </p>
-                        <p className="mt-1 leading-snug">
-                          This is optional and does not affect drive time,
-                          mileage, or day/night status. Choose a weather
-                          condition only if you want it included in the saved
-                          summary.
-                        </p>
-                        <p className="mt-1 italic text-[#0A1E5E]/70">
-                          If you don't select anything, weather will simply be
-                          left blank.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {["Clear", "Rain", "Snow", "Fog"].map((w) => {
-                      const isSelected = session.weather === w
-                      return (
-                        <button
-                          key={w}
-                          type="button"
-                          onClick={() => setWeather(isSelected ? null : w)}
-                          className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition ${
-                            isSelected
-                              ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_12px_rgba(249,200,14,0.28)]"
-                              : "border-[#0A1E5E]/15 bg-white text-[#0A1E5E]/70 hover:bg-[#f9c80e]/10"
-                          }`}
-                        >
-                          {w}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
               </div>
             </div>
 
+            {/* Weather */}
+            <div className="mt-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] px-3 py-3 shadow-sm">
+              <div
+                ref={weatherHelpRef}
+                className="relative flex items-center justify-center gap-1"
+              >
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                  Weather Conditions
+                </p>
+                <button
+                  id={weatherHelpButtonId}
+                  type="button"
+                  aria-label="Weather conditions help"
+                  aria-expanded={showWeatherHelp}
+                  aria-controls={weatherHelpPanelId}
+                  onClick={() => setShowWeatherHelp((prev) => !prev)}
+                  className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-[#0A1E5E]/45 transition hover:bg-[#0A1E5E]/5 hover:text-[#0A1E5E]/70"
+                >
+                  ⓘ
+                </button>
+
+                {showWeatherHelp && (
+                  <div
+                    id={weatherHelpPanelId}
+                    aria-labelledby={weatherHelpButtonId}
+                    className="absolute left-1/2 top-full z-20 mt-2 w-64 max-w-[80vw] -translate-x-1/2 rounded-lg bg-white p-3 text-left text-xs text-[#08194A] shadow-lg ring-1 ring-black/10"
+                  >
+                    <p className="font-semibold text-[#0A1E5E]">Optional Weather Tag</p>
+                    <p className="mt-1 leading-snug">
+                      This is optional and does not affect drive time, mileage, or
+                      day/night status. Choose a weather condition only if you want it
+                      included in the saved summary.
+                    </p>
+                    <p className="mt-1 italic text-[#0A1E5E]/70">
+                      If you don't select anything, weather will simply be left blank.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 4-col weather buttons */}
+              <div className="mt-2 grid grid-cols-4 gap-1.5">
+                {["Clear", "Rain", "Snow", "Fog"].map((w) => {
+                  const isSelected = session.weather === w
+                  return (
+                    <button
+                      key={w}
+                      type="button"
+                      onClick={() => setWeather(isSelected ? null : w)}
+                      className={`rounded-full border px-1 py-1.5 text-xs font-semibold transition ${
+                        isSelected
+                          ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_10px_rgba(249,200,14,0.25)]"
+                          : "border-[#0A1E5E]/12 bg-white text-[#0A1E5E]/65 hover:bg-[#f9c80e]/10"
+                      }`}
+                    >
+                      {w}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Location error */}
             {locationError && (
-              <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 text-left shadow-sm">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-red-600">
+              <div className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 px-3 py-2.5 text-left shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-red-600">
                   Location Issue
                 </p>
-                <p className="mt-1 text-sm font-medium text-red-700">
+                <p className="mt-0.5 text-xs font-medium text-red-700">
                   {locationError}
                 </p>
               </div>
             )}
 
-            <div className="mt-5 space-y-3">
-              <div className="grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
+            {/* Action buttons */}
+            <div className="mt-4 space-y-2.5">
+              <div className="grid grid-cols-2 gap-2 max-[380px]:grid-cols-1">
                 <button
                   type="button"
                   onClick={handlePress}
                   disabled={isStopping || isPreviewing || isPreparingStop}
-                  className={`w-full rounded-xl py-3 font-bold transition shadow-md ${
+                  className={`w-full rounded-xl py-3.5 text-sm font-bold transition shadow-md ${
                     isStopping || isPreviewing || isPreparingStop
                       ? "cursor-not-allowed bg-gray-300 text-gray-600"
                       : isRunning
@@ -998,9 +980,11 @@ function ActiveDriveContent({
 
                 <button
                   type="button"
-                  onClick={() => { void handleStopRequest() }}
+                  onClick={() => {
+                    void handleStopRequest()
+                  }}
                   disabled={saveDisabled}
-                  className={`w-full rounded-xl py-3 font-bold transition ${
+                  className={`w-full rounded-xl py-3.5 text-sm font-bold transition ${
                     saveDisabled
                       ? "cursor-not-allowed bg-gray-300 text-gray-500"
                       : "bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.22)] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
@@ -1010,31 +994,32 @@ function ActiveDriveContent({
                 </button>
               </div>
 
+              {/* Stop confirm dialog */}
               {showStopConfirm && (
-                <div className="rounded-2xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                <div className="rounded-xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                     Confirm Stop
                   </p>
                   <h4 className="mt-1 text-base font-extrabold text-[#08194A]">
                     End and save this drive?
                   </h4>
-                  <p className="mt-1 text-sm text-[#0A1E5E]/70">
+                  <p className="mt-1 text-xs text-[#0A1E5E]/70">
                     This will save the current duration, mileage, route trail,
                     and lighting conditions.
                   </p>
 
                   {isPreparingStop && (
-                    <p className="mt-2 text-sm font-semibold text-[#0A1E5E]">
+                    <p className="mt-2 text-xs font-semibold text-[#0A1E5E]">
                       Preparing final snapshot...
                     </p>
                   )}
 
-                  <div className="mt-4 grid grid-cols-2 gap-3 max-[380px]:grid-cols-1">
+                  <div className="mt-3 grid grid-cols-2 gap-2 max-[380px]:grid-cols-1">
                     <button
                       type="button"
                       onClick={handleCancelStop}
                       disabled={isStopping}
-                      className="w-full rounded-xl border border-[#0A1E5E]/15 bg-white py-3 font-bold text-[#08194A] transition hover:bg-[#F7F9FC]"
+                      className="w-full rounded-xl border border-[#0A1E5E]/15 bg-white py-3.5 text-sm font-bold text-[#08194A] transition hover:bg-[#F7F9FC]"
                     >
                       Cancel
                     </button>
@@ -1043,7 +1028,7 @@ function ActiveDriveContent({
                       type="button"
                       onClick={handleSaveDrive}
                       disabled={isStopping || isPreparingStop}
-                      className={`w-full rounded-xl py-3 font-bold transition ${
+                      className={`w-full rounded-xl py-3.5 text-sm font-bold transition ${
                         isStopping || isPreparingStop
                           ? "cursor-not-allowed bg-gray-300 text-gray-500"
                           : "bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.22)] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
@@ -1059,7 +1044,7 @@ function ActiveDriveContent({
                 type="button"
                 onClick={handlePreviewSummary}
                 disabled={previewDisabled}
-                className={`w-full rounded-xl border-2 border-[#0A1E5E]/50 py-3 font-bold transition ${
+                className={`w-full rounded-xl border-2 border-[#0A1E5E]/50 py-3.5 text-sm font-bold transition ${
                   previewDisabled
                     ? "cursor-not-allowed bg-gray-200 text-gray-500"
                     : "bg-white text-[#08194A] shadow-sm hover:-translate-y-[1px] hover:shadow-[0_0_16px_rgba(249,200,14,0.18)]"
@@ -1085,8 +1070,28 @@ function ActiveDriveContent({
               animation: pulse-slow 2.5s ease-in-out infinite;
             }
 
+            @keyframes live-ping {
+              0% {
+                transform: scale(0.9);
+                opacity: 0.85;
+              }
+              70% {
+                transform: scale(1.9);
+                opacity: 0;
+              }
+              100% {
+                transform: scale(1.9);
+                opacity: 0;
+              }
+            }
+
+            .animate-live-ping {
+              animation: live-ping 1.6s ease-out infinite;
+            }
+
             @media (prefers-reduced-motion: reduce) {
-              .animate-pulse-slow {
+              .animate-pulse-slow,
+              .animate-live-ping {
                 animation: none;
               }
             }

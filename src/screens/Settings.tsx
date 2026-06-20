@@ -25,36 +25,35 @@ export default function Settings() {
       <div className="mx-auto w-full max-w-2xl">
 
         {/* ── Header ── */}
-        <header className="rounded-2xl border border-[#08194A]/8 bg-white px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => goBack()}
-              className="inline-flex h-9 shrink-0 items-center rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/70 transition hover:bg-[#EEF3FA]"
-            >
-              ← Back
-            </button>
-            {/* Title + badges in one row, badges never overlap title */}
-            <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#08194A]/40">
-                  Preferences
-                </p>
-                <h1 className="text-lg font-extrabold tracking-tight text-[#08194A] leading-tight">
-                  Settings
-                </h1>
-              </div>
-              {/* Badges side by side, never wrapping over title */}
-              <div className="flex shrink-0 items-center gap-1.5">
-                <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-2 py-0.5 text-[10px] font-semibold text-[#08194A]/55">
-                  v1.0.0
-                </span>
-                <span className="rounded-full border border-[#16A34A]/15 bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-semibold text-[#166534]">
-                  Active
-                </span>
-              </div>
+        <header className="rounded-2xl border border-[#08194A]/8 bg-white px-4 py-4 shadow-sm">
+          {/* Row 1: Back button full width */}
+          <button
+            type="button"
+            onClick={() => goBack()}
+            className="inline-flex h-9 w-full items-center justify-center rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/70 transition hover:bg-[#EEF3FA] mb-3"
+          >
+            ← Back
+          </button>
+
+          {/* Row 2: Preferences label + badges */}
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#08194A]/40">
+              Preferences
+            </p>
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-2 py-0.5 text-[10px] font-semibold text-[#08194A]/55">
+                v1.0.0
+              </span>
+              <span className="rounded-full border border-[#16A34A]/15 bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-semibold text-[#166534]">
+                Active
+              </span>
             </div>
           </div>
+
+          {/* Row 3: Title */}
+          <h1 className="text-lg font-extrabold tracking-tight text-[#08194A] leading-tight">
+            Settings
+          </h1>
         </header>
 
         <div className="mt-3 space-y-3">
@@ -112,7 +111,7 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── Profile — all stacked, no grid ── */}
+          {/* ── Profile ── */}
           <CompactCard eyebrow="Profile" title="Account & Profile">
             <div className="flex flex-col gap-2">
               <ActionButton
@@ -142,7 +141,7 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── DMV Tools — all stacked ── */}
+          {/* ── DMV Tools ── */}
           <CompactCard eyebrow="DMV" title="DMV Tools & History">
             <div className="flex flex-col gap-2">
               <ActionButton
@@ -183,7 +182,7 @@ export default function Settings() {
           <CompactCard eyebrow="Support" title="Help & Contact">
             <a
               href="mailto:support@njdrive50.com"
-              className="flex h-10 w-full items-center justify-center rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-4 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
+              className="flex h-11 w-full items-center justify-center rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-4 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
             >
               support@njdrive50.com
             </a>
@@ -195,7 +194,7 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={() => setScreen("privacy")}
-                className="flex h-10 w-full items-center justify-between px-4 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
+                className="flex h-11 w-full items-center justify-between px-4 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
               >
                 <span>Privacy Policy</span>
                 <span className="text-[#08194A]/30">›</span>
@@ -203,7 +202,7 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={() => setScreen("terms")}
-                className="flex h-10 w-full items-center justify-between px-4 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
+                className="flex h-11 w-full items-center justify-between px-4 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]"
               >
                 <span>Terms of Use</span>
                 <span className="text-[#08194A]/30">›</span>

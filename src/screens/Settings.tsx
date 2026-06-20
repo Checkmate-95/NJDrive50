@@ -26,15 +26,16 @@ export default function Settings() {
 
         {/* ── Header ── */}
         <header className="rounded-2xl border border-[#08194A]/8 bg-white px-4 py-3 shadow-sm">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <button
-                type="button"
-                onClick={() => goBack()}
-                className="inline-flex h-9 shrink-0 items-center rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/70 transition hover:bg-[#EEF3FA]"
-              >
-                ← Back
-              </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => goBack()}
+              className="inline-flex h-9 shrink-0 items-center rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/70 transition hover:bg-[#EEF3FA]"
+            >
+              ← Back
+            </button>
+            {/* Title + badges in one row, badges never overlap title */}
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#08194A]/40">
                   Preferences
@@ -43,15 +44,15 @@ export default function Settings() {
                   Settings
                 </h1>
               </div>
-            </div>
-            {/* Badges — stack vertically if needed */}
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-2.5 py-0.5 text-[11px] font-semibold text-[#08194A]/55">
-                v1.0.0
-              </span>
-              <span className="rounded-full border border-[#16A34A]/15 bg-[#ECFDF3] px-2.5 py-0.5 text-[11px] font-semibold text-[#166534]">
-                Active
-              </span>
+              {/* Badges side by side, never wrapping over title */}
+              <div className="flex shrink-0 items-center gap-1.5">
+                <span className="rounded-full border border-[#08194A]/10 bg-[#F7F9FC] px-2 py-0.5 text-[10px] font-semibold text-[#08194A]/55">
+                  v1.0.0
+                </span>
+                <span className="rounded-full border border-[#16A34A]/15 bg-[#ECFDF3] px-2 py-0.5 text-[10px] font-semibold text-[#166534]">
+                  Active
+                </span>
+              </div>
             </div>
           </div>
         </header>
@@ -74,21 +75,21 @@ export default function Settings() {
             />
           </CompactCard>
 
-          {/* ── App Status — grid-cols-2 on small, cols-3 on sm+ ── */}
+          {/* ── App Status ── */}
           <CompactCard eyebrow="Status" title="App Status">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-2">
               <SidebarStat
-                label="Notifications"
+                label="Notifs"
                 value={notifications ? "On" : "Off"}
                 tone={notifications ? "success" : "muted"}
               />
               <SidebarStat
-                label="Auto-export"
+                label="Export"
                 value={autoExport ? "On" : "Off"}
                 tone={autoExport ? "success" : "muted"}
               />
               <SidebarStat
-                label="Version"
+                label="Ver"
                 value="1.0.0"
                 tone="neutral"
               />
@@ -97,23 +98,23 @@ export default function Settings() {
 
           {/* ── Reminders ── */}
           <CompactCard eyebrow="Reminders" title="Reminder Tools">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
               <ActionButton
-                label="Reminders"
+                label="Reminder Settings"
                 tone="secondary"
                 onClick={() => setScreen("reminderSettings")}
               />
               <ActionButton
-                label="Summary"
+                label="Back to Summary"
                 tone="primary"
                 onClick={() => setScreen("summary")}
               />
             </div>
           </CompactCard>
 
-          {/* ── Profile ── */}
+          {/* ── Profile — all stacked, no grid ── */}
           <CompactCard eyebrow="Profile" title="Account & Profile">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
               <ActionButton
                 label="Manage Profile"
                 tone="secondary"
@@ -133,8 +134,6 @@ export default function Settings() {
                 tone="danger"
                 onClick={() => setScreen("deleteAccount")}
               />
-            </div>
-            <div className="mt-2">
               <ActionButton
                 label="Delete My Data"
                 tone="danger"
@@ -143,9 +142,9 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── DMV Tools — odd 3rd button gets full width ── */}
+          {/* ── DMV Tools — all stacked ── */}
           <CompactCard eyebrow="DMV" title="DMV Tools & History">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
               <ActionButton
                 label="Teen Driver Rules"
                 tone="secondary"
@@ -156,8 +155,6 @@ export default function Settings() {
                 tone="accent"
                 onClick={() => setScreen("driveHistory")}
               />
-            </div>
-            <div className="mt-2">
               <ActionButton
                 label="Restart Onboarding"
                 tone="secondary"
@@ -168,7 +165,7 @@ export default function Settings() {
 
           {/* ── AI Assistant ── */}
           <CompactCard eyebrow="AI Assistant" title="NJDrive50 Q&A">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2">
               <ActionButton
                 label="Open AI Q&A"
                 tone="primary"
@@ -182,7 +179,7 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── Support — fixed: removed markdown link, uses plain JSX ── */}
+          {/* ── Support ── */}
           <CompactCard eyebrow="Support" title="Help & Contact">
             <a
               href="mailto:support@njdrive50.com"
@@ -287,13 +284,13 @@ function ActionButton({
 }) {
   const classMap = {
     primary:
-      "h-10 w-full rounded-xl bg-[#08194A] px-3 text-xs font-extrabold text-white transition hover:bg-[#0A1E5E] truncate",
+      "h-11 w-full rounded-xl bg-[#08194A] px-4 text-sm font-extrabold text-white transition hover:bg-[#0A1E5E]",
     secondary:
-      "h-10 w-full rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-3 text-xs font-bold text-[#08194A] transition hover:bg-[#EEF3FA] truncate",
+      "h-11 w-full rounded-xl border border-[#08194A]/12 bg-[#F7F9FC] px-4 text-sm font-bold text-[#08194A] transition hover:bg-[#EEF3FA]",
     accent:
-      "h-10 w-full rounded-xl bg-[#f9c80e] px-3 text-xs font-extrabold text-[#08194A] transition hover:bg-[#ffd84a] truncate",
+      "h-11 w-full rounded-xl bg-[#f9c80e] px-4 text-sm font-extrabold text-[#08194A] transition hover:bg-[#ffd84a]",
     danger:
-      "h-10 w-full rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-extrabold text-red-700 transition hover:bg-red-100 truncate",
+      "h-11 w-full rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-extrabold text-red-700 transition hover:bg-red-100",
   }
 
   return (

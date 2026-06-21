@@ -676,97 +676,101 @@ function ActiveDriveContent({
       : "Ready to Start"
 
   return (
-    <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
-      <div className="w-full max-w-[46rem]">
+  <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
+    <div className="w-full max-w-[46rem]">
 
-        {/* ── TOP PANEL: Live Tracking ───────────────────────────────────── */}
-        <div className="mx-auto w-full max-w-[42rem]">
-          <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
-            <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
+      {/* ── TOP PANEL: Live Tracking ───────────────────────────────────── */}
+      <div className="mx-auto w-full max-w-[42rem]">
+        <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
+          <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
 
-            <div className="p-4 sm:p-5">
-              <div className="rounded-[24px] border border-white/10 bg-[#08194A]/78 px-4 py-4 shadow-inner sm:px-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[clamp(1.6rem,5vw,2.5rem)] font-extrabold leading-none tracking-tight text-white">
-                      Live Tracking
+          <div className="p-4 sm:p-5">
+            <div className="rounded-[24px] border border-white/10 bg-[#08194A]/78 px-4 py-4 shadow-inner sm:px-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[clamp(1.6rem,5vw,2.5rem)] font-extrabold leading-none tracking-tight text-white">
+                    Live Tracking
+                  </p>
+
+                  <div className="mt-2 flex items-center gap-2">
+                    <p className="text-sm font-medium text-white/82 sm:text-base">
+                      {isRunning
+                        ? "Drive in Progress"
+                        : hasActiveDrive
+                          ? "Drive Paused"
+                          : "Ready to Start"}
                     </p>
 
-                    <div className="mt-2 flex items-center gap-2">
-                      <p className="text-sm font-medium text-white/82 sm:text-base">
-                        {isRunning
-                          ? "Drive in Progress"
-                          : hasActiveDrive
-                            ? "Drive Paused"
-                            : "Ready to Start"}
-                      </p>
-
-                      <span className="relative flex h-3 w-3 items-center justify-center">
-                        <span
-                          className={`absolute h-3 w-3 rounded-full ${
-                            isRunning ? "bg-[#35ff69]/35 animate-live-ping" : "bg-white/15"
-                          }`}
-                        />
-                        <span
-                          className={`relative h-2.5 w-2.5 rounded-full ${
-                            isRunning
-                              ? "bg-[#35ff69] shadow-[0_0_12px_rgba(53,255,105,0.95)]"
-                              : "bg-white/35"
-                          }`}
-                        />
-                      </span>
-                    </div>
-                  </div>
-
-                  <div
-                    className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
-                      effectiveNight
-                        ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40"
-                        : "bg-white text-[#08194A]"
-                    }`}
-                  >
-                    {effectiveNight ? "NIGHT" : "DAY"}
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-full bg-[#06153E]/95 p-1">
-                  <div className="grid grid-cols-3 gap-1">
-                    {(["auto", "day", "night"] as NightOverride[]).map((mode) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setNightOverride(mode)}
-                        aria-pressed={session.nightOverride === mode}
-                        className={`rounded-full px-2 py-2.5 text-sm font-extrabold transition ${
-                          session.nightOverride === mode
-                            ? mode === "auto"
-                              ? "bg-[#f9d65c] text-[#08194A] shadow-[0_8px_20px_rgba(249,214,92,0.26)]"
-                              : mode === "day"
-                                ? "bg-white text-[#08194A] shadow-md"
-                                : "bg-[#112869] text-white ring-1 ring-[#f9c80e]/35 shadow-md"
-                            : "bg-transparent text-white/88 hover:bg-white/8"
+                    {/* ⭐ Pulsing Green Dot */}
+                    <span className="relative flex h-3 w-3 items-center justify-center">
+                      <span
+                        className={`absolute h-3 w-3 rounded-full ${
+                          isRunning
+                            ? "bg-[#35ff69]/35 animate-live-ping"
+                            : "bg-white/15"
                         }`}
-                      >
-                        {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                      </button>
-                    ))}
+                      />
+                      <span
+                        className={`relative h-2.5 w-2.5 rounded-full ${
+                          isRunning
+                            ? "bg-[#35ff69] shadow-[0_0_12px_rgba(53,255,105,0.95)]"
+                            : "bg-white/35"
+                        }`}
+                      />
+                    </span>
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-center gap-2 text-center">
-                  {effectiveNight ? (
-                    <MoonIcon className="h-5 w-5 text-[#f9c80e]" />
-                  ) : (
-                    <SunIcon className="h-5 w-5 text-[#f9c80e]" />
-                  )}
-                  <p className="text-sm font-semibold text-white/84">
-                    {effectiveNight ? "Night Mode" : "Day Mode"}
-                  </p>
+                <div
+                  className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
+                    effectiveNight
+                      ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40"
+                      : "bg-white text-[#08194A]"
+                  }`}
+                >
+                  {effectiveNight ? "NIGHT" : "DAY"}
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-full bg-[#06153E]/95 p-1">
+                <div className="grid grid-cols-3 gap-1">
+                  {(["auto", "day", "night"] as NightOverride[]).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setNightOverride(mode)}
+                      aria-pressed={session.nightOverride === mode}
+                      className={`rounded-full px-2 py-2.5 text-sm font-extrabold transition ${
+                        session.nightOverride === mode
+                          ? mode === "auto"
+                            ? "bg-[#f9d65c] text-[#08194A] shadow-[0_8px_20px_rgba(249,214,92,0.26)]"
+                            : mode === "day"
+                              ? "bg-white text-[#08194A] shadow-md"
+                              : "bg-[#112869] text-white ring-1 ring-[#f9c80e]/35 shadow-md"
+                          : "bg-transparent text-white/88 hover:bg-white/8"
+                      }`}
+                    >
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-center gap-2 text-center">
+                {effectiveNight ? (
+                  <MoonIcon className="h-5 w-5 text-[#f9c80e]" />
+                ) : (
+                  <SunIcon className="h-5 w-5 text-[#f9c80e]" />
+                )}
+                <p className="text-sm font-semibold text-white/84">
+                  {effectiveNight ? "Night Mode" : "Day Mode"}
+                </p>
               </div>
             </div>
           </div>
         </div>
+      </div>
+
 
         {/* ── TIMER + PLAY/PAUSE ─────────────────────────────────────────── */}
         <div className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">

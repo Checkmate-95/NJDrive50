@@ -837,28 +837,29 @@ function ActiveDriveContent({
               </div>
             </div>
 
-            {/* Duration + Distance side by side */}
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                  Duration
-                </p>
-                <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
-                  {formattedElapsed}
-                </p>
-              </div>
+            {/* Duration + Distance stacked */}
+<div className="mt-3 flex flex-col gap-2">
+  <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
+    <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+      Duration
+    </p>
+    <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+      {formattedElapsed}
+    </p>
+  </div>
 
-              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                  Distance
-                </p>
-                <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
-                  {safeNumber(session.liveMiles).toFixed(1)}
-                  <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">mi</span>
-                </p>
-                <p className="mt-0.5 text-[9px] text-[#0A1E5E]/35">Live GPS</p>
-              </div>
-            </div>
+  <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
+    <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+      Distance
+    </p>
+    <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+      {safeNumber(session.liveMiles).toFixed(1)}
+      <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">mi</span>
+    </p>
+    <p className="mt-0.5 text-[9px] text-[#0A1E5E]/35">Live GPS</p>
+  </div>
+</div>
+
 
             {/* Start Time + Lighting */}
             <div className="mt-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] px-3 py-3 shadow-sm">

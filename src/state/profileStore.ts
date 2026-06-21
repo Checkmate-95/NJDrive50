@@ -15,12 +15,9 @@ export type Profile = {
   carMake: string
   carModel: string
   carYear: number | null
-
-  // ✅ Add these two flags
   isOnboarded: boolean
   profileComplete: boolean
 }
-
 
 const defaultProfile: Profile = {
   teenName: "",
@@ -80,15 +77,15 @@ function normalizeProfile(value: unknown): Profile {
   const raw = value as Record<string, unknown>
 
   return freezeProfile({
-  teenName: normalizeString(raw.teenName),
-  parentName: normalizeString(raw.parentName),
-  teenAge: normalizeTeenAge(raw.teenAge),
-  carMake: normalizeString(raw.carMake),
-  carModel: normalizeString(raw.carModel),
-  carYear: normalizeCarYear(raw.carYear),
-  isOnboarded: Boolean(raw.isOnboarded),
-  profileComplete: Boolean(raw.profileComplete),
-})
+    teenName: normalizeString(raw.teenName),
+    parentName: normalizeString(raw.parentName),
+    teenAge: normalizeTeenAge(raw.teenAge),
+    carMake: normalizeString(raw.carMake),
+    carModel: normalizeString(raw.carModel),
+    carYear: normalizeCarYear(raw.carYear),
+    isOnboarded: Boolean(raw.isOnboarded),
+    profileComplete: Boolean(raw.profileComplete),
+  })
 }
 
 function emitPhotoChange() {
@@ -144,19 +141,26 @@ function loadProfileFromStorage(): Profile {
 if (canUseLocalStorage()) {
   loadTeenPhotoFromStorage()
   loadProfileFromStorage()
+
+  // ⭐ One-time migration: if profile has a teenName but isOnboarded is false,
+  // they completed onboarding before this field existed — mark them as onboarded
+  const p = cachedProfileSnapshot
+  if (p.teenName.length > 0 && !p.isOnboarded) {
+    const migrated = freezeProfile({ ...p, isOnboarded: true, profileComplete: true })
+    try {
+      window.localStorage.setItem(PROFILE_KEY, JSON.stringify(migrated))
+      cachedProfileSnapshot = migrated
+      if (isDev) console.log("[profileStore] Migrated existing profile → isOnboarded: true")
+    } catch {
+      // silent fail
+    }
+  }
 }
 
 // ─── setTeenPhoto ─────────────────────────────────────────────────────────────
-// FIX: The original implementation incorrectly rejected data: URLs, which is
-// exactly what the crop modal produces. data: URLs are plain base64 strings and
-// are perfectly persistable in localStorage. Only blob: URLs are session-only
-// and must be rejected. An empty string is treated as an explicit clear so that
-// handleRemoveTeenPhoto works correctly via setGlobalTeenPhoto("").
-
 export function setTeenPhoto(url: string): boolean {
   const normalized = url.trim()
 
-  // Empty string → treat as explicit clear
   if (!normalized) {
     if (!canUseLocalStorage()) return false
     try {
@@ -170,13 +174,11 @@ export function setTeenPhoto(url: string): boolean {
     }
   }
 
-  // blob: URLs are session-only — they cannot survive a page reload
   if (normalized.startsWith("blob:")) {
     if (isDev) console.warn("setTeenPhoto rejected blob: URL — not persistable across sessions")
     return false
   }
 
-  // Accept data:, http(s):, and app-relative paths
   const isDataUrl = normalized.startsWith("data:")
   const isHttpUrl = /^https?:\/\//i.test(normalized)
   const isAppRelative = normalized.startsWith("/")
@@ -228,9 +230,7 @@ function subscribePhoto(listener: () => void) {
     return () => {}
   }
 
-  const onCustom = () => {
-    listener()
-  }
+  const onCustom = () => { listener() }
 
   const onStorage = (e: StorageEvent) => {
     if (e.key === PHOTO_KEY) {
@@ -256,7 +256,7 @@ export function getProfile(): Profile {
   return cachedProfileSnapshot
 }
 
-// ⭐ NEW: Check if a real profile exists (not just the empty default)
+// ⭐ Check if a real profile exists (not just the empty default)
 export function hasProfile(): boolean {
   const p = cachedProfileSnapshot
   return p.teenName.length > 0
@@ -308,9 +308,7 @@ function subscribeProfile(listener: () => void) {
     return () => {}
   }
 
-  const onCustom = () => {
-    listener()
-  }
+  const onCustom = () => { listener() }
 
   const onStorage = (e: StorageEvent) => {
     if (e.key === PROFILE_KEY) {

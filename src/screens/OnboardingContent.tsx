@@ -570,28 +570,24 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   const teenComplete = Boolean(teenName.trim() && teenBirthday.trim())
   const parentComplete = Boolean(parentName.trim() && relationship.trim())
 
-  const isDevBypass = import.meta.env.DEV
+  const canContinue = Boolean(
+  teenName.trim() &&
+  teenBirthday.trim() &&
+  teenPhone.trim() &&
+  parentName.trim() &&
+  parentPhone.trim() &&
+  relationship.trim() &&
+  permitIssueDate.trim() &&
+  permitNumber.trim() &&
+  address.trim() &&
+  homeTown.trim() &&
+  homeZip.trim() &&
+  homeCounty.trim() &&
+  homeLat !== null &&
+  homeLng !== null
+)
 
-  const canContinue =
-    isDevBypass ||
-    Boolean(
-      teenName.trim() &&
-        teenBirthday.trim() &&
-        teenPhone.trim() &&
-        parentName.trim() &&
-        parentPhone.trim() &&
-        relationship.trim() &&
-        permitIssueDate.trim() &&
-        permitNumber.trim() &&
-        address.trim() &&
-        homeTown.trim() &&
-        homeZip.trim() &&
-        homeCounty.trim() &&
-        homeLat !== null &&
-        homeLng !== null
-    )
-
-  const handleContinue = async () => {
+const handleContinue = async () => {
   if (!canContinue) return
   persistOnboarding()
 

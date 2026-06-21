@@ -5,25 +5,40 @@ const SITE_URL = "https://njdrive50.com"
 const ROUTE_PATH = "/new-jersey-permit-practice-test"
 const PAGE_URL = `${SITE_URL}${ROUTE_PATH}`
 const LANDING_PAGE_URL = SITE_URL
-const PAGE_TITLE = "Free New Jersey Permit Practice Test | NJDrive50"
+const PAGE_TITLE = "Free New Jersey Permit Practice Test: 50 Questions (2026) | NJDrive50"
 const PAGE_DESCRIPTION =
-  "Take a free New Jersey permit practice test with 23 questions, then use NJDrive50 to track supervised driving hours and support the full NJ permit journey."
+  "Practice the New Jersey permit test with 50 free questions, shuffled answers, and instant explanations. Based on the NJ Driver Manual. 80% to pass. No sign-up needed."
 
 const FAQS = [
   {
     question: "Is this New Jersey permit practice test free?",
     answer:
-      "Yes. This page offers a free 23-question New Jersey permit practice round for study support.",
+      "Yes. This page offers a completely free New Jersey permit practice test with 50 questions and no registration required. Choose Part 1 (questions 1–25), Part 2 (questions 26–50), or Full Round (all 50) and start immediately.",
   },
   {
-    question: "How many questions are in the practice test?",
+    question: "How many questions are on the real NJ permit test?",
     answer:
-      "The practice round includes 23 questions and gives you a quick way to review common New Jersey permit-test topics.",
+      "The real New Jersey MVC knowledge test has 50 questions. You need to answer at least 40 correctly — an 80% score — to pass. This practice test mirrors that format exactly.",
+  },
+  {
+    question: "Are the answers shuffled on this practice test?",
+    answer:
+      "Yes. Every time you start a new session, the four answer choices for each question are randomly shuffled so you practice recognizing the right answer, not memorizing its position.",
+  },
+  {
+    question: "Is this the official NJ MVC permit test?",
+    answer:
+      "No. This is a free study tool based on topics covered in the official New Jersey Driver Manual. It is designed to help you prepare for the real NJ MVC knowledge test, not replace it.",
   },
   {
     question: "What is NJDrive50?",
     answer:
-      "NJDrive50 helps families track supervised driving hours, stay organized, and support progress through the New Jersey permit journey.",
+      "NJDrive50 is a free app that helps New Jersey families track supervised driving hours, stay organized during the permit stage, and support progress through the full NJ GDL journey. After you pass your permit test, NJDrive50 is the next step.",
+  },
+  {
+    question: "What score do I need to pass the NJ permit test?",
+    answer:
+      "You need to answer at least 40 out of 50 questions correctly — an 80% passing score — on the real New Jersey MVC knowledge test. This practice test uses the same 80% benchmark so you know exactly where you stand.",
   },
 ] as const
 
@@ -89,6 +104,7 @@ export default function PublicPracticeTestPage() {
     document.title = PAGE_TITLE
 
     upsertMeta("description", PAGE_DESCRIPTION)
+    upsertMeta("robots", "index, follow")
     upsertLink("canonical", PAGE_URL)
 
     upsertMeta("og:type", "website", "property")
@@ -96,11 +112,15 @@ export default function PublicPracticeTestPage() {
     upsertMeta("og:description", PAGE_DESCRIPTION, "property")
     upsertMeta("og:url", PAGE_URL, "property")
     upsertMeta("og:site_name", "NJDrive50", "property")
+    upsertMeta("og:image", `${SITE_URL}/og-practice-test.png`, "property")
+    upsertMeta("og:image:width", "1200", "property")
+    upsertMeta("og:image:height", "630", "property")
 
-    upsertMeta("twitter:card", "summary")
+    upsertMeta("twitter:card", "summary_large_image")
     upsertMeta("twitter:title", PAGE_TITLE)
     upsertMeta("twitter:description", PAGE_DESCRIPTION)
     upsertMeta("twitter:url", PAGE_URL)
+    upsertMeta("twitter:image", `${SITE_URL}/og-practice-test.png`)
 
     upsertJsonLd("public-practice-test-webpage", {
       "@context": "https://schema.org",
@@ -111,22 +131,31 @@ export default function PublicPracticeTestPage() {
           url: PAGE_URL,
           name: PAGE_TITLE,
           description: PAGE_DESCRIPTION,
-          isPartOf: {
-            "@id": `${SITE_URL}/#website`,
+          dateModified: "2026-06-21",
+          inLanguage: "en-US",
+          isPartOf: { "@id": `${SITE_URL}/#website` },
+          breadcrumb: {
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "NJDrive50",
+                item: `${SITE_URL}/`,
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "NJ Permit Practice Test",
+                item: PAGE_URL,
+              },
+            ],
           },
           about: [
-            {
-              "@type": "Thing",
-              name: "New Jersey permit practice test",
-            },
-            {
-              "@type": "Thing",
-              name: "New Jersey GDL",
-            },
-            {
-              "@type": "Thing",
-              name: "Supervised driving hours",
-            },
+            { "@type": "Thing", name: "New Jersey permit practice test" },
+            { "@type": "Thing", name: "New Jersey MVC knowledge test" },
+            { "@type": "Thing", name: "New Jersey GDL" },
+            { "@type": "Thing", name: "Supervised driving hours" },
           ],
         },
         {
@@ -134,9 +163,7 @@ export default function PublicPracticeTestPage() {
           "@id": `${SITE_URL}/#website`,
           url: `${SITE_URL}/`,
           name: "NJDrive50",
-          publisher: {
-            "@id": `${SITE_URL}/#organization`,
-          },
+          publisher: { "@id": `${SITE_URL}/#organization` },
         },
         {
           "@type": "Organization",
@@ -156,15 +183,24 @@ export default function PublicPracticeTestPage() {
           operatingSystem: "iOS, Android, Web",
           url: `${SITE_URL}/`,
           description:
-            "NJDrive50 helps families track supervised driving hours, stay organized, and support progress through the New Jersey permit journey.",
+            "NJDrive50 helps New Jersey families track supervised driving hours, stay organized during the permit stage, and support progress through the full NJ GDL journey.",
           offers: {
             "@type": "Offer",
             price: "0",
             priceCurrency: "USD",
           },
-          publisher: {
-            "@id": `${SITE_URL}/#organization`,
-          },
+          publisher: { "@id": `${SITE_URL}/#organization` },
+        },
+        {
+          "@type": "Quiz",
+          "@id": `${PAGE_URL}#quiz`,
+          name: "Free New Jersey Permit Practice Test",
+          description:
+            "A 50-question free New Jersey permit practice test based on the NJ Driver Manual, with shuffled answers and instant explanations.",
+          url: PAGE_URL,
+          educationalLevel: "beginner",
+          about: { "@type": "Thing", name: "New Jersey MVC knowledge test" },
+          provider: { "@id": `${SITE_URL}/#organization` },
         },
         {
           "@type": "FAQPage",
@@ -216,6 +252,7 @@ export default function PublicPracticeTestPage() {
         className="mx-auto w-full max-w-md"
         aria-label="Free New Jersey permit practice test"
       >
+        {/* ── Hero card ─────────────────────────────────────────────────────── */}
         <section
           className="mb-5 overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_18px_40px_rgba(0,0,0,0.14)]"
           aria-labelledby="practice-page-title"
@@ -224,77 +261,110 @@ export default function PublicPracticeTestPage() {
 
           <div className="p-5 sm:p-6">
             <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
-              Free NJ Permit Practice Test
+              Free NJ Permit Practice Test · 2026
             </p>
 
             <h1
               id="practice-page-title"
               className="mt-2 text-3xl font-black leading-tight text-[#08194A]"
             >
-              Free New Jersey permit practice test with a next step for the full NJ driving journey
+              Free New Jersey Permit Practice Test
             </h1>
 
             <p className="mt-3 text-sm leading-relaxed text-[#08194A]/72">
-              Take a free New Jersey permit practice test with 23 questions based
-              on common NJ knowledge-test topics. After the quiz, families can use
-              NJDrive50 to track supervised driving hours, stay organized, and
-              support progress through the New Jersey permit process.
+              50 free questions based on the{" "}
+              <a
+                href="https://www.nj.gov/mvc/vehicles/manuals.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-[#08194A] underline underline-offset-2"
+              >
+                NJ Driver Manual
+              </a>
+              . Answers are shuffled every attempt. Instant explanations after
+              each question. No sign-up needed. Score 80% or higher to hit the
+              real{" "}
+              <a
+                href="https://www.nj.gov/mvc/license/knowledgetest.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-[#08194A] underline underline-offset-2"
+              >
+                NJ MVC knowledge test
+              </a>{" "}
+              passing threshold.
             </p>
 
+            {/* Quick facts */}
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[
+                { stat: "50", label: "Questions" },
+                { stat: "80%", label: "To Pass" },
+                { stat: "Shuffled", label: "Each Attempt" },
+                { stat: "Free", label: "No Sign-Up" },
+              ].map(({ stat, label }) => (
+                <div
+                  key={label}
+                  className="rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-3 text-center"
+                >
+                  <p className="text-lg font-black text-[#08194A]">{stat}</p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#08194A]/55">
+                    {label}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {/* CTAs */}
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <a
+                href="#practice-test"
+                className="flex w-full items-center justify-center rounded-xl bg-[#08194A] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2"
+              >
+                Start Free Practice Test
+              </a>
+
               <a
                 href={LANDING_PAGE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex w-full items-center justify-center rounded-xl bg-[#f9c80e] px-4 py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.20)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2"
               >
-                Start NJDrive50
-              </a>
-
-              <a
-                href="#practice-test"
-                className="flex w-full items-center justify-center rounded-xl bg-[#08194A] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2"
-              >
-                Take Free Practice Test
+                Get NJDrive50 — Free App
               </a>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-3 text-center">
-                <p className="text-lg font-black text-[#08194A]">23</p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#08194A]/55">
-                  Questions
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-3 text-center">
-                <p className="text-lg font-black text-[#08194A]">Random</p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#08194A]/55">
-                  Each Attempt
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-3 text-center">
-                <p className="text-lg font-black text-[#08194A]">Free</p>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#08194A]/55">
-                  Study Tool
-                </p>
-              </div>
-            </div>
-
+            {/* What you'll practice */}
             <div className="mt-4 rounded-2xl border border-[#08194A]/10 bg-[#F4F6FA] p-4">
-              <h2 className="text-sm font-semibold text-[#08194A]">
-                Why people use this free NJ practice test
+              <h2 className="text-sm font-bold text-[#08194A]">
+                What this NJ permit practice test covers
               </h2>
-              <ul className="mt-3 space-y-2 text-sm leading-relaxed text-[#08194A]/78">
-                <li>Practice with a fast, mobile-friendly New Jersey permit quiz.</li>
-                <li>Build confidence before taking the NJ written knowledge test.</li>
-                <li>Move into NJDrive50 when it is time to track real driving progress.</li>
+              <ul className="mt-3 grid grid-cols-1 gap-1.5 text-sm text-[#08194A]/78 sm:grid-cols-2">
+                {[
+                  "Road signs and pavement markings",
+                  "NJ speed limits and school zones",
+                  "Right-of-way and yielding rules",
+                  "GDL restrictions for new drivers",
+                  "Safe following distance",
+                  "Distracted and impaired driving",
+                  "Emergency vehicle rules",
+                  "NJ Move Over law",
+                  "Roundabouts and lane changes",
+                  "BAC limits and DUI laws",
+                ].map((topic) => (
+                  <li key={topic} className="flex items-start gap-2">
+                    <span className="mt-0.5 text-[#f9c80e]" aria-hidden="true">
+                      ✓
+                    </span>
+                    {topic}
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
         </section>
 
+        {/* ── Practice test panel ───────────────────────────────────────────── */}
         <section
           id="practice-test"
           tabIndex={-1}
@@ -304,72 +374,179 @@ export default function PublicPracticeTestPage() {
           <PracticeTestPanel />
         </section>
 
+        {/* ── How it works ──────────────────────────────────────────────────── */}
         <section
           className="mt-5 overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_18px_40px_rgba(0,0,0,0.14)]"
-          aria-labelledby="beyond-quiz-title"
+          aria-labelledby="how-it-works-title"
         >
           <div className="h-1.5 w-full bg-gradient-to-r from-[#08194A] via-[#f9c80e] to-[#ffe27a]" />
 
           <div className="p-5 sm:p-6">
             <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
-              NJ permit help beyond practice questions
+              How this practice test works
+            </p>
+
+            <h2
+              id="how-it-works-title"
+              className="mt-2 text-2xl font-black leading-tight text-[#08194A]"
+            >
+              Built to match the real NJ MVC exam
+            </h2>
+
+            <p className="mt-3 text-sm leading-relaxed text-[#08194A]/72">
+              The real New Jersey MVC knowledge test has 50 questions and requires
+              an 80% passing score — 40 correct answers. This practice test uses
+              the same format so your results reflect your real readiness.
+            </p>
+
+            <ol className="mt-4 space-y-3">
+              {[
+                {
+                  step: "1",
+                  title: "Choose your round",
+                  desc: "Pick Part 1 (questions 1–25), Part 2 (questions 26–50), or Full Round (all 50). Each session takes 5–15 minutes.",
+                },
+                {
+                  step: "2",
+                  title: "Answer each question",
+                  desc: "Answers are shuffled every attempt so you learn to recognize the right answer, not its position on the screen.",
+                },
+                {
+                  step: "3",
+                  title: "See your explanation",
+                  desc: "After each answer you get an instant explanation so you understand why — not just what — the correct answer is.",
+                },
+                {
+                  step: "4",
+                  title: "Check your score",
+                  desc: "Your final score shows you whether you are in passing range (80%+) or need more practice before your MVC appointment.",
+                },
+              ].map(({ step, title, desc }) => (
+                <li
+                  key={step}
+                  className="flex gap-4 rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-4"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#08194A] text-sm font-black text-[#f9c80e]">
+                    {step}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[#08194A]">{title}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-[#08194A]/70">
+                      {desc}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ── NJDrive50 CTA ─────────────────────────────────────────────────── */}
+        <section
+          className="mt-5 overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_18px_40px_rgba(0,0,0,0.14)]"
+          aria-labelledby="beyond-quiz-title"
+        >
+          <div className="h-1.5 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#08194A]" />
+
+          <div className="p-5 sm:p-6">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
+              After the permit test — what comes next
             </p>
 
             <h2
               id="beyond-quiz-title"
               className="mt-2 text-2xl font-black leading-tight text-[#08194A]"
             >
-              The New Jersey permit test is only the first step
+              Passing the NJ permit test is just the beginning
             </h2>
 
             <p className="mt-3 text-sm leading-relaxed text-[#08194A]/72">
-              Passing a New Jersey permit practice test is helpful, but families
-              also need a way to track supervised driving hours and stay aligned
-              with NJ GDL expectations. NJDrive50 is built to support that next stage.
+              Once your teen passes the NJ MVC knowledge test, the real work
+              starts: 6 months of supervised driving and at least 6 supervised
+              hours logged before applying for a probationary license. Most
+              families struggle to track this accurately. NJDrive50 fixes that.
             </p>
 
-            <ul className="mt-4 space-y-2 text-sm text-[#08194A]/80">
-              <li className="rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-2">
-                Track supervised driving hours in one place.
-              </li>
-              <li className="rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-2">
-                Stay organized as your teen works through NJ requirements.
-              </li>
-              <li className="rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-2">
-                Turn practice into real progress for the New Jersey permit journey.
-              </li>
-            </ul>
+            <div className="mt-4 space-y-2 text-sm">
+              {[
+                "Log every supervised drive in seconds — date, time, conditions, and notes.",
+                "Track progress toward the 6-month and 6-hour NJ GDL milestones.",
+                "Keep parents and teens on the same page without spreadsheets or paper logs.",
+                "Get reminders so driving hours don't pile up before the license deadline.",
+              ].map((point) => (
+                <div
+                  key={point}
+                  className="flex items-start gap-3 rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-3 py-2.5"
+                >
+                  <span className="mt-0.5 shrink-0 text-[#f9c80e]" aria-hidden="true">
+                    ✓
+                  </span>
+                  <p className="text-[#08194A]/80">{point}</p>
+                </div>
+              ))}
+            </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mt-5 overflow-hidden rounded-2xl bg-[#08194A] shadow-[0_14px_28px_rgba(8,25,74,0.20)]">
+              <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/50 to-[#0A1E5E]" />
+              <div className="p-4">
+                <p className="text-sm font-bold text-white">
+                  NJDrive50 is free — no subscription, no hidden fees.
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-white/75">
+                  Used by NJ families to track every supervised mile from permit
+                  to probationary license.
+                </p>
+                <a
+                  href={LANDING_PAGE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 flex w-full items-center justify-center rounded-xl bg-[#f9c80e] py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
+                >
+                  Start NJDrive50 Free — No Sign-Up Required
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <a
+                href="#practice-test"
+                className="flex w-full items-center justify-center rounded-xl border-2 border-[#08194A]/10 bg-[#F7F9FC] px-4 py-3 text-sm font-bold text-[#08194A] transition hover:border-[#08194A]/25 hover:bg-[#eef0f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2"
+              >
+                Take Another Practice Round
+              </a>
+
               <a
                 href={LANDING_PAGE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex w-full items-center justify-center rounded-xl bg-[#f9c80e] px-4 py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.18)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2"
               >
-                Start NJDrive50
-              </a>
-
-              <a
-                href="#practice-test"
-                className="flex w-full items-center justify-center rounded-xl bg-[#08194A] px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2"
-              >
-                Take Another Free Practice Round
+                Explore NJDrive50
               </a>
             </div>
 
-            <p className="mt-4 text-xs leading-relaxed text-[#08194A]/55">
+            <p className="mt-4 text-xs leading-relaxed text-[#08194A]/50">
               This page is a free New Jersey permit practice resource for study
-              support and does not replace the official New Jersey Driver Manual.
+              support only and does not replace the{" "}
+              <a
+                href="https://www.nj.gov/mvc/vehicles/manuals.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2"
+              >
+                official New Jersey Driver Manual
+              </a>
+              .
             </p>
           </div>
         </section>
 
+        {/* ── FAQ ───────────────────────────────────────────────────────────── */}
         <section
           className="mt-5 overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_18px_40px_rgba(0,0,0,0.14)]"
           aria-labelledby="faq-title"
         >
-          <div className="h-1.5 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#08194A]" />
+          <div className="h-1.5 w-full bg-gradient-to-r from-[#08194A] via-[#f9c80e] to-[#ffe27a]" />
 
           <div className="p-5 sm:p-6">
             <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
@@ -380,7 +557,7 @@ export default function PublicPracticeTestPage() {
               id="faq-title"
               className="mt-2 text-2xl font-black leading-tight text-[#08194A]"
             >
-              Common questions about this free NJ permit practice page
+              NJ permit practice test — common questions
             </h2>
 
             <div className="mt-4 space-y-3">
@@ -398,6 +575,21 @@ export default function PublicPracticeTestPage() {
                 </div>
               ))}
             </div>
+
+            <p className="mt-5 text-xs leading-relaxed text-[#08194A]/50">
+              Last reviewed: June 2026. Based on the New Jersey Driver Manual and
+              NJ MVC knowledge test format. For the most current information,
+              visit the{" "}
+              <a
+                href="https://www.nj.gov/mvc/license/knowledgetest.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2"
+              >
+                official NJ MVC knowledge test page
+              </a>
+              .
+            </p>
           </div>
         </section>
       </main>

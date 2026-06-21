@@ -115,16 +115,16 @@ export default function App() {
 
   // ─── Firebase Auth + Startup Controller ─────────────────────────────────────
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setAuthUser(user)
-      setAuthReady(true)
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    setAuthUser(user)
 
-      // ⭐ NEW: Run the startup controller
-      await startupController(user)
-    })
+    // ⭐ Route first, then reveal UI — prevents landingApp flash
+    await startupController(user)
+    setAuthReady(true)
+  })
 
-    return () => unsubscribe()
-  }, [])
+  return () => unsubscribe()
+}, [])
 
   // ─── Location Permission ───────────────────────────────────────────────────
   useEffect(() => {

@@ -7,10 +7,33 @@ import {
 } from "../utils/practiceTestUtils"
 
 const PASSING_PERCENT = 80
-const QUESTION_COUNT = 23
 const LANDING_PAGE_URL = "https://njdrive50.com"
 
+type TestMode = "part1" | "part2" | "full"
+
+const MODE_CONFIG: Record<TestMode, { label: string; description: string; count: number; slice?: [number, number] }> = {
+  part1: { label: "Part 1", description: "Questions 1–25", count: 25, slice: [0, 25] },
+  part2: { label: "Part 2", description: "Questions 26–50", count: 25, slice: [25, 50] },
+  full:  { label: "Full Round", description: "All 50 Questions", count: 50 },
+}
+
+function shuffleAnswers(
+  answers: readonly [string, string, string, string],
+  correctIndex: number
+): { answers: [string, string, string, string]; correctIndex: number } {
+  const indexed = answers.map((a, i) => ({ text: a, isCorrect: i === correctIndex }))
+  for (let i = indexed.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [indexed[i], indexed[j]] = [indexed[j], indexed[i]]
+  }
+  return {
+    answers: indexed.map((a) => a.text) as [string, string, string, string],
+    correctIndex: indexed.findIndex((a) => a.isCorrect),
+  }
+}
+
 export default function PracticeTestPanel() {
+  const [mode, setMode] = useState<TestMode | null>(null)
   const [testSeed, setTestSeed] = useState(0)
   const [index, setIndex] = useState(0)
   const [score, setScore] = useState(0)
@@ -23,11 +46,18 @@ export default function PracticeTestPanel() {
   const nextButtonRef = useRef<HTMLButtonElement | null>(null)
 
   const sessionQuestions = useMemo(() => {
-    return buildTestQuestions(QUESTIONS, QUESTION_COUNT)
-  }, [testSeed])
+    if (!mode) return []
+    const cfg = MODE_CONFIG[mode]
+    const pool = cfg.slice ? QUESTIONS.slice(cfg.slice[0], cfg.slice[1]) : QUESTIONS
+    const built = buildTestQuestions(pool, cfg.count)
+    return built.map((q) => {
+      const shuffled = shuffleAnswers(q.answers, q.correctIndex)
+      return { ...q, answers: shuffled.answers, correctIndex: shuffled.correctIndex }
+    })
+  }, [mode, testSeed])
 
   const totalQuestions = sessionQuestions.length
-  const isFinished = index >= totalQuestions
+  const isFinished = mode !== null && index >= totalQuestions && totalQuestions > 0
   const current = sessionQuestions[index]
 
   const answeredCount = Math.min(index, totalQuestions)
@@ -99,11 +129,9 @@ export default function PracticeTestPanel() {
 
   const handleSubmit = () => {
     if (selected === null || !current || showResult) return
-
     if (selected === current.correctIndex) {
       setScore((s) => s + 1)
     }
-
     setShowResult(true)
   }
 
@@ -114,7 +142,6 @@ export default function PracticeTestPanel() {
       setShowResult(false)
       return
     }
-
     setIndex((i) => i + 1)
     setSelected(null)
     setShowResult(false)
@@ -128,7 +155,66 @@ export default function PracticeTestPanel() {
     setShowResult(false)
   }
 
+  const handleBackToModes = () => {
+    setMode(null)
+    setIndex(0)
+    setScore(0)
+    setSelected(null)
+    setShowResult(false)
+  }
+
+  // ── Mode picker ──────────────────────────────────────────────────────────────
+  if (mode === null) {
+    return (
+      <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4">
+        <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
+          <div className="h-1.5 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#08194A]" />
+
+          <div className="p-5 sm:p-6">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
+              Free NJ Practice Test
+            </p>
+            <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
+              Choose your practice round
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-[#08194A]/65">
+              Split into two 25-question sessions or take all 50 at once. Answers are shuffled every attempt.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {(["part1", "part2", "full"] as TestMode[]).map((m) => {
+                const cfg = MODE_CONFIG[m]
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMode(m)}
+                    className="flex w-full items-center justify-between rounded-2xl border-2 border-[#08194A]/10 bg-[#F7F9FC] px-4 py-4 text-left transition hover:border-[#f9c80e] hover:bg-[#fff8d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2 active:scale-[0.99]"
+                  >
+                    <div>
+                      <p className="text-base font-black text-[#08194A]">{cfg.label}</p>
+                      <p className="mt-0.5 text-xs text-[#08194A]/55">{cfg.description}</p>
+                    </div>
+                    <div className="rounded-full bg-[#08194A] px-3 py-1 text-xs font-bold text-white">
+                      {cfg.count}Q
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <p className="mt-4 text-xs leading-relaxed text-[#08194A]/45">
+              Answer choices are randomized each session. Based on NJ permit-test concepts — for study support only.
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Results screen ───────────────────────────────────────────────────────────
   if (isFinished) {
+    const cfg = MODE_CONFIG[mode]
     return (
       <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4">
         <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
@@ -138,10 +224,10 @@ export default function PracticeTestPanel() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
-                  23-Question Test Complete
+                  {cfg.label} Complete
                 </p>
                 <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
-                  23-Question Practice Test Results
+                  {cfg.description} Results
                 </h2>
               </div>
 
@@ -191,40 +277,31 @@ export default function PracticeTestPanel() {
               </p>
             </div>
 
-            <div className="mt-4 overflow-hidden rounded-2xl border border-[#08194A]/10 bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.18)]">
-              <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={handleRestart}
+                className="w-full rounded-xl border-2 border-[#08194A]/10 bg-[#F7F9FC] py-3 text-sm font-bold text-[#08194A] transition hover:border-[#08194A]/25 hover:bg-[#eef0f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2"
+              >
+                Retry {cfg.label}
+              </button>
 
-              <div className="p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-white/60">
-                  Go Further
-                </p>
-                <h2 className="mt-1 text-lg font-extrabold text-white">
-                  More than practice questions
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-white/80">
-                  NJDrive50 helps families track supervised driving, log hours,
-                  and stay aligned with NJ GDL expectations.
-                </p>
+              <button
+                type="button"
+                onClick={handleBackToModes}
+                className="w-full rounded-xl border-2 border-[#08194A]/10 bg-[#F7F9FC] py-3 text-sm font-bold text-[#08194A] transition hover:border-[#08194A]/25 hover:bg-[#eef0f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2"
+              >
+                Switch Round
+              </button>
 
-                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={handleRestart}
-                    className="w-full rounded-xl border border-white/20 bg-white/10 py-3 text-sm font-bold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
-                  >
-                    Restart Test
-                  </button>
-
-                  <a
-                    href={LANDING_PAGE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center rounded-xl bg-[#f9c80e] py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
-                  >
-                    Start NJDrive50
-                  </a>
-                </div>
-              </div>
+              <a
+                href={LANDING_PAGE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex w-full items-center justify-center rounded-xl bg-[#f9c80e] py-3 text-sm font-bold text-[#08194A] shadow-[0_12px_26px_rgba(249,200,14,0.22)] transition hover:-translate-y-[1px] hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f9c80e] focus-visible:ring-offset-2"
+              >
+                Start NJDrive50
+              </a>
             </div>
           </div>
         </div>
@@ -237,7 +314,9 @@ export default function PracticeTestPanel() {
   const radioName = `practice-question-${current.id}`
   const legendId = `question-legend-${current.id}`
   const resultId = `question-result-${current.id}`
+  const cfg = MODE_CONFIG[mode]
 
+  // ── Question screen ──────────────────────────────────────────────────────────
   return (
     <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4">
       <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
@@ -247,15 +326,24 @@ export default function PracticeTestPanel() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
-                Free NJ Practice Test
+                {cfg.label} · {cfg.description}
               </p>
               <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
                 New Jersey Permit Test Question
               </h2>
             </div>
 
-            <div className="rounded-full bg-[#08194A] px-3 py-1 text-xs font-bold tracking-[0.14em] text-white ring-1 ring-[#f9c80e]/35">
-              Q {index + 1}/{totalQuestions}
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="rounded-full bg-[#08194A] px-3 py-1 text-xs font-bold tracking-[0.14em] text-white ring-1 ring-[#f9c80e]/35">
+                Q {index + 1}/{totalQuestions}
+              </div>
+              <button
+                type="button"
+                onClick={handleBackToModes}
+                className="text-xs font-semibold text-[#08194A]/45 underline underline-offset-2 hover:text-[#08194A]/70 focus-visible:outline-none"
+              >
+                Switch round
+              </button>
             </div>
           </div>
 
@@ -266,7 +354,7 @@ export default function PracticeTestPanel() {
                   Progress
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[#08194A]">
-                  {answeredCount} answered • {score} correct so far
+                  {answeredCount} answered · {score} correct so far
                 </p>
               </div>
 

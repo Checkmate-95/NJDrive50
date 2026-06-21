@@ -5,6 +5,9 @@ type NavShape = {
 };
 
 export const NAV = {
+  // ⭐ NEW: Loading screen must exist in NavShape
+  loading: {},
+
   // ⭐ NEW APP LANDING PAGE
   landingApp: {
     continue: "pricing",

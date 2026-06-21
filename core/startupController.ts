@@ -11,15 +11,15 @@ export async function startupController(authUser: User | null) {
     return
   }
 
-  // 2. No profile data saved → First-time user → Landing
+  // 2. Logged in but no local profile → Intro (not landingApp — they're already registered)
   if (!hasProfile()) {
-    nav.resetTo("landingApp")
+    nav.resetTo("intro")
     return
   }
 
   const { isOnboarded } = getProfile()
 
-  // 3. Logged in but NOT onboarded → Intro
+  // 3. Has profile but not onboarded → Intro
   if (!isOnboarded) {
     nav.resetTo("intro")
     return

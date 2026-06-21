@@ -1,10 +1,9 @@
 import { useNav } from "../src/state/navStore"
-import { getProfile } from "../src/state/profileStore"
+import { getProfile, hasProfile } from "../src/state/profileStore"
 import type { User } from "firebase/auth"
 
 export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
-  const profile = getProfile()
 
   // 1. Not logged in → Login
   if (!authUser) {
@@ -12,13 +11,13 @@ export async function startupController(authUser: User | null) {
     return
   }
 
-  // 2. No profile saved → First-time user → Landing
-  if (!profile) {
+  // 2. No profile data saved → First-time user → Landing
+  if (!hasProfile()) {
     nav.resetTo("landingApp")
     return
   }
 
-  const { isOnboarded } = profile
+  const { isOnboarded } = getProfile()
 
   // 3. Logged in but NOT onboarded → Intro
   if (!isOnboarded) {

@@ -256,6 +256,12 @@ export function getProfile(): Profile {
   return cachedProfileSnapshot
 }
 
+// ⭐ NEW: Check if a real profile exists (not just the empty default)
+export function hasProfile(): boolean {
+  const p = cachedProfileSnapshot
+  return p.teenName.length > 0
+}
+
 export function setProfile(profile: Profile): boolean {
   if (!canUseLocalStorage()) return false
 

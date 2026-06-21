@@ -20,6 +20,8 @@ import {
 import {
   useTeenPhoto,
   setTeenPhoto as setGlobalTeenPhoto,
+  getProfile,
+  setProfile,
 } from "../state/profileStore"
 import { useMapContext } from "../components/map/MapContext"
 import AddressAutocomplete from "../components/AddressAutocomplete"
@@ -590,10 +592,19 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
     )
 
   const handleContinue = async () => {
-    if (!canContinue) return
-    persistOnboarding()
-    setScreen("home")
-  }
+  if (!canContinue) return
+  persistOnboarding()
+
+  // ⭐ Mark user as onboarded so startupController routes to Home on next launch
+  setProfile({
+    ...getProfile(),
+    teenName: teenName.trim(),
+    isOnboarded: true,
+    profileComplete: true,
+  })
+
+  setScreen("home")
+}
 
   const openPhotoPicker = () => {
     photoInputRef.current?.click()

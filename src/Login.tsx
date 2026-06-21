@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
+import { Preferences } from "@capacitor/preferences";
 
 import { auth } from "./firebase";
 import { useNav } from "./state/navStore";
-import { useProfile } from "./state/profileStore";
 
 const REMEMBER_EMAIL_KEY = "njdrive50_remembered_email";
 
@@ -29,7 +29,6 @@ function getFriendlyError(code: string): string {
 
 export default function Login() {
   const { setScreen } = useNav();
-  const { isOnboarded } = useProfile();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,15 +39,18 @@ export default function Login() {
 
   // ⭐ Load remembered email on mount
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(REMEMBER_EMAIL_KEY);
-      if (saved) {
-        setEmail(saved);
-        setRememberMe(true);
+    async function loadRememberedEmail() {
+      try {
+        const { value } = await Preferences.get({ key: REMEMBER_EMAIL_KEY });
+        if (value) {
+          setEmail(value);
+          setRememberMe(true);
+        }
+      } catch {
+        // silent fail
       }
-    } catch {
-      // localStorage unavailable — silent fail
     }
+    loadRememberedEmail();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -68,15 +70,15 @@ export default function Login() {
       // ⭐ Save or clear remembered email based on checkbox
       try {
         if (rememberMe) {
-          window.localStorage.setItem(REMEMBER_EMAIL_KEY, email.trim());
+          await Preferences.set({ key: REMEMBER_EMAIL_KEY, value: email.trim() });
         } else {
-          window.localStorage.removeItem(REMEMBER_EMAIL_KEY);
+          await Preferences.remove({ key: REMEMBER_EMAIL_KEY });
         }
       } catch {
-        // localStorage unavailable — silent fail
+        // silent fail
       }
 
-      // Do nothing — startupController will handle navigation
+      // ✅ Do nothing — startupController handles navigation via onAuthStateChanged
 
     } catch (err: unknown) {
       const firebaseErr = err as FirebaseError;

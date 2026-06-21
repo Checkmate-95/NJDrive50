@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
 
 import { auth } from "./firebase";
 import { useNav } from "./state/navStore";
 import { useProfile } from "./state/profileStore";
+
+const REMEMBER_EMAIL_KEY = "njdrive50_remembered_email";
 
 function getFriendlyError(code: string): string {
   switch (code) {
@@ -32,8 +34,22 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // ⭐ Load remembered email on mount
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(REMEMBER_EMAIL_KEY);
+      if (saved) {
+        setEmail(saved);
+        setRememberMe(true);
+      }
+    } catch {
+      // localStorage unavailable — silent fail
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,11 +65,19 @@ export default function Login() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
 
-      if (!isOnboarded) {
-        setScreen("intro");
-      } else {
-        setScreen("home");
+      // ⭐ Save or clear remembered email based on checkbox
+      try {
+        if (rememberMe) {
+          window.localStorage.setItem(REMEMBER_EMAIL_KEY, email.trim());
+        } else {
+          window.localStorage.removeItem(REMEMBER_EMAIL_KEY);
+        }
+      } catch {
+        // localStorage unavailable — silent fail
       }
+
+      // Do nothing — startupController will handle navigation
+
     } catch (err: unknown) {
       const firebaseErr = err as FirebaseError;
       setError(getFriendlyError(firebaseErr.code));
@@ -114,7 +138,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setScreen("forgotPassword")}
-                  className="text-xs font-semibold text-[#08194A]/50 hover:text-[#08194A] transition"
+                  className="text-xs font-semibold text-[#08194A]/50 transition hover:text-[#08194A]"
                 >
                   Forgot password?
                 </button>
@@ -134,42 +158,55 @@ export default function Login() {
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#08194A]/40 hover:text-[#08194A]/70 transition"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[#08194A]/40 transition hover:text-[#08194A]/70"
                 >
                   {showPassword ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
                       <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
                       <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
                   ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   )}
                 </button>
               </div>
+            </div>
+
+            {/* ⭐ Remember Me */}
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={rememberMe}
+                onClick={() => setRememberMe((prev) => !prev)}
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition ${
+                  rememberMe
+                    ? "border-[#08194A] bg-[#08194A]"
+                    : "border-[#08194A]/25 bg-white"
+                }`}
+              >
+                {rememberMe && (
+                  <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                    <path
+                      d="M1 4L4 7.5L10 1"
+                      stroke="white"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
+              <span
+                className="cursor-pointer select-none text-sm text-[#08194A]/70"
+                onClick={() => setRememberMe((prev) => !prev)}
+              >
+                Remember my email
+              </span>
             </div>
 
             {/* Error */}

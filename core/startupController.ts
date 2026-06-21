@@ -6,27 +6,26 @@ export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
   const profile = getProfile()
 
-  // 1. FIRST‑TIME USER (no profile saved)
-  if (!profile) {
-    nav.resetTo("landingApp")
-    return
-  }
-
-  // 2. RETURNING USER (profile exists)
-  const { profileComplete, isOnboarded } = profile
-
-  // 2A. RETURNING USER — LOGGED OUT
+  // 1. Not logged in → Login
   if (!authUser) {
     nav.resetTo("login")
     return
   }
 
-  // 2B. RETURNING USER — LOGGED IN
-  if (profileComplete && !isOnboarded) {
+  // 2. No profile saved → First-time user → Landing
+  if (!profile) {
+    nav.resetTo("landingApp")
+    return
+  }
+
+  const { isOnboarded } = profile
+
+  // 3. Logged in but NOT onboarded → Intro
+  if (!isOnboarded) {
     nav.resetTo("intro")
     return
   }
 
-  // Fully onboarded → Home Dashboard
+  // 4. Fully onboarded → Home
   nav.resetTo("home")
 }

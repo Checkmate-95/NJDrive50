@@ -1,12 +1,40 @@
 import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
-import { Preferences } from "@capacitor/preferences";
 
 import { auth } from "./firebase";
 import { useNav } from "./state/navStore";
 
 const REMEMBER_EMAIL_KEY = "njdrive50_remembered_email";
+
+// ⭐ Cross-platform storage helpers — Capacitor on Android, localStorage on desktop
+async function getRememberedEmail(): Promise<string | null> {
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    const { value } = await Preferences.get({ key: REMEMBER_EMAIL_KEY });
+    return value;
+  } catch {
+    try { return window.localStorage.getItem(REMEMBER_EMAIL_KEY); } catch { return null; }
+  }
+}
+
+async function setRememberedEmail(email: string): Promise<void> {
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    await Preferences.set({ key: REMEMBER_EMAIL_KEY, value: email });
+  } catch {
+    try { window.localStorage.setItem(REMEMBER_EMAIL_KEY, email); } catch { /* silent */ }
+  }
+}
+
+async function removeRememberedEmail(): Promise<void> {
+  try {
+    const { Preferences } = await import("@capacitor/preferences");
+    await Preferences.remove({ key: REMEMBER_EMAIL_KEY });
+  } catch {
+    try { window.localStorage.removeItem(REMEMBER_EMAIL_KEY); } catch { /* silent */ }
+  }
+}
 
 function getFriendlyError(code: string): string {
   switch (code) {
@@ -39,18 +67,12 @@ export default function Login() {
 
   // ⭐ Load remembered email on mount
   useEffect(() => {
-    async function loadRememberedEmail() {
-      try {
-        const { value } = await Preferences.get({ key: REMEMBER_EMAIL_KEY });
-        if (value) {
-          setEmail(value);
-          setRememberMe(true);
-        }
-      } catch {
-        // silent fail
+    getRememberedEmail().then((value) => {
+      if (value) {
+        setEmail(value);
+        setRememberMe(true);
       }
-    }
-    loadRememberedEmail();
+    });
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -68,14 +90,10 @@ export default function Login() {
       await signInWithEmailAndPassword(auth, email, password);
 
       // ⭐ Save or clear remembered email based on checkbox
-      try {
-        if (rememberMe) {
-          await Preferences.set({ key: REMEMBER_EMAIL_KEY, value: email.trim() });
-        } else {
-          await Preferences.remove({ key: REMEMBER_EMAIL_KEY });
-        }
-      } catch {
-        // silent fail
+      if (rememberMe) {
+        await setRememberedEmail(email.trim());
+      } else {
+        await removeRememberedEmail();
       }
 
       // ✅ Do nothing — startupController handles navigation via onAuthStateChanged

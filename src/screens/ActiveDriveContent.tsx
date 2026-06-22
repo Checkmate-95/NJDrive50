@@ -14,22 +14,27 @@ import {
 import { Geolocation } from "@capacitor/geolocation"
 import { Capacitor } from "@capacitor/core"
 
+
 type ActiveDriveContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
   setCurrentDrive: Dispatch<SetStateAction<DriveEntry | null>>
 }
 
+
 type DriveSnapshot = DriveEntry & {
   isPreview?: boolean
 }
 
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
 const ROUTE_TIMEOUT_MS = 8000
+
 
 const safeNumber = (value: unknown) => {
   const num = Number(value)
   return Number.isFinite(num) ? num : 0
 }
+
 
 const formatTime = (ms: number) => {
   const totalSec = Math.max(0, Math.floor(ms / 1000))
@@ -42,6 +47,7 @@ const formatTime = (ms: number) => {
     .join(":")
 }
 
+
 const sameCoord = (
   a: RouteCoord | null | undefined,
   b: RouteCoord | null | undefined
@@ -50,12 +56,14 @@ const sameCoord = (
   return a.lat === b.lat && a.lng === b.lng
 }
 
+
 function makeDriveId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID()
   }
   return `drive-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
+
 
 function composeAbortSignal(
   external?: AbortSignal,
@@ -82,8 +90,9 @@ function composeAbortSignal(
     }
   }
 
+  // FIX: use globalThis.setTimeout instead of window.setTimeout for SSR safety
   const controller = new AbortController()
-  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs)
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs)
 
   const abortHandler = () => controller.abort()
   external?.addEventListener("abort", abortHandler, { once: true })
@@ -91,11 +100,12 @@ function composeAbortSignal(
   return {
     signal: controller.signal,
     cleanup: () => {
-      window.clearTimeout(timeoutId)
+      globalThis.clearTimeout(timeoutId)
       external?.removeEventListener("abort", abortHandler)
     },
   }
 }
+
 
 async function getAccurateMileage(
   start: RouteCoord,
@@ -139,6 +149,7 @@ async function getAccurateMileage(
     return null
   }
 }
+
 
 function ActiveDriveContent({
   setScreen,
@@ -190,6 +201,7 @@ function ActiveDriveContent({
   }, [clearGpsWatch])
 
   const requestAndGetLocation = useCallback(async (): Promise<RouteCoord | null> => {
+    // Return in-flight promise if one is already running
     if (inflightLocationRef.current) {
       return inflightLocationRef.current
     }
@@ -251,6 +263,7 @@ function ActiveDriveContent({
         console.error("Location error:", err)
         return null
       } finally {
+        // Always clear the inflight ref so future calls create a new promise
         inflightLocationRef.current = null
       }
     })()
@@ -260,6 +273,7 @@ function ActiveDriveContent({
   }, [])
 
   const primeSessionCoord = useCallback((coord: RouteCoord) => {
+    // Stable: only calls setState, no captured reactive values
     useActiveDriveStore.setState((state) => {
       const s = state.session
       const hasStart = !!s.startCoord
@@ -295,7 +309,11 @@ function ActiveDriveContent({
       if (!savedStartTime) return null
 
       const snapshotTime = Date.now()
-      state.tick(undefined, snapshotTime)
+
+      // FIX: call tick via the live store action, not via the snapshot object.
+      // state.tick is the Zustand action and is a stable reference, but to be
+      // explicit and safe we pull it directly from getState() here.
+      useActiveDriveStore.getState().tick(undefined, snapshotTime)
 
       const freshState = useActiveDriveStore.getState()
       const fresh = freshState.session
@@ -408,7 +426,7 @@ function ActiveDriveContent({
   }, [])
 
   useEffect(() => {
-    const id = window.setInterval(() => {
+    const id = globalThis.setInterval(() => {
       const s = useActiveDriveStore.getState().session
       if (!s.isActive) {
         setDisplayedMs(s.dayMs + s.nightMs)
@@ -422,9 +440,10 @@ function ActiveDriveContent({
         setDisplayedMs(s.dayMs + s.nightMs)
       }
     }, 500)
-    return () => window.clearInterval(id)
+    return () => globalThis.clearInterval(id)
   }, [])
 
+  // GPS watch effect — only runs while drive is running
   useEffect(() => {
     void clearGpsWatch()
     if (!session.isRunning) return
@@ -451,12 +470,14 @@ function ActiveDriveContent({
           }
         }
 
+        // FIX: Capacitor watchPosition callback only receives one argument (position | null).
+        // Errors do not arrive as a second argument — a null position indicates failure.
         const id = await Geolocation.watchPosition(
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
-          (pos, err) => {
+          (pos) => {
             if (!mountedRef.current || !active) return
 
-            if (err || !pos) {
+            if (!pos) {
               setLocationError("Location access is required for accurate mileage.")
               return
             }
@@ -490,6 +511,7 @@ function ActiveDriveContent({
     }
   }, [session.isRunning, tick, clearGpsWatch])
 
+  // Prime initial coord when a session becomes active
   useEffect(() => {
     if (!session.isActive) return
 
@@ -512,12 +534,14 @@ function ActiveDriveContent({
     }
   }, [session.isActive, primeSessionCoord, requestAndGetLocation, tick])
 
+  // Cleanup all loops on unmount
   useEffect(() => {
     return () => {
       clearAllLoops()
     }
   }, [clearAllLoops])
 
+  // Weather help popover dismiss handlers
   useEffect(() => {
     if (!showWeatherHelp) return
 
@@ -578,7 +602,17 @@ function ActiveDriveContent({
     })
   }
 
+  // FIX: compute saveDisabled before handleStopRequest so the guard reads
+  // the correct value and not undefined (hoisting issue in original).
+  const isRunning = session.isRunning
+  const hasActiveDrive = session.isActive
+  const saveDisabled =
+    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreparingStop
+  const previewDisabled =
+    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing || isPreparingStop
+
   const handleStopRequest = () => {
+    // Guard reads the correctly computed const above
     if (saveDisabled) return
 
     wasRunningBeforeStopRef.current = session.isRunning
@@ -645,22 +679,20 @@ function ActiveDriveContent({
     try {
       setIsPreviewing(true)
       const previewDrive = await startFrozenSnapshot({ isPreview: true })
+
+      // FIX: guard against unmount completing after a long async snapshot
+      if (!mountedRef.current) return
       if (!previewDrive) return
+
       setCurrentDrive(previewDrive)
       setScreen("summary")
     } finally {
-      setIsPreviewing(false)
+      // FIX: only update state if still mounted to avoid React warning
+      if (mountedRef.current) setIsPreviewing(false)
     }
   }
 
   const formattedElapsed = formatTime(displayedMs)
-
-  const isRunning = session.isRunning
-  const hasActiveDrive = session.isActive
-  const saveDisabled =
-    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreparingStop
-  const previewDisabled =
-    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing || isPreparingStop
 
   const effectiveMode: DriveMode | null = hasActiveDrive
     ? getCurrentMode()
@@ -679,10 +711,12 @@ function ActiveDriveContent({
   <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
     <div className="w-full max-w-[46rem]">
 
+
       {/* ── TOP PANEL: Live Tracking ───────────────────────────────────── */}
       <div className="mx-auto w-full max-w-[42rem]">
         <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
+
 
           <div className="p-4 sm:p-5">
             <div className="rounded-[24px] border border-white/10 bg-[#08194A]/78 px-4 py-4 shadow-inner sm:px-5">
@@ -692,6 +726,7 @@ function ActiveDriveContent({
                     Live Tracking
                   </p>
 
+
                   <div className="mt-2 flex items-center gap-2">
                     <p className="text-sm font-medium text-white/82 sm:text-base">
                       {isRunning
@@ -700,6 +735,7 @@ function ActiveDriveContent({
                           ? "Drive Paused"
                           : "Ready to Start"}
                     </p>
+
 
                     {/* ⭐ Pulsing Green Dot */}
                     <span className="relative flex h-3 w-3 items-center justify-center">
@@ -721,6 +757,7 @@ function ActiveDriveContent({
                   </div>
                 </div>
 
+
                 <div
                   className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
                     effectiveNight
@@ -731,6 +768,7 @@ function ActiveDriveContent({
                   {effectiveNight ? "NIGHT" : "DAY"}
                 </div>
               </div>
+
 
               <div className="mt-4 rounded-full bg-[#06153E]/95 p-1">
                 <div className="grid grid-cols-3 gap-1">
@@ -756,6 +794,7 @@ function ActiveDriveContent({
                 </div>
               </div>
 
+
               <div className="mt-4 flex items-center justify-center gap-2 text-center">
                 {effectiveNight ? (
                   <MoonIcon className="h-5 w-5 text-[#f9c80e]" />
@@ -772,11 +811,13 @@ function ActiveDriveContent({
       </div>
 
 
+
         {/* ── TIMER + PLAY/PAUSE ─────────────────────────────────────────── */}
         <div className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
           <p className={`text-sm uppercase tracking-[0.18em] ${statusClass}`}>
             {statusText}
           </p>
+
 
           <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
             <button
@@ -804,17 +845,21 @@ function ActiveDriveContent({
               )}
             </button>
 
+
             <div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums text-white">
               {formattedElapsed}
             </div>
           </div>
         </div>
 
+
         {/* ── BOTTOM PANEL: Drive Summary (compact) ─────────────────────── */}
         <div className="mx-auto mt-4 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#0A1E5E] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#0A1E5E]" />
 
+
           <div className="p-4 sm:p-5">
+
 
             {/* Header */}
             <div className="flex items-center justify-between gap-3">
@@ -837,6 +882,7 @@ function ActiveDriveContent({
               </div>
             </div>
 
+
             {/* Duration + Distance stacked */}
 <div className="mt-3 flex flex-col gap-2">
   <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
@@ -847,6 +893,7 @@ function ActiveDriveContent({
       {formattedElapsed}
     </p>
   </div>
+
 
   <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
     <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
@@ -859,6 +906,7 @@ function ActiveDriveContent({
     <p className="mt-0.5 text-[9px] text-[#0A1E5E]/35">Live GPS</p>
   </div>
 </div>
+
 
 
             {/* Start Time + Lighting */}
@@ -885,6 +933,7 @@ function ActiveDriveContent({
               </div>
             </div>
 
+
             {/* Weather */}
             <div className="mt-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] px-3 py-3 shadow-sm">
               <div
@@ -906,6 +955,7 @@ function ActiveDriveContent({
                   ⓘ
                 </button>
 
+
                 {showWeatherHelp && (
                   <div
                     id={weatherHelpPanelId}
@@ -924,6 +974,7 @@ function ActiveDriveContent({
                   </div>
                 )}
               </div>
+
 
               {/* 4-col weather buttons */}
               <div className="mt-2 grid grid-cols-4 gap-1.5">
@@ -947,6 +998,7 @@ function ActiveDriveContent({
               </div>
             </div>
 
+
             {/* Location error */}
             {locationError && (
               <div className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 px-3 py-2.5 text-left shadow-sm">
@@ -958,6 +1010,7 @@ function ActiveDriveContent({
                 </p>
               </div>
             )}
+
 
             {/* Action buttons */}
             <div className="mt-4 space-y-2.5">
@@ -983,11 +1036,10 @@ function ActiveDriveContent({
                       : "Start Timer"}
                 </button>
 
+
                 <button
                   type="button"
-                  onClick={() => {
-                    void handleStopRequest()
-                  }}
+                  onClick={handleStopRequest}
                   disabled={saveDisabled}
                   className={`w-full rounded-xl py-3.5 text-sm font-bold transition ${
                     saveDisabled
@@ -998,6 +1050,7 @@ function ActiveDriveContent({
                   {isPreparingStop ? "Preparing..." : "Stop Drive"}
                 </button>
               </div>
+
 
               {/* Stop confirm dialog */}
               {showStopConfirm && (
@@ -1013,11 +1066,13 @@ function ActiveDriveContent({
                     and lighting conditions.
                   </p>
 
+
                   {isPreparingStop && (
                     <p className="mt-2 text-xs font-semibold text-[#0A1E5E]">
                       Preparing final snapshot...
                     </p>
                   )}
+
 
                   <div className="mt-3 grid grid-cols-2 gap-2 max-[380px]:grid-cols-1">
                     <button
@@ -1028,6 +1083,7 @@ function ActiveDriveContent({
                     >
                       Cancel
                     </button>
+
 
                     <button
                       type="button"
@@ -1044,6 +1100,7 @@ function ActiveDriveContent({
                   </div>
                 </div>
               )}
+
 
               <button
                 type="button"
@@ -1062,6 +1119,7 @@ function ActiveDriveContent({
             </div>
           </div>
         </div>
+
 
         <style>
           {`

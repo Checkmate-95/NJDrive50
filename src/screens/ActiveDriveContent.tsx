@@ -13,6 +13,7 @@ import {
 } from "../state/activeDriveStore"
 import { Geolocation } from "@capacitor/geolocation"
 import { Capacitor } from "@capacitor/core"
+import { ForegroundService } from "@capawesome-team/capacitor-android-foreground-service"
 
 
 type ActiveDriveContentProps = {
@@ -28,6 +29,8 @@ type DriveSnapshot = DriveEntry & {
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
 const ROUTE_TIMEOUT_MS = 8000
+const FS_NOTIFICATION_ID = 1001
+const FS_CHANNEL_ID = "njdrive50_drive"
 
 
 const safeNumber = (value: unknown) => {
@@ -90,7 +93,6 @@ function composeAbortSignal(
     }
   }
 
-  // FIX: use globalThis.setTimeout instead of window.setTimeout for SSR safety
   const controller = new AbortController()
   const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs)
 
@@ -151,6 +153,67 @@ async function getAccurateMileage(
 }
 
 
+// ─── Foreground Service helpers ────────────────────────────────────────────────
+// Only ever runs on native Android. All calls are fire-and-forget with a silent
+// catch so a foreground-service failure never crashes the drive session itself.
+
+async function ensureForegroundServiceChannel() {
+  try {
+    await ForegroundService.createNotificationChannel({
+      id: FS_CHANNEL_ID,
+      name: "NJDrive50 Active Drive",
+      description: "Keeps your drive timer and GPS running in the background.",
+      importance: 2, // IMPORTANCE_LOW — no sound, no heads-up banner
+    })
+  } catch {
+    // Channel may already exist on subsequent launches; safe to ignore
+  }
+}
+
+async function startForegroundService(body: string) {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await ensureForegroundServiceChannel()
+    await ForegroundService.startForegroundService({
+      id: FS_NOTIFICATION_ID,
+      title: "NJDrive50 — Drive Active",
+      body,
+      smallIcon: "ic_stat_directions_car",
+      silent: true,
+      notificationChannelId: FS_CHANNEL_ID,
+      serviceType: 8, // ServiceType.Location
+    })
+  } catch (err) {
+    console.warn("[ForegroundService] start failed:", err)
+  }
+}
+
+async function updateForegroundService(body: string) {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await ForegroundService.updateForegroundService({
+      id: FS_NOTIFICATION_ID,
+      title: "NJDrive50 — Drive Active",
+      body,
+      smallIcon: "ic_stat_directions_car",
+      notificationChannelId: FS_CHANNEL_ID,
+    })
+  } catch {
+    // Notification update failure is non-critical — ignore silently
+  }
+}
+
+async function stopForegroundService() {
+  if (!Capacitor.isNativePlatform()) return
+  try {
+    await ForegroundService.stopForegroundService()
+  } catch {
+    // Ignore cleanup errors
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+
 function ActiveDriveContent({
   setScreen,
   setCurrentDrive,
@@ -170,6 +233,8 @@ function ActiveDriveContent({
   const inflightLocationRef = useRef<Promise<RouteCoord | null> | null>(null)
   const activeSnapshotAbortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(true)
+  // Interval ref for keeping the foreground service notification text in sync
+  const fsUpdateIntervalRef = useRef<ReturnType<typeof globalThis.setInterval> | null>(null)
   const weatherHelpButtonId = useId()
   const weatherHelpPanelId = useId()
 
@@ -198,6 +263,11 @@ function ActiveDriveContent({
 
   const clearAllLoops = useCallback(() => {
     void clearGpsWatch()
+    // Also clear the foreground service notification update interval
+    if (fsUpdateIntervalRef.current !== null) {
+      globalThis.clearInterval(fsUpdateIntervalRef.current)
+      fsUpdateIntervalRef.current = null
+    }
   }, [clearGpsWatch])
 
   const requestAndGetLocation = useCallback(async (): Promise<RouteCoord | null> => {
@@ -310,9 +380,7 @@ function ActiveDriveContent({
 
       const snapshotTime = Date.now()
 
-      // FIX: call tick via the live store action, not via the snapshot object.
-      // state.tick is the Zustand action and is a stable reference, but to be
-      // explicit and safe we pull it directly from getState() here.
+      // Call tick via a fresh getState() to avoid stale snapshot references
       useActiveDriveStore.getState().tick(undefined, snapshotTime)
 
       const freshState = useActiveDriveStore.getState()
@@ -417,6 +485,7 @@ function ActiveDriveContent({
     return s.dayMs + s.nightMs
   })
 
+  // ── Mount / unmount ────────────────────────────────────────────────────────
   useEffect(() => {
     mountedRef.current = true
     return () => {
@@ -425,6 +494,7 @@ function ActiveDriveContent({
     }
   }, [])
 
+  // ── Display timer — ticks every 500ms ─────────────────────────────────────
   useEffect(() => {
     const id = globalThis.setInterval(() => {
       const s = useActiveDriveStore.getState().session
@@ -443,7 +513,42 @@ function ActiveDriveContent({
     return () => globalThis.clearInterval(id)
   }, [])
 
-  // GPS watch effect — only runs while drive is running
+  // ── Foreground service notification sync — updates every 30s ──────────────
+  // Keeps the Android status-bar notification in sync with elapsed time so
+  // users can glance at the notification shade and see live drive progress.
+  // The interval only runs while the drive is actively running (not paused).
+  useEffect(() => {
+    if (!session.isRunning) {
+      if (fsUpdateIntervalRef.current !== null) {
+        globalThis.clearInterval(fsUpdateIntervalRef.current)
+        fsUpdateIntervalRef.current = null
+      }
+      return
+    }
+
+    const syncNotification = () => {
+      const s = useActiveDriveStore.getState().session
+      const accumulated = s.dayMs + s.nightMs
+      const liveDelta =
+        s.lastTickAt !== null ? Math.max(0, Date.now() - s.lastTickAt) : 0
+      const elapsed = formatTime(accumulated + liveDelta)
+      const miles = safeNumber(s.liveMiles).toFixed(1)
+      void updateForegroundService(`${elapsed} elapsed · ${miles} mi`)
+    }
+
+    // Sync immediately when drive (re)starts
+    syncNotification()
+    fsUpdateIntervalRef.current = globalThis.setInterval(syncNotification, 30000)
+
+    return () => {
+      if (fsUpdateIntervalRef.current !== null) {
+        globalThis.clearInterval(fsUpdateIntervalRef.current)
+        fsUpdateIntervalRef.current = null
+      }
+    }
+  }, [session.isRunning])
+
+  // ── GPS watch — only runs while drive is running ───────────────────────────
   useEffect(() => {
     void clearGpsWatch()
     if (!session.isRunning) return
@@ -470,8 +575,8 @@ function ActiveDriveContent({
           }
         }
 
-        // FIX: Capacitor watchPosition callback only receives one argument (position | null).
-        // Errors do not arrive as a second argument — a null position indicates failure.
+        // Capacitor watchPosition callback receives one arg: (position | null).
+        // Errors do not arrive as a second argument — null position = failure.
         const id = await Geolocation.watchPosition(
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
           (pos) => {
@@ -511,7 +616,7 @@ function ActiveDriveContent({
     }
   }, [session.isRunning, tick, clearGpsWatch])
 
-  // Prime initial coord when a session becomes active
+  // ── Prime initial coord when session becomes active ────────────────────────
   useEffect(() => {
     if (!session.isActive) return
 
@@ -534,14 +639,14 @@ function ActiveDriveContent({
     }
   }, [session.isActive, primeSessionCoord, requestAndGetLocation, tick])
 
-  // Cleanup all loops on unmount
+  // ── Cleanup all loops on unmount ───────────────────────────────────────────
   useEffect(() => {
     return () => {
       clearAllLoops()
     }
   }, [clearAllLoops])
 
-  // Weather help popover dismiss handlers
+  // ── Weather help popover dismiss handlers ──────────────────────────────────
   useEffect(() => {
     if (!showWeatherHelp) return
 
@@ -567,11 +672,22 @@ function ActiveDriveContent({
     }
   }, [showWeatherHelp])
 
+  // ── Derived state — declared before handlers that reference them ───────────
+  const isRunning = session.isRunning
+  const hasActiveDrive = session.isActive
+  const saveDisabled =
+    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreparingStop
+  const previewDisabled =
+    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing || isPreparingStop
+
+  // ── Button handlers ────────────────────────────────────────────────────────
   const handlePress = async () => {
     if (isStopping || isPreviewing || isPreparingStop) return
 
     if (session.isRunning) {
       pauseDrive()
+      // Keep service alive but update notification to reflect paused state
+      void updateForegroundService("Drive paused — tap to resume")
       setShowStopConfirm(false)
       return
     }
@@ -580,16 +696,21 @@ function ActiveDriveContent({
       resumeDrive()
       setShowStopConfirm(false)
       setLocationError(null)
-
+      // Notification text will be synced by the fsUpdateInterval effect
+      void updateForegroundService("Drive resumed — tracking active")
       requestAndGetLocation().then((coord) => {
         if (coord && mountedRef.current) primeSessionCoord(coord)
       })
       return
     }
 
+    // ── Starting a brand new drive ─────────────────────────────────────────
     startDrive(Date.now(), null)
     setShowStopConfirm(false)
     setLocationError(null)
+
+    // Start foreground service — prevents Android from killing the app
+    void startForegroundService("Drive started — tracking time & location")
 
     requestAndGetLocation().then((coord) => {
       if (!mountedRef.current) return
@@ -602,17 +723,7 @@ function ActiveDriveContent({
     })
   }
 
-  // FIX: compute saveDisabled before handleStopRequest so the guard reads
-  // the correct value and not undefined (hoisting issue in original).
-  const isRunning = session.isRunning
-  const hasActiveDrive = session.isActive
-  const saveDisabled =
-    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreparingStop
-  const previewDisabled =
-    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing || isPreparingStop
-
   const handleStopRequest = () => {
-    // Guard reads the correctly computed const above
     if (saveDisabled) return
 
     wasRunningBeforeStopRef.current = session.isRunning
@@ -658,6 +769,9 @@ function ActiveDriveContent({
       setCurrentDrive(driveToSave)
       setShowStopConfirm(false)
 
+      // Drive is saved — stop the foreground service and dismiss the notification
+      void stopForegroundService()
+
       setScreen("todaysDrive")
       hardReset()
     } catch (err) {
@@ -680,14 +794,14 @@ function ActiveDriveContent({
       setIsPreviewing(true)
       const previewDrive = await startFrozenSnapshot({ isPreview: true })
 
-      // FIX: guard against unmount completing after a long async snapshot
+      // Guard against unmount completing mid-async-snapshot
       if (!mountedRef.current) return
       if (!previewDrive) return
 
       setCurrentDrive(previewDrive)
       setScreen("summary")
     } finally {
-      // FIX: only update state if still mounted to avoid React warning
+      // Only update state if still mounted to avoid React warning
       if (mountedRef.current) setIsPreviewing(false)
     }
   }

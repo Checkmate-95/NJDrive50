@@ -13,10 +13,8 @@ import {
 } from "../state/activeDriveStore"
 import { Geolocation } from "@capacitor/geolocation"
 import { Capacitor } from "@capacitor/core"
-// FIX 1: Removed top-level static import of ForegroundService.
-// A top-level import of an Android-only Capacitor plugin crashes on web and iOS
-// because the plugin is not registered in those environments. We use a lazy
-// dynamic import inside each helper so the module is only loaded on Android.
+// FIX 1: No top-level ForegroundService import — Android-only plugin crashes
+// on web/iOS if imported statically. Each helper lazy-imports it instead.
 
 
 type ActiveDriveContentProps = {
@@ -157,14 +155,12 @@ async function getAccurateMileage(
 
 
 // ─── Foreground Service helpers ────────────────────────────────────────────────
-// FIX 1 (continued): Each helper dynamically imports ForegroundService only when
-// called, and only on native Android. This prevents the plugin from being
-// evaluated on web/iOS where it is not registered, which would crash the app.
-// FIX 2: serviceType is passed as the number 8 (Android Location service type).
-// The @capawesome-team plugin accepts a raw number here — if your installed
-// version exports a ForegroundServiceType enum, you can swap 8 for
-// ForegroundServiceType.Location after confirming the import works on your
-// version. Using 8 directly avoids a compile-time type error on older versions.
+// All helpers dynamically import ForegroundService so the module is never
+// evaluated on web/iOS where the plugin is not registered.
+
+// Tracks whether startForegroundService has fully resolved so that
+// updateForegroundService never fires before the service is running.
+let fsStarted = false
 
 async function ensureForegroundServiceChannel() {
   try {
@@ -198,13 +194,23 @@ async function startForegroundService(body: string) {
       notificationChannelId: FS_CHANNEL_ID,
       serviceType: 8, // Android Location foreground service type
     })
+    // FIX: Only mark as started AFTER the native call resolves.
+    // updateForegroundService checks this flag and no-ops if false,
+    // preventing the crash where update fires before start completes.
+    fsStarted = true
   } catch (err) {
     console.warn("[ForegroundService] start failed:", err)
+    fsStarted = false
   }
 }
 
 async function updateForegroundService(body: string) {
   if (!Capacitor.isNativePlatform()) return
+  // FIX: Guard — do not call update if the service has not started yet.
+  // This is the primary crash fix: the notification sync interval was
+  // calling update immediately on mount before startForegroundService
+  // resolved, causing Android to throw a native exception.
+  if (!fsStarted) return
   try {
     const { ForegroundService } = await import(
       "@capawesome-team/capacitor-android-foreground-service"
@@ -223,6 +229,7 @@ async function updateForegroundService(body: string) {
 
 async function stopForegroundService() {
   if (!Capacitor.isNativePlatform()) return
+  fsStarted = false
   try {
     const { ForegroundService } = await import(
       "@capawesome-team/capacitor-android-foreground-service"
@@ -233,6 +240,7 @@ async function stopForegroundService() {
   }
 }
 // ──────────────────────────────────────────────────────────────────────────────
+
 
 function ActiveDriveContent({
   setScreen,
@@ -253,7 +261,6 @@ function ActiveDriveContent({
   const inflightLocationRef = useRef<Promise<RouteCoord | null> | null>(null)
   const activeSnapshotAbortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(true)
-  // Interval ref for keeping the foreground service notification text in sync
   const fsUpdateIntervalRef = useRef<ReturnType<typeof globalThis.setInterval> | null>(null)
   const weatherHelpButtonId = useId()
   const weatherHelpPanelId = useId()
@@ -283,7 +290,6 @@ function ActiveDriveContent({
 
   const clearAllLoops = useCallback(() => {
     void clearGpsWatch()
-    // Also clear the foreground service notification update interval
     if (fsUpdateIntervalRef.current !== null) {
       globalThis.clearInterval(fsUpdateIntervalRef.current)
       fsUpdateIntervalRef.current = null
@@ -291,7 +297,6 @@ function ActiveDriveContent({
   }, [clearGpsWatch])
 
   const requestAndGetLocation = useCallback(async (): Promise<RouteCoord | null> => {
-    // Return in-flight promise if one is already running
     if (inflightLocationRef.current) {
       return inflightLocationRef.current
     }
@@ -353,7 +358,6 @@ function ActiveDriveContent({
         console.error("Location error:", err)
         return null
       } finally {
-        // Always clear the inflight ref so future calls create a new promise
         inflightLocationRef.current = null
       }
     })()
@@ -363,7 +367,6 @@ function ActiveDriveContent({
   }, [])
 
   const primeSessionCoord = useCallback((coord: RouteCoord) => {
-    // Stable: only calls setState, no captured reactive values
     useActiveDriveStore.setState((state) => {
       const s = state.session
       const hasStart = !!s.startCoord
@@ -400,7 +403,6 @@ function ActiveDriveContent({
 
       const snapshotTime = Date.now()
 
-      // Call tick via a fresh getState() to avoid stale snapshot references
       useActiveDriveStore.getState().tick(undefined, snapshotTime)
 
       const freshState = useActiveDriveStore.getState()
@@ -534,9 +536,14 @@ function ActiveDriveContent({
   }, [])
 
   // ── Foreground service notification sync — updates every 30s ──────────────
-  // Keeps the Android status-bar notification in sync with elapsed time so
-  // users can glance at the notification shade and see live drive progress.
-  // The interval only runs while the drive is actively running (not paused).
+  // FIX: Removed the immediate syncNotification() call that was here before.
+  // Calling updateForegroundService() immediately when session.isRunning
+  // becomes true caused a crash because startForegroundService() (called in
+  // handlePress) had not yet resolved — Android threw a native exception
+  // trying to update a service that hadn't started. The fsStarted flag in
+  // updateForegroundService() is the primary guard, but we also delay the
+  // first interval tick by 2 seconds to give the native start call time to
+  // fully resolve before any update is attempted.
   useEffect(() => {
     if (!session.isRunning) {
       if (fsUpdateIntervalRef.current !== null) {
@@ -556,11 +563,17 @@ function ActiveDriveContent({
       void updateForegroundService(`${elapsed} elapsed · ${miles} mi`)
     }
 
-    // Sync immediately when drive (re)starts
-    syncNotification()
-    fsUpdateIntervalRef.current = globalThis.setInterval(syncNotification, 30000)
+    // Delay first sync by 2s to ensure startForegroundService has resolved.
+    // The fsStarted guard in updateForegroundService is the hard safety net;
+    // this delay just avoids the unnecessary no-op on the first tick.
+    const firstSyncTimeout = globalThis.setTimeout(() => {
+      if (!mountedRef.current) return
+      syncNotification()
+      fsUpdateIntervalRef.current = globalThis.setInterval(syncNotification, 30000)
+    }, 2000)
 
     return () => {
+      globalThis.clearTimeout(firstSyncTimeout)
       if (fsUpdateIntervalRef.current !== null) {
         globalThis.clearInterval(fsUpdateIntervalRef.current)
         fsUpdateIntervalRef.current = null
@@ -595,8 +608,6 @@ function ActiveDriveContent({
           }
         }
 
-        // Capacitor watchPosition callback receives one arg: (position | null).
-        // Errors do not arrive as a second argument — null position = failure.
         const id = await Geolocation.watchPosition(
           { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
           (pos) => {
@@ -660,9 +671,6 @@ function ActiveDriveContent({
   }, [session.isActive, primeSessionCoord, requestAndGetLocation, tick])
 
   // ── Cleanup all loops on unmount ───────────────────────────────────────────
-  // FIX 3 & 4: Also stop the foreground service on unmount so it doesn't
-  // run orphaned in the Android background if the component is torn down
-  // without going through handleSaveDrive (e.g. a hard nav change or force kill).
   useEffect(() => {
     return () => {
       clearAllLoops()
@@ -696,7 +704,7 @@ function ActiveDriveContent({
     }
   }, [showWeatherHelp])
 
-  // ── Derived state — declared before handlers that reference them ───────────
+  // ── Derived state ──────────────────────────────────────────────────────────
   const isRunning = session.isRunning
   const hasActiveDrive = session.isActive
   const saveDisabled =
@@ -710,7 +718,6 @@ function ActiveDriveContent({
 
     if (session.isRunning) {
       pauseDrive()
-      // Keep service alive but update notification to reflect paused state
       void updateForegroundService("Drive paused — tap to resume")
       setShowStopConfirm(false)
       return
@@ -720,10 +727,7 @@ function ActiveDriveContent({
       resumeDrive()
       setShowStopConfirm(false)
       setLocationError(null)
-      // FIX 3: On resume, always call startForegroundService (not update) so
-      // the service is guaranteed to be running regardless of whether it was
-      // killed while the app was in the background. startForegroundService is
-      // idempotent on Android when the service is already running.
+      // On resume, call start (not update) so service is guaranteed running
       void startForegroundService("Drive resumed — tracking active")
       requestAndGetLocation().then((coord) => {
         if (coord && mountedRef.current) primeSessionCoord(coord)
@@ -731,12 +735,10 @@ function ActiveDriveContent({
       return
     }
 
-    // ── Starting a brand new drive ─────────────────────────────────────────
     startDrive(Date.now(), null)
     setShowStopConfirm(false)
     setLocationError(null)
 
-    // Start foreground service — prevents Android from killing the app
     void startForegroundService("Drive started — tracking time & location")
 
     requestAndGetLocation().then((coord) => {
@@ -796,7 +798,6 @@ function ActiveDriveContent({
       setCurrentDrive(driveToSave)
       setShowStopConfirm(false)
 
-      // Drive is saved — stop the foreground service and dismiss the notification
       void stopForegroundService()
 
       setScreen("todaysDrive")
@@ -821,14 +822,12 @@ function ActiveDriveContent({
       setIsPreviewing(true)
       const previewDrive = await startFrozenSnapshot({ isPreview: true })
 
-      // Guard against unmount completing mid-async-snapshot
       if (!mountedRef.current) return
       if (!previewDrive) return
 
       setCurrentDrive(previewDrive)
       setScreen("summary")
     } finally {
-      // Only update state if still mounted to avoid React warning
       if (mountedRef.current) setIsPreviewing(false)
     }
   }
@@ -852,12 +851,10 @@ function ActiveDriveContent({
   <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
     <div className="w-full max-w-[46rem]">
 
-
       {/* ── TOP PANEL: Live Tracking ───────────────────────────────────── */}
       <div className="mx-auto w-full max-w-[42rem]">
         <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
-
 
           <div className="p-4 sm:p-5">
             <div className="rounded-[24px] border border-white/10 bg-[#08194A]/78 px-4 py-4 shadow-inner sm:px-5">
@@ -867,7 +864,6 @@ function ActiveDriveContent({
                     Live Tracking
                   </p>
 
-
                   <div className="mt-2 flex items-center gap-2">
                     <p className="text-sm font-medium text-white/82 sm:text-base">
                       {isRunning
@@ -876,7 +872,6 @@ function ActiveDriveContent({
                           ? "Drive Paused"
                           : "Ready to Start"}
                     </p>
-
 
                     {/* ⭐ Pulsing Green Dot */}
                     <span className="relative flex h-3 w-3 items-center justify-center">
@@ -898,7 +893,6 @@ function ActiveDriveContent({
                   </div>
                 </div>
 
-
                 <div
                   className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
                     effectiveNight
@@ -909,7 +903,6 @@ function ActiveDriveContent({
                   {effectiveNight ? "NIGHT" : "DAY"}
                 </div>
               </div>
-
 
               <div className="mt-4 rounded-full bg-[#06153E]/95 p-1">
                 <div className="grid grid-cols-3 gap-1">
@@ -935,7 +928,6 @@ function ActiveDriveContent({
                 </div>
               </div>
 
-
               <div className="mt-4 flex items-center justify-center gap-2 text-center">
                 {effectiveNight ? (
                   <MoonIcon className="h-5 w-5 text-[#f9c80e]" />
@@ -951,14 +943,11 @@ function ActiveDriveContent({
         </div>
       </div>
 
-
-
         {/* ── TIMER + PLAY/PAUSE ─────────────────────────────────────────── */}
         <div className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
           <p className={`text-sm uppercase tracking-[0.18em] ${statusClass}`}>
             {statusText}
           </p>
-
 
           <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
             <button
@@ -986,21 +975,17 @@ function ActiveDriveContent({
               )}
             </button>
 
-
             <div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums text-white">
               {formattedElapsed}
             </div>
           </div>
         </div>
 
-
         {/* ── BOTTOM PANEL: Drive Summary (compact) ─────────────────────── */}
         <div className="mx-auto mt-4 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#0A1E5E] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#0A1E5E]" />
 
-
           <div className="p-4 sm:p-5">
-
 
             {/* Header */}
             <div className="flex items-center justify-between gap-3">
@@ -1023,7 +1008,6 @@ function ActiveDriveContent({
               </div>
             </div>
 
-
             {/* Duration + Distance stacked */}
 <div className="mt-3 flex flex-col gap-2">
   <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
@@ -1034,7 +1018,6 @@ function ActiveDriveContent({
       {formattedElapsed}
     </p>
   </div>
-
 
   <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
     <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
@@ -1047,8 +1030,6 @@ function ActiveDriveContent({
     <p className="mt-0.5 text-[9px] text-[#0A1E5E]/35">Live GPS</p>
   </div>
 </div>
-
-
 
             {/* Start Time + Lighting */}
             <div className="mt-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] px-3 py-3 shadow-sm">
@@ -1074,7 +1055,6 @@ function ActiveDriveContent({
               </div>
             </div>
 
-
             {/* Weather */}
             <div className="mt-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] px-3 py-3 shadow-sm">
               <div
@@ -1096,7 +1076,6 @@ function ActiveDriveContent({
                   ⓘ
                 </button>
 
-
                 {showWeatherHelp && (
                   <div
                     id={weatherHelpPanelId}
@@ -1115,7 +1094,6 @@ function ActiveDriveContent({
                   </div>
                 )}
               </div>
-
 
               {/* 4-col weather buttons */}
               <div className="mt-2 grid grid-cols-4 gap-1.5">
@@ -1139,7 +1117,6 @@ function ActiveDriveContent({
               </div>
             </div>
 
-
             {/* Location error */}
             {locationError && (
               <div className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 px-3 py-2.5 text-left shadow-sm">
@@ -1151,7 +1128,6 @@ function ActiveDriveContent({
                 </p>
               </div>
             )}
-
 
             {/* Action buttons */}
             <div className="mt-4 space-y-2.5">
@@ -1177,7 +1153,6 @@ function ActiveDriveContent({
                       : "Start Timer"}
                 </button>
 
-
                 <button
                   type="button"
                   onClick={handleStopRequest}
@@ -1191,7 +1166,6 @@ function ActiveDriveContent({
                   {isPreparingStop ? "Preparing..." : "Stop Drive"}
                 </button>
               </div>
-
 
               {/* Stop confirm dialog */}
               {showStopConfirm && (
@@ -1207,13 +1181,11 @@ function ActiveDriveContent({
                     and lighting conditions.
                   </p>
 
-
                   {isPreparingStop && (
                     <p className="mt-2 text-xs font-semibold text-[#0A1E5E]">
                       Preparing final snapshot...
                     </p>
                   )}
-
 
                   <div className="mt-3 grid grid-cols-2 gap-2 max-[380px]:grid-cols-1">
                     <button
@@ -1224,7 +1196,6 @@ function ActiveDriveContent({
                     >
                       Cancel
                     </button>
-
 
                     <button
                       type="button"
@@ -1241,7 +1212,6 @@ function ActiveDriveContent({
                   </div>
                 </div>
               )}
-
 
               <button
                 type="button"
@@ -1260,7 +1230,6 @@ function ActiveDriveContent({
             </div>
           </div>
         </div>
-
 
         <style>
           {`

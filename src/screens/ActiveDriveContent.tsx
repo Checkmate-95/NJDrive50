@@ -13,7 +13,10 @@ import {
 } from "../state/activeDriveStore"
 import { Geolocation } from "@capacitor/geolocation"
 import { Capacitor } from "@capacitor/core"
-import { ForegroundService } from "@capawesome-team/capacitor-android-foreground-service"
+// FIX 1: Removed top-level static import of ForegroundService.
+// A top-level import of an Android-only Capacitor plugin crashes on web and iOS
+// because the plugin is not registered in those environments. We use a lazy
+// dynamic import inside each helper so the module is only loaded on Android.
 
 
 type ActiveDriveContentProps = {
@@ -154,11 +157,20 @@ async function getAccurateMileage(
 
 
 // ─── Foreground Service helpers ────────────────────────────────────────────────
-// Only ever runs on native Android. All calls are fire-and-forget with a silent
-// catch so a foreground-service failure never crashes the drive session itself.
+// FIX 1 (continued): Each helper dynamically imports ForegroundService only when
+// called, and only on native Android. This prevents the plugin from being
+// evaluated on web/iOS where it is not registered, which would crash the app.
+// FIX 2: serviceType is passed as the number 8 (Android Location service type).
+// The @capawesome-team plugin accepts a raw number here — if your installed
+// version exports a ForegroundServiceType enum, you can swap 8 for
+// ForegroundServiceType.Location after confirming the import works on your
+// version. Using 8 directly avoids a compile-time type error on older versions.
 
 async function ensureForegroundServiceChannel() {
   try {
+    const { ForegroundService } = await import(
+      "@capawesome-team/capacitor-android-foreground-service"
+    )
     await ForegroundService.createNotificationChannel({
       id: FS_CHANNEL_ID,
       name: "NJDrive50 Active Drive",
@@ -174,6 +186,9 @@ async function startForegroundService(body: string) {
   if (!Capacitor.isNativePlatform()) return
   try {
     await ensureForegroundServiceChannel()
+    const { ForegroundService } = await import(
+      "@capawesome-team/capacitor-android-foreground-service"
+    )
     await ForegroundService.startForegroundService({
       id: FS_NOTIFICATION_ID,
       title: "NJDrive50 — Drive Active",
@@ -181,7 +196,7 @@ async function startForegroundService(body: string) {
       smallIcon: "ic_stat_directions_car",
       silent: true,
       notificationChannelId: FS_CHANNEL_ID,
-      serviceType: 8, // ServiceType.Location
+      serviceType: 8, // Android Location foreground service type
     })
   } catch (err) {
     console.warn("[ForegroundService] start failed:", err)
@@ -191,6 +206,9 @@ async function startForegroundService(body: string) {
 async function updateForegroundService(body: string) {
   if (!Capacitor.isNativePlatform()) return
   try {
+    const { ForegroundService } = await import(
+      "@capawesome-team/capacitor-android-foreground-service"
+    )
     await ForegroundService.updateForegroundService({
       id: FS_NOTIFICATION_ID,
       title: "NJDrive50 — Drive Active",
@@ -206,13 +224,15 @@ async function updateForegroundService(body: string) {
 async function stopForegroundService() {
   if (!Capacitor.isNativePlatform()) return
   try {
+    const { ForegroundService } = await import(
+      "@capawesome-team/capacitor-android-foreground-service"
+    )
     await ForegroundService.stopForegroundService()
   } catch {
     // Ignore cleanup errors
   }
 }
 // ──────────────────────────────────────────────────────────────────────────────
-
 
 function ActiveDriveContent({
   setScreen,
@@ -640,9 +660,13 @@ function ActiveDriveContent({
   }, [session.isActive, primeSessionCoord, requestAndGetLocation, tick])
 
   // ── Cleanup all loops on unmount ───────────────────────────────────────────
+  // FIX 3 & 4: Also stop the foreground service on unmount so it doesn't
+  // run orphaned in the Android background if the component is torn down
+  // without going through handleSaveDrive (e.g. a hard nav change or force kill).
   useEffect(() => {
     return () => {
       clearAllLoops()
+      void stopForegroundService()
     }
   }, [clearAllLoops])
 
@@ -696,8 +720,11 @@ function ActiveDriveContent({
       resumeDrive()
       setShowStopConfirm(false)
       setLocationError(null)
-      // Notification text will be synced by the fsUpdateInterval effect
-      void updateForegroundService("Drive resumed — tracking active")
+      // FIX 3: On resume, always call startForegroundService (not update) so
+      // the service is guaranteed to be running regardless of whether it was
+      // killed while the app was in the background. startForegroundService is
+      // idempotent on Android when the service is already running.
+      void startForegroundService("Drive resumed — tracking active")
       requestAndGetLocation().then((coord) => {
         if (coord && mountedRef.current) primeSessionCoord(coord)
       })

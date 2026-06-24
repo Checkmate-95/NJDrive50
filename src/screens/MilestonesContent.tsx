@@ -100,27 +100,30 @@ export default function MilestonesContent() {
         <div className="relative border-b border-[#08194A]/8 bg-white p-6 pb-8 text-[#08194A] sm:p-8 sm:pb-10">
   <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#f9c80e] via-[#FFF4C2] to-[#08194A]" />
 
-  <button
-    type="button"
-    onClick={() => goBack("summary")}
-    className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] text-[#08194A]/70 shadow-sm transition hover:bg-[#EEF3FA] hover:text-[#08194A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#f9c80e]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:right-6 sm:top-6"
-    aria-label="Close milestones"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2}
-      aria-hidden="true"
+  {/* ✅ X button row — sits above the badge, aligned right, doesn't touch center content */}
+  <div className="mb-3 flex justify-end">
+    <button
+      type="button"
+      onClick={() => goBack("summary")}
+      className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] text-[#08194A]/70 shadow-sm transition hover:bg-[#EEF3FA] hover:text-[#08194A] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#f9c80e]/55 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+      aria-label="Close milestones"
     >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-  </button>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+        aria-hidden="true"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+  </div>
 
-  {/* ✅ pr-14 on mobile creates clearance for the absolute X button */}
-  <div className="pr-14 text-center sm:pr-0">
+  {/* Badge + title — fully centered, no interference */}
+  <div className="text-center">
     <div className="inline-flex items-center rounded-full border border-[#f9c80e]/40 bg-[#FFF7DB] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#8A6500]">
       Progress Milestones
     </div>

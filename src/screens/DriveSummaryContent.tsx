@@ -1,7 +1,12 @@
+// src/screens/DriveSummaryContent.tsx
 import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from "react"
 import type { Screen } from "../App"
 import { computeDriveScoreV2 } from "../utils/driveLogic"
-import { useDriveHistory, type DriveEntry } from "../state/driveStore"
+import {
+  useDriveHistory,
+  type DriveEntry,
+  isDriveVerified,          // ✅ imported from store — single source of truth
+} from "../state/driveStore"
 import { useTeenPhoto } from "../state/profileStore"
 import { navigate } from "../navigation/navMap"
 import { useActiveDriveStore } from "../state/activeDriveStore"
@@ -22,11 +27,7 @@ const formatHours = (hours: number) => {
   const safeHours = Number.isFinite(hours) ? Math.max(hours, 0) : 0
   const wholeHours = Math.floor(safeHours)
   const minutes = Math.round((safeHours - wholeHours) * 60)
-
-  if (minutes === 60) {
-    return `${wholeHours + 1}h 0m`
-  }
-
+  if (minutes === 60) return `${wholeHours + 1}h 0m`
   return `${wholeHours}h ${minutes}m`
 }
 
@@ -35,7 +36,6 @@ const formatClock = (totalSeconds: number) => {
   const hours = Math.floor(safeSeconds / 3600)
   const minutes = Math.floor((safeSeconds % 3600) / 60)
   const seconds = safeSeconds % 60
-
   return [hours, minutes, seconds]
     .map((part) => String(part).padStart(2, "0"))
     .join(":")
@@ -50,13 +50,11 @@ const getLightingLabel = (
   return "Day"
 }
 
-const toTimestamp = (value: unknown) => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string") {
-    const parsed = Date.parse(value)
-    return Number.isFinite(parsed) ? parsed : 0
-  }
-  return 0
+// ✅ Effective night hours — prefer verifiedNightDurationHours if present
+function getEffectiveNightHours(drive: DriveEntry): number {
+  const verified = safeNumber(drive.verifiedNightDurationHours)
+  const estimated = safeNumber(drive.nightDurationHours)
+  return verified > 0 ? verified : estimated
 }
 
 export default function DriveSummaryContent({
@@ -72,15 +70,11 @@ export default function DriveSummaryContent({
   const [teenImgFailed, setTeenImgFailed] = useState(false)
   const [showScoreHelp, setShowScoreHelp] = useState(false)
 
-  // Stable onError handler — prevents re-creation on every render which could
-  // flicker or reset the error state unexpectedly on Android WebView
   const handleTeenImgError = useCallback(() => setTeenImgFailed(true), [])
 
   const lastDrive: DriveEntry | null = useMemo(() => {
     if (drives.length === 0) return null
-    return [...drives].sort(
-      (a, b) => toTimestamp(b.startTime) - toTimestamp(a.startTime)
-    )[0]
+    return [...drives].sort((a, b) => b.startTime.localeCompare(a.startTime))[0]
   }, [drives])
 
   const hasActiveDrive = !!activeSession?.isActive
@@ -100,66 +94,34 @@ export default function DriveSummaryContent({
     const totals = drives.reduce(
       (acc, d) => {
         acc.totalHours += safeNumber(d.totalDurationHours)
-        acc.dayHours += safeNumber(d.dayDurationHours)
-
-        const verified = safeNumber(d.verifiedNightDurationHours)
-        const estimated = safeNumber(d.nightDurationHours)
-        acc.nightHours += verified > 0 ? verified : estimated
-
+        acc.dayHours   += safeNumber(d.dayDurationHours)
+        acc.nightHours += getEffectiveNightHours(d)
         acc.totalMilesValue += safeNumber(d.miles)
         return acc
       },
-      {
-        totalHours: 0,
-        dayHours: 0,
-        nightHours: 0,
-        totalMilesValue: 0,
-      }
+      { totalHours: 0, dayHours: 0, nightHours: 0, totalMilesValue: 0 }
     )
 
-    const remainingTotalHours = Math.max(
-      REQUIRED_TOTAL_HOURS - totals.totalHours,
-      0
-    )
-    const remainingNightHours = Math.max(
-      REQUIRED_NIGHT_HOURS - totals.nightHours,
-      0
-    )
+    const remainingTotalHours = Math.max(REQUIRED_TOTAL_HOURS - totals.totalHours, 0)
+    const remainingNightHours = Math.max(REQUIRED_NIGHT_HOURS - totals.nightHours, 0)
 
     return {
       ...totals,
       remainingTotalHours,
       remainingNightHours,
-      progressPercent: Math.min(
-        (totals.totalHours / REQUIRED_TOTAL_HOURS) * 100,
-        100
-      ),
-      nightProgressPercent: Math.min(
-        (totals.nightHours / REQUIRED_NIGHT_HOURS) * 100,
-        100
-      ),
+      progressPercent: Math.min((totals.totalHours / REQUIRED_TOTAL_HOURS) * 100, 100),
+      nightProgressPercent: Math.min((totals.nightHours / REQUIRED_NIGHT_HOURS) * 100, 100),
       isFullyCompliant:
         totals.totalHours >= REQUIRED_TOTAL_HOURS &&
         totals.nightHours >= REQUIRED_NIGHT_HOURS,
     }
   }, [drives])
 
-  const lastDriveDayHours = hasLastDrive
-    ? safeNumber(lastDrive?.dayDurationHours)
-    : 0
-
-  const lastDriveNightHours = hasLastDrive
-    ? (() => {
-        const verified = safeNumber(lastDrive?.verifiedNightDurationHours)
-        const estimated = safeNumber(lastDrive?.nightDurationHours)
-        return verified > 0 ? verified : estimated
-      })()
-    : 0
-
-  const lastDriveTimeOfDay = hasLastDrive
+  const lastDriveDayHours   = hasLastDrive ? safeNumber(lastDrive?.dayDurationHours) : 0
+  const lastDriveNightHours = hasLastDrive ? getEffectiveNightHours(lastDrive!) : 0
+  const lastDriveTimeOfDay  = hasLastDrive
     ? getLightingLabel(lastDriveDayHours, lastDriveNightHours)
     : "—"
-
   const lastDriveMinutes = hasLastDrive
     ? Math.round(safeNumber(lastDrive?.totalDurationHours) * 60)
     : 0
@@ -169,7 +131,7 @@ export default function DriveSummaryContent({
         minutes: lastDriveMinutes,
         isNight: lastDriveNightHours > 0,
         weather: lastDrive?.weather || "Clear",
-        confirmed: true,
+        confirmed: isDriveVerified(lastDrive!),   // ✅ uses store helper
       })
     : 0
 
@@ -181,35 +143,18 @@ export default function DriveSummaryContent({
     if (isFullyCompliant) {
       return "✅ 50 supervised hours and 10 night hours completed — ready for NJ MVC supervised-driving certification."
     }
-
     if (totalHours >= REQUIRED_TOTAL_HOURS && nightHours < REQUIRED_NIGHT_HOURS) {
-      return `Total hours complete, but you still need ${formatHours(
-        remainingNightHours
-      )} of night driving to meet NJ MVC requirements.`
+      return `Total hours complete, but you still need ${formatHours(remainingNightHours)} of night driving to meet NJ MVC requirements.`
     }
-
     if (progressPercent >= 80) {
-      return `Almost there — ${formatHours(
-        remainingTotalHours
-      )} total and ${formatHours(
-        remainingNightHours
-      )} night hours remaining.`
+      return `Almost there — ${formatHours(remainingTotalHours)} total and ${formatHours(remainingNightHours)} night hours remaining.`
     }
-
     if (progressPercent >= 50) {
-      return `Good progress — ${formatHours(
-        remainingTotalHours
-      )} total and ${formatHours(
-        remainingNightHours
-      )} night hours still needed.`
+      return `Good progress — ${formatHours(remainingTotalHours)} total and ${formatHours(remainingNightHours)} night hours still needed.`
     }
-
     if (progressPercent >= 1) {
-      return `Progress building — keep logging supervised drives. Remaining: ${formatHours(
-        remainingTotalHours
-      )} total and ${formatHours(remainingNightHours)} night hours.`
+      return `Progress building — keep logging supervised drives. Remaining: ${formatHours(remainingTotalHours)} total and ${formatHours(remainingNightHours)} night hours.`
     }
-
     return "Start logging drives to begin building NJ MVC supervised-driving progress."
   }, [
     isFullyCompliant,
@@ -246,22 +191,10 @@ export default function DriveSummaryContent({
     hardReset()
     navigate("summary", "startNew", setScreen)
   }
-
-  const handleContinueDrive = () => {
-    navigate("summary", "continue", setScreen)
-  }
-
-  const handleGoHistory = () => {
-    navigate("summary", "history", setScreen)
-  }
-
-  const handleGoMilestones = () => {
-    navigate("summary", "milestones", setScreen)
-  }
-
-  const handleGoDmv = () => {
-    navigate("summary", "dmv", setScreen)
-  }
+  const handleContinueDrive = () => navigate("summary", "continue",   setScreen)
+  const handleGoHistory     = () => navigate("summary", "history",    setScreen)
+  const handleGoMilestones  = () => navigate("summary", "milestones", setScreen)
+  const handleGoDmv         = () => navigate("summary", "dmv",        setScreen)
 
   const lastDriveHoursParts = hasActiveDrive
     ? formatHours(activeDurationSeconds / 3600).split(" ")
@@ -287,7 +220,6 @@ export default function DriveSummaryContent({
                   status before heading back out.
                 </p>
               </div>
-
               <div className="flex justify-center sm:justify-end">
                 {teenPhoto && !teenImgFailed ? (
                   <img
@@ -351,87 +283,52 @@ export default function DriveSummaryContent({
 
           <div className="mt-5 rounded-[28px] border border-[#0A1E5E]/10 bg-[#F7F9FC] p-4 shadow-sm sm:p-5">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
-                  Total<br />Hours
-                </p>
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">Total<br />Hours</p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">
-                    {formatHours(totalHours).split(" ")[0]}
-                  </span>
-                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">
-                    {formatHours(totalHours).split(" ")[1]}
-                  </span>
+                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">{formatHours(totalHours).split(" ")[0]}</span>
+                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">{formatHours(totalHours).split(" ")[1]}</span>
                 </p>
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
-                  Day<br />Hours
-                </p>
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">Day<br />Hours</p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">
-                    {formatHours(dayHours).split(" ")[0]}
-                  </span>
-                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">
-                    {formatHours(dayHours).split(" ")[1]}
-                  </span>
+                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">{formatHours(dayHours).split(" ")[0]}</span>
+                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">{formatHours(dayHours).split(" ")[1]}</span>
                 </p>
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
-                  Night<br />Hours
-                </p>
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">Night<br />Hours</p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">
-                    {formatHours(nightHours).split(" ")[0]}
-                  </span>
-                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">
-                    {formatHours(nightHours).split(" ")[1]}
-                  </span>
+                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">{formatHours(nightHours).split(" ")[0]}</span>
+                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">{formatHours(nightHours).split(" ")[1]}</span>
                 </p>
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
-                  Night<br />Remain
-                </p>
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">Night<br />Remain</p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">
-                    {formatHours(remainingNightHours).split(" ")[0]}
-                  </span>
-                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">
-                    {formatHours(remainingNightHours).split(" ")[1]}
-                  </span>
+                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">{formatHours(remainingNightHours).split(" ")[0]}</span>
+                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">{formatHours(remainingNightHours).split(" ")[1]}</span>
                 </p>
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
-                  Total<br />Remain
-                </p>
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">Total<br />Remain</p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">
-                    {formatHours(remainingTotalHours).split(" ")[0]}
-                  </span>
-                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">
-                    {formatHours(remainingTotalHours).split(" ")[1]}
-                  </span>
+                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">{formatHours(remainingTotalHours).split(" ")[0]}</span>
+                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">{formatHours(remainingTotalHours).split(" ")[1]}</span>
                 </p>
               </div>
 
               <div className="flex min-h-[110px] flex-col items-center justify-center rounded-2xl border border-[#0A1E5E]/10 bg-white p-3 text-center shadow-sm">
-                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">
-                  Last<br />Drive
-                </p>
+                <p className="text-[10px] leading-tight tracking-[0.12em] text-[#0A1E5E]/55 uppercase">Last<br />Drive</p>
                 <p className="mt-2 flex items-baseline justify-center space-x-1 text-[#08194A]">
-                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">
-                    {lastDriveHoursParts[0] ?? "—"}
-                  </span>
-                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">
-                    {lastDriveHoursParts[1] ?? ""}
-                  </span>
+                  <span className="text-[1.1rem] font-bold leading-none tabular-nums sm:text-[1.2rem]">{lastDriveHoursParts[0] ?? "—"}</span>
+                  <span className="text-[0.8rem] font-semibold leading-none tabular-nums sm:text-[0.9rem]">{lastDriveHoursParts[1] ?? ""}</span>
                 </p>
               </div>
 
@@ -440,26 +337,18 @@ export default function DriveSummaryContent({
                   <div>
                     <p className="text-[11px] leading-tight tracking-[0.16em] text-[#0A1E5E]/55 uppercase">
                       Total<br />Miles
-                      <span className="ml-1.5 rounded-full border border-[#0A1E5E]/10 bg-[#F4F6FA] px-1.5 py-0.5 text-[9px] font-bold tracking-[0.1em] text-[#0A1E5E]/45">
-                        INFO
-                      </span>
+                      <span className="ml-1.5 rounded-full border border-[#0A1E5E]/10 bg-[#F4F6FA] px-1.5 py-0.5 text-[9px] font-bold tracking-[0.1em] text-[#0A1E5E]/45">INFO</span>
                     </p>
                     <p className="mt-2 text-2xl font-black leading-none tracking-tight text-[#08194A] tabular-nums sm:text-3xl">
                       {totalMilesValue.toFixed(1)}
-                      <span className="ml-1 text-base font-bold text-[#0A1E5E]/65">
-                        mi
-                      </span>
+                      <span className="ml-1 text-base font-bold text-[#0A1E5E]/65">mi</span>
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[11px] leading-tight tracking-[0.16em] text-[#0A1E5E]/55 uppercase">
-                      Last<br />Drive<br />Miles
-                    </p>
+                    <p className="text-[11px] leading-tight tracking-[0.16em] text-[#0A1E5E]/55 uppercase">Last<br />Drive<br />Miles</p>
                     <p className="mt-2 text-xl font-black leading-none tracking-tight text-[#08194A] tabular-nums sm:text-2xl">
                       {lastDriveMiles}
-                      <span className="ml-1 text-sm font-bold text-[#0A1E5E]/65">
-                        mi
-                      </span>
+                      <span className="ml-1 text-sm font-bold text-[#0A1E5E]/65">mi</span>
                     </p>
                   </div>
                 </div>
@@ -497,26 +386,19 @@ export default function DriveSummaryContent({
             </div>
 
             <p className="mt-4 text-center text-xs text-[#0A1E5E]/60">
-              NJ supervised-driving progress is tracked here as 50 total hours
-              with 10 night hours.
+              NJ supervised-driving progress is tracked here as 50 total hours with 10 night hours.
             </p>
           </div>
 
           <div className="mt-5 rounded-[28px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white shadow-[0_14px_34px_rgba(10,30,94,0.18)] sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">
-                  Next Steps
-                </p>
-                <h2 className="mt-1 text-lg font-bold sm:text-xl">
-                  Choose your next action
-                </h2>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">Next Steps</p>
+                <h2 className="mt-1 text-lg font-bold sm:text-xl">Choose your next action</h2>
                 <p className="mt-1 max-w-[34rem] text-sm leading-relaxed text-white/72">
-                  Continue an active session or review history, milestones, and
-                  downloadable records.
+                  Continue an active session or review history, milestones, and downloadable records.
                 </p>
               </div>
-
               <div className="w-fit rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.14em] text-white/85">
                 {sessionBadgeLabel}
               </div>
@@ -524,48 +406,31 @@ export default function DriveSummaryContent({
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {hasActiveDrive ? (
-                <button
-                  type="button"
-                  onClick={handleContinueDrive}
-                  className="w-full rounded-xl bg-white py-3.5 font-semibold text-[#08194A] shadow-md transition hover:bg-white/95"
-                >
+                <button type="button" onClick={handleContinueDrive}
+                  className="w-full rounded-xl bg-white py-3.5 font-semibold text-[#08194A] shadow-md transition hover:bg-white/95">
                   Continue Drive
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={handleStartNewDrive}
-                  className="w-full rounded-xl bg-[#f9c80e] py-3.5 font-semibold text-[#08194A] shadow-md transition hover:brightness-105"
-                >
+                <button type="button" onClick={handleStartNewDrive}
+                  className="w-full rounded-xl bg-[#f9c80e] py-3.5 font-semibold text-[#08194A] shadow-md transition hover:brightness-105">
                   Start New Drive
                 </button>
               )}
-
-              <button
-                type="button"
-                onClick={handleGoHistory}
-                className="w-full rounded-xl bg-white/10 py-3.5 font-semibold text-white shadow-md transition hover:bg-white/15"
-              >
+              <button type="button" onClick={handleGoHistory}
+                className="w-full rounded-xl bg-white/10 py-3.5 font-semibold text-white shadow-md transition hover:bg-white/15">
                 View History
               </button>
-
-              <button
-                type="button"
-                onClick={handleGoMilestones}
-                className="w-full rounded-xl bg-green-600 py-3.5 font-semibold text-white shadow-lg transition hover:bg-green-700"
-              >
+              <button type="button" onClick={handleGoMilestones}
+                className="w-full rounded-xl bg-green-600 py-3.5 font-semibold text-white shadow-lg transition hover:bg-green-700">
                 View Milestones
               </button>
-
-              <button
-                type="button"
-                onClick={handleGoDmv}
-                className="w-full rounded-xl border-2 border-[#f9c80e] bg-white py-3.5 font-semibold text-[#08194A] shadow-sm transition hover:-translate-y-[1px] hover:shadow-[0_0_16px_rgba(249,200,14,0.18)]"
-              >
+              <button type="button" onClick={handleGoDmv}
+                className="w-full rounded-xl border-2 border-[#f9c80e] bg-white py-3.5 font-semibold text-[#08194A] shadow-sm transition hover:-translate-y-[1px] hover:shadow-[0_0_16px_rgba(249,200,14,0.18)]">
                 DMV Bundle Download
               </button>
             </div>
           </div>
+
         </div>
       </section>
     </div>

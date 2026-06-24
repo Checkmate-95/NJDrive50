@@ -4,6 +4,7 @@ import {
   useDriveHistory,
   type DriveEntry,
   deleteDriveEntry,
+  isDriveVerified,          // ✅ imported from store
 } from "../state/driveStore"
 import { EditDriveModal } from "../components/EditDriveModal"
 import { useNav } from "../state/navStore"
@@ -37,7 +38,7 @@ const getNightData = (d: DriveEntry) => {
   const verifiedNight = safeNumber(d.verifiedNightDurationHours)
   const estimatedNight = safeNumber(d.nightDurationHours)
   const effectiveNight = verifiedNight > 0 ? verifiedNight : estimatedNight
-  const isVerified = verifiedNight > 0
+  const isVerified = isDriveVerified(d)   // ✅ single source of truth
 
   return {
     effectiveNight,
@@ -64,13 +65,7 @@ const getDisplaySegments = (d: DriveEntry) => {
   let nightRange = ""
 
   if (totalMs <= 0) {
-    return {
-      dayHours,
-      nightHours,
-      dayRange,
-      nightRange,
-      isVerified,
-    }
+    return { dayHours, nightHours, dayRange, nightRange, isVerified }
   }
 
   if (nightHours <= 0) {
@@ -80,18 +75,11 @@ const getDisplaySegments = (d: DriveEntry) => {
   } else {
     const dayMs = dayHours * 60 * 60 * 1000
     const split = new Date(startMs + dayMs)
-
     dayRange = `${formatClockTime(start)} – ${formatClockTime(split)}`
     nightRange = `${formatClockTime(split)} – ${formatClockTime(end)}`
   }
 
-  return {
-    dayHours,
-    nightHours,
-    dayRange,
-    nightRange,
-    isVerified,
-  }
+  return { dayHours, nightHours, dayRange, nightRange, isVerified }
 }
 
 const VerifiedBadge = () => (
@@ -133,13 +121,7 @@ export default function DriveHistoryContent() {
       if (isVerified) verifiedCount += 1
     }
 
-    return {
-      total: drives.length,
-      dayOnly,
-      nightOnly,
-      mixed,
-      verifiedCount,
-    }
+    return { total: drives.length, dayOnly, nightOnly, mixed, verifiedCount }
   }, [drives])
 
   function handleOpenEdit(entry: DriveEntry) {
@@ -168,7 +150,6 @@ export default function DriveHistoryContent() {
       alert("No logs to export.")
       return
     }
-
     window.scrollTo({ top: 0, behavior: "smooth" })
     setScreen("export")
   }
@@ -276,9 +257,7 @@ export default function DriveHistoryContent() {
                     <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {dayHours > 0 && (
                         <div className="rounded-xl bg-white px-3 py-2 text-[11px] text-[#08194A]/65">
-                          <span className="font-semibold text-[#08194A]/82">
-                            Day:
-                          </span>{" "}
+                          <span className="font-semibold text-[#08194A]/82">Day:</span>{" "}
                           {dayHours.toFixed(2)} hrs
                           {dayRange ? ` (${dayRange})` : ""}
                         </div>
@@ -286,9 +265,7 @@ export default function DriveHistoryContent() {
 
                       {nightHours > 0 && (
                         <div className="rounded-xl bg-white px-3 py-2 text-[11px] text-[#08194A]/65">
-                          <span className="font-semibold text-[#08194A]/82">
-                            Night:
-                          </span>{" "}
+                          <span className="font-semibold text-[#08194A]/82">Night:</span>{" "}
                           {nightHours.toFixed(2)} hrs
                           {nightRange ? ` (${nightRange})` : ""}
                         </div>
@@ -297,9 +274,7 @@ export default function DriveHistoryContent() {
 
                     {drive.notes ? (
                       <div className="mt-3 rounded-xl bg-white px-3 py-2 text-[11px] text-[#08194A]/65">
-                        <span className="font-semibold text-[#08194A]/82">
-                          Notes:
-                        </span>{" "}
+                        <span className="font-semibold text-[#08194A]/82">Notes:</span>{" "}
                         {drive.notes}
                       </div>
                     ) : null}

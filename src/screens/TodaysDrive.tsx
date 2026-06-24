@@ -4,7 +4,7 @@ import { useActiveDriveStore } from "../state/activeDriveStore"
 
 import { MapProvider } from "../components/map/MapProvider"
 import { DriveMapPanel } from "../components/map/DriveMapPanel"
-import type { DriveEntry } from "../state/driveStore"
+import type { DriveEntry } from "../engine/driveEngine"  // ✅ import from engine, not driveStore
 
 type Coord = {
   lat: number
@@ -15,47 +15,50 @@ type TodaysDriveProps = {
   drive: (DriveEntry & { isPreview?: boolean }) | null
 }
 
-function formatHours(hours?: number): string {
-  if (typeof hours !== "number" || Number.isNaN(hours)) return "0.00 hrs"
-  return `${hours.toFixed(2)} hrs`
+/* -------------------------------------------------------
+   FORMATTERS
+------------------------------------------------------- */
+
+function formatHours(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "0.00 hrs"
+  return `${(ms / 3600000).toFixed(2)} hrs`
 }
 
-function formatClockTime(date: Date): string {
+function formatClockTime(ms: number): string {
+  const date = new Date(ms)
   if (Number.isNaN(date.getTime())) return "Invalid time"
-  return date.toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  })
+  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
 }
 
-function formatDateTime(value: unknown): string {
-  const date = new Date(typeof value === "string" || typeof value === "number" ? value : "")
+function formatDateTime(ms: number): string {
+  const date = new Date(ms)
   if (Number.isNaN(date.getTime())) return "Invalid date"
   return date.toLocaleString()
 }
 
+/* -------------------------------------------------------
+   LIGHTING LABEL
+------------------------------------------------------- */
+
 function getLightingLabel(
-  dayHours: number,
-  nightHours: number
+  dayMs: number,
+  nightMs: number
 ): "Day Drive" | "Night Drive" | "Mixed Drive" {
-  if (nightHours > 0 && dayHours > 0) return "Mixed Drive"
-  if (nightHours > 0) return "Night Drive"
+  if (nightMs > 0 && dayMs > 0) return "Mixed Drive"
+  if (nightMs > 0) return "Night Drive"
   return "Day Drive"
 }
 
-function getMapTimeOfDay(nightHours: number): "Day" | "Night" {
-  return nightHours > 0 ? "Night" : "Day"
+function getMapTimeOfDay(nightMs: number): "Day" | "Night" {
+  return nightMs > 0 ? "Night" : "Day"
 }
 
-function normalizeMiles(value: unknown): number {
-  const numericMiles =
-    typeof value === "number" ? value : Number(value ?? 0)
-  return Number.isFinite(numericMiles) ? numericMiles : 0
-}
+/* -------------------------------------------------------
+   ROUTE NORMALIZER
+------------------------------------------------------- */
 
 function normalizeRoute(value: unknown): Coord[] {
   if (!Array.isArray(value)) return []
-
   return value.filter(
     (coord): coord is Coord =>
       !!coord &&
@@ -67,77 +70,52 @@ function normalizeRoute(value: unknown): Coord[] {
   )
 }
 
-function safeNumber(value: unknown): number {
-  const num = Number(value)
-  return Number.isFinite(num) ? num : 0
+/* -------------------------------------------------------
+   VERIFICATION — matches engine exactly
+------------------------------------------------------- */
+
+function getVerification(drive: DriveEntry): boolean {
+  // Verified night: solar mode with actual night duration
+  if (drive.nightCalcMode === "solar" && drive.nightDuration > 0) return true
+  // Verified day: engine confirmed fully daytime via solar
+  if (drive.isVerifiedDay === true) return true
+  return false
 }
 
-function getNightData(drive: DriveEntry) {
-  const verifiedNight = safeNumber(drive.verifiedNightDurationHours)
-  const estimatedNight = safeNumber(drive.nightDurationHours)
-  const effectiveNight = verifiedNight > 0 ? verifiedNight : estimatedNight
-  const isVerified = verifiedNight > 0
-
-  return {
-    verifiedNight,
-    estimatedNight,
-    effectiveNight,
-    isVerified,
-  }
-}
+/* -------------------------------------------------------
+   DISPLAY SEGMENTS — time ranges for day/night portions
+------------------------------------------------------- */
 
 function getDisplaySegments(drive: DriveEntry) {
-  const start = new Date(drive.startTime)
-  const end = new Date(drive.endTime)
-
-  const startMs = start.getTime()
-  const endMs = end.getTime()
-  const totalMs = Math.max(endMs - startMs, 0)
-
-  const totalHours = safeNumber(drive.totalDurationHours)
-  const storedDayHours = safeNumber(drive.dayDurationHours)
-  const { effectiveNight, isVerified } = getNightData(drive)
-
-  const dayHours =
-    totalHours > 0
-      ? Math.max(totalHours - effectiveNight, 0)
-      : Math.max(storedDayHours, 0)
-
-  const nightHours = effectiveNight
+  const { start, end, nightDuration, dayDuration } = drive
 
   let dayRange = ""
   let nightRange = ""
 
+  const totalMs = end - start
   if (totalMs <= 0) {
-    return {
-      dayHours,
-      nightHours,
-      dayRange,
-      nightRange,
-      isVerified,
-    }
+    return { dayRange, nightRange }
   }
 
-  if (nightHours <= 0) {
+  if (nightDuration <= 0) {
+    // Pure day drive
     dayRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
-  } else if (dayHours <= 0) {
+  } else if (dayDuration <= 0) {
+    // Pure night drive
     nightRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
   } else {
-    const dayMs = dayHours * 60 * 60 * 1000
-    const split = new Date(startMs + dayMs)
-
-    dayRange = `${formatClockTime(start)} – ${formatClockTime(split)}`
-    nightRange = `${formatClockTime(split)} – ${formatClockTime(end)}`
+    // Mixed: day first, then night (approximation — day portion starts at drive start)
+    const splitMs = start + dayDuration
+    dayRange = `${formatClockTime(start)} – ${formatClockTime(splitMs)}`
+    nightRange = `${formatClockTime(splitMs)} – ${formatClockTime(end)}`
   }
 
-  return {
-    dayHours,
-    nightHours,
-    dayRange,
-    nightRange,
-    isVerified,
-  }
+  return { dayRange, nightRange }
 }
+
+/* -------------------------------------------------------
+   BADGES
+------------------------------------------------------- */
 
 const VerifiedBadge = () => (
   <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">
@@ -151,13 +129,16 @@ const EstimatedBadge = () => (
   </span>
 )
 
+/* -------------------------------------------------------
+   COMPONENT
+------------------------------------------------------- */
+
 export default function TodaysDrive({ drive }: TodaysDriveProps) {
   const { setScreen } = useNav()
-
   const activeSession = useActiveDriveStore((s) => s.session)
   const hasActiveDrive = Boolean(activeSession?.isActive)
 
-  if (!drive || !drive.startTime || !drive.endTime) {
+  if (!drive || !Number.isFinite(drive.start) || !Number.isFinite(drive.end)) {
     return (
       <div className="p-6 text-center text-red-600">
         No drive data available.
@@ -165,44 +146,26 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
     )
   }
 
-  const {
-    startTime,
-    endTime,
-    miles,
-    weather,
-    notes,
-    routeCoords,
-    totalDurationHours,
-    isPreview,
-    milesSource,
-  } = drive
+  const { start, end, duration, nightDuration, dayDuration, notes, isPreview } = drive
 
-  const numericMiles = normalizeMiles(miles)
-  const totalHours =
-    typeof totalDurationHours === "number" ? totalDurationHours : 0
+  const isVerified = getVerification(drive)
+  const lightingLabel = getLightingLabel(dayDuration, nightDuration)
+  const mapTimeOfDay = getMapTimeOfDay(nightDuration)
+  const { dayRange, nightRange } = getDisplaySegments(drive)
+  const safeRoute = normalizeRoute((drive as DriveEntry & { routeCoords?: unknown }).routeCoords)
 
-  const {
-    dayHours,
-    nightHours,
-    dayRange,
-    nightRange,
-    isVerified,
-  } = getDisplaySegments(drive)
+  // Miles — optional field not in engine type, safe-read defensively
+  const rawMiles = (drive as DriveEntry & { miles?: unknown }).miles
+  const numericMiles = Number.isFinite(Number(rawMiles)) ? Number(rawMiles) : 0
+  const milesSource = (drive as DriveEntry & { milesSource?: string }).milesSource
 
-  const lightingLabel = getLightingLabel(dayHours, nightHours)
-  const mapTimeOfDay = getMapTimeOfDay(nightHours)
-  const safeRoute = normalizeRoute(routeCoords)
-
-  const handleStartNew = () => {
-    setScreen("active")
-  }
-
-  const handleViewSummary = () => {
-    setScreen("summary")
-  }
+  const handleStartNew = () => setScreen("active")
+  const handleViewSummary = () => setScreen("summary")
 
   return (
     <div className="flex w-full flex-col items-center px-3 pb-24 pt-3 text-[#0A1E5E] sm:px-4">
+
+      {/* Preview warning */}
       {isPreview && (
         <div className="mb-4 w-full max-w-md rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">
@@ -218,11 +181,12 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
       )}
 
       <section className="w-full max-w-md rounded-[24px] border border-white/30 bg-white/95 px-6 py-7 text-left shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md">
+
+        {/* Header */}
         <div className="mb-1 flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">
             {isPreview ? "Drive Preview" : "Today's Drive"}
           </h2>
-
           <div className="flex items-center gap-2">
             {isPreview && (
               <span className="rounded-full border border-amber-400 bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
@@ -239,65 +203,65 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
             : "Great job today — here's what you completed."}
         </p>
 
+        {/* Drive details */}
         <div className="mb-4 space-y-2 text-sm text-[#1b2755]">
+
           <p>
-            <strong>Start Time:</strong>{" "}
-            {formatDateTime(startTime)}
+            <strong>Start Time:</strong> {formatDateTime(start)}
           </p>
 
           <p>
-            <strong>End Time:</strong>{" "}
-            {formatDateTime(endTime)}
+            <strong>End Time:</strong> {formatDateTime(end)}
           </p>
 
-          <p>
-            <strong>Miles:</strong>{" "}
-            {numericMiles.toFixed(1)}
-            {milesSource === "gps-accumulated" && (
-              <span className="ml-1 text-[10px] text-[#0A1E5E]/45">
-                (GPS est.)
-              </span>
-            )}
-            {milesSource === "routes-api" && (
-              <span className="ml-1 text-[10px] text-[#0A1E5E]/45">
-                (Route)
-              </span>
-            )}
-          </p>
+          {numericMiles > 0 && (
+            <p>
+              <strong>Miles:</strong> {numericMiles.toFixed(1)}
+              {milesSource === "gps-accumulated" && (
+                <span className="ml-1 text-[10px] text-[#0A1E5E]/45">(GPS est.)</span>
+              )}
+              {milesSource === "routes-api" && (
+                <span className="ml-1 text-[10px] text-[#0A1E5E]/45">(Route)</span>
+              )}
+            </p>
+          )}
 
           <p>
-            <strong>Total Duration:</strong> {formatHours(totalHours)}
+            <strong>Total Duration:</strong> {formatHours(duration)}
           </p>
 
           <p>
             <strong>Lighting:</strong> {lightingLabel}
           </p>
 
-          {dayHours > 0 && (
+          {dayDuration > 0 && (
             <p>
-              <strong>Day Driving:</strong> {formatHours(dayHours)}
-              {dayRange ? (
-                <span className="ml-1 text-xs text-[#0A1E5E]/60">
-                  ({dayRange})
-                </span>
-              ) : null}
+              <strong>Day Driving:</strong> {formatHours(dayDuration)}
+              {dayRange && (
+                <span className="ml-1 text-xs text-[#0A1E5E]/60">({dayRange})</span>
+              )}
             </p>
           )}
 
-          {nightHours > 0 && (
+          {nightDuration > 0 && (
             <p>
-              <strong>Night Driving:</strong> {formatHours(nightHours)}
-              {nightRange ? (
-                <span className="ml-1 text-xs text-[#0A1E5E]/60">
-                  ({nightRange})
-                </span>
-              ) : null}
+              <strong>Night Driving:</strong> {formatHours(nightDuration)}
+              {nightRange && (
+                <span className="ml-1 text-xs text-[#0A1E5E]/60">({nightRange})</span>
+              )}
             </p>
           )}
 
-          <p>
-            <strong>Weather:</strong> {weather || "—"}
-          </p>
+          {/* Weather — optional field, safe-read */}
+          {(() => {
+            const weather = (drive as DriveEntry & { weather?: string }).weather
+            return (
+              <p>
+                <strong>Weather:</strong> {weather || "—"}
+              </p>
+            )
+          })()}
+
         </div>
 
         {notes && (
@@ -307,21 +271,24 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
             </p>
           </div>
         )}
+
       </section>
 
+      {/* Map */}
       <div className="mt-6 h-[400px] w-full max-w-md overflow-hidden rounded-[24px] border border-[#00bfff] shadow-lg">
         <MapProvider>
           <DriveMapPanel
             route={safeRoute}
             driveMeta={{
               miles: numericMiles,
-              duration: formatHours(totalHours),
+              duration: formatHours(duration),
               timeOfDay: mapTimeOfDay,
             }}
           />
         </MapProvider>
       </div>
 
+      {/* Actions */}
       <div className="flex w-full max-w-md flex-col gap-3 pt-6">
         <button
           type="button"
@@ -339,6 +306,7 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
           View Summary
         </button>
       </div>
+
     </div>
   )
 }

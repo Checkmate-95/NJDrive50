@@ -1,10 +1,12 @@
 // src/screens/TodaysDrive.tsx
 import { useNav } from "../state/navStore"
 import { useActiveDriveStore } from "../state/activeDriveStore"
-
 import { MapProvider } from "../components/map/MapProvider"
 import { DriveMapPanel } from "../components/map/DriveMapPanel"
-import type { DriveEntry } from "../engine/driveEngine"  // ✅ import from engine, not driveStore
+import {
+  isDriveVerified,
+  type DriveEntry,
+} from "../state/driveStore"
 
 type Coord = {
   lat: number
@@ -19,19 +21,19 @@ type TodaysDriveProps = {
    FORMATTERS
 ------------------------------------------------------- */
 
-function formatHours(ms: number): string {
-  if (!Number.isFinite(ms) || ms < 0) return "0.00 hrs"
-  return `${(ms / 3600000).toFixed(2)} hrs`
+function formatHours(hours: number): string {
+  if (!Number.isFinite(hours) || hours < 0) return "0.00 hrs"
+  return `${hours.toFixed(2)} hrs`
 }
 
-function formatClockTime(ms: number): string {
-  const date = new Date(ms)
+function formatClockTime(isoOrMs: string | number): string {
+  const date = typeof isoOrMs === "number" ? new Date(isoOrMs) : new Date(isoOrMs)
   if (Number.isNaN(date.getTime())) return "Invalid time"
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
 }
 
-function formatDateTime(ms: number): string {
-  const date = new Date(ms)
+function formatDateTime(iso: string): string {
+  const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return "Invalid date"
   return date.toLocaleString()
 }
@@ -41,16 +43,16 @@ function formatDateTime(ms: number): string {
 ------------------------------------------------------- */
 
 function getLightingLabel(
-  dayMs: number,
-  nightMs: number
+  dayHours: number,
+  nightHours: number
 ): "Day Drive" | "Night Drive" | "Mixed Drive" {
-  if (nightMs > 0 && dayMs > 0) return "Mixed Drive"
-  if (nightMs > 0) return "Night Drive"
+  if (nightHours > 0 && dayHours > 0) return "Mixed Drive"
+  if (nightHours > 0) return "Night Drive"
   return "Day Drive"
 }
 
-function getMapTimeOfDay(nightMs: number): "Day" | "Night" {
-  return nightMs > 0 ? "Night" : "Day"
+function getMapTimeOfDay(nightHours: number): "Day" | "Night" {
+  return nightHours > 0 ? "Night" : "Day"
 }
 
 /* -------------------------------------------------------
@@ -71,43 +73,33 @@ function normalizeRoute(value: unknown): Coord[] {
 }
 
 /* -------------------------------------------------------
-   VERIFICATION — matches engine exactly
-------------------------------------------------------- */
-
-function getVerification(drive: DriveEntry): boolean {
-  // Verified night: solar mode with actual night duration
-  if (drive.nightCalcMode === "solar" && drive.nightDuration > 0) return true
-  // Verified day: engine confirmed fully daytime via solar
-  if (drive.isVerifiedDay === true) return true
-  return false
-}
-
-/* -------------------------------------------------------
    DISPLAY SEGMENTS — time ranges for day/night portions
 ------------------------------------------------------- */
 
 function getDisplaySegments(drive: DriveEntry) {
-  const { start, end, nightDuration, dayDuration } = drive
+  const startMs = new Date(drive.startTime).getTime()
+  const endMs   = new Date(drive.endTime).getTime()
 
-  let dayRange = ""
+  const totalDurationHours = drive.totalDurationHours ?? 0
+  const verifiedNight = drive.verifiedNightDurationHours ?? 0
+  const estimatedNight = drive.nightDurationHours ?? 0
+  const nightHours = verifiedNight > 0 ? verifiedNight : estimatedNight
+  const dayHours   = Math.max(totalDurationHours - nightHours, 0)
+
+  let dayRange   = ""
   let nightRange = ""
 
-  const totalMs = end - start
-  if (totalMs <= 0) {
-    return { dayRange, nightRange }
-  }
+  const totalMs = endMs - startMs
+  if (totalMs <= 0) return { dayRange, nightRange }
 
-  if (nightDuration <= 0) {
-    // Pure day drive
-    dayRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
-  } else if (dayDuration <= 0) {
-    // Pure night drive
-    nightRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
+  if (nightHours <= 0) {
+    dayRange = `${formatClockTime(startMs)} – ${formatClockTime(endMs)}`
+  } else if (dayHours <= 0) {
+    nightRange = `${formatClockTime(startMs)} – ${formatClockTime(endMs)}`
   } else {
-    // Mixed: day first, then night (approximation — day portion starts at drive start)
-    const splitMs = start + dayDuration
-    dayRange = `${formatClockTime(start)} – ${formatClockTime(splitMs)}`
-    nightRange = `${formatClockTime(splitMs)} – ${formatClockTime(end)}`
+    const splitMs = startMs + dayHours * 3600 * 1000
+    dayRange   = `${formatClockTime(startMs)} – ${formatClockTime(splitMs)}`
+    nightRange = `${formatClockTime(splitMs)} – ${formatClockTime(endMs)}`
   }
 
   return { dayRange, nightRange }
@@ -138,7 +130,7 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
   const activeSession = useActiveDriveStore((s) => s.session)
   const hasActiveDrive = Boolean(activeSession?.isActive)
 
-  if (!drive || !Number.isFinite(drive.start) || !Number.isFinite(drive.end)) {
+  if (!drive || !drive.startTime || !drive.endTime) {
     return (
       <div className="p-6 text-center text-red-600">
         No drive data available.
@@ -146,21 +138,26 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
     )
   }
 
-  const { start, end, duration, nightDuration, dayDuration, notes, isPreview } = drive
+  const verifiedNight    = drive.verifiedNightDurationHours ?? 0
+  const estimatedNight   = drive.nightDurationHours ?? 0
+  const nightHours       = verifiedNight > 0 ? verifiedNight : estimatedNight
+  const dayHours         = Math.max((drive.totalDurationHours ?? 0) - nightHours, 0)
+  const totalDurationHours = drive.totalDurationHours ?? 0
+  const isPreview        = (drive as DriveEntry & { isPreview?: boolean }).isPreview
 
-  const isVerified = getVerification(drive)
-  const lightingLabel = getLightingLabel(dayDuration, nightDuration)
-  const mapTimeOfDay = getMapTimeOfDay(nightDuration)
+  const isVerified       = isDriveVerified(drive)                    // ✅ store helper
+  const lightingLabel    = getLightingLabel(dayHours, nightHours)
+  const mapTimeOfDay     = getMapTimeOfDay(nightHours)
   const { dayRange, nightRange } = getDisplaySegments(drive)
-  const safeRoute = normalizeRoute((drive as DriveEntry & { routeCoords?: unknown }).routeCoords)
+  const safeRoute        = normalizeRoute((drive as DriveEntry & { routeCoords?: unknown }).routeCoords)
 
-  // Miles — optional field not in engine type, safe-read defensively
-  const rawMiles = (drive as DriveEntry & { miles?: unknown }).miles
-  const numericMiles = Number.isFinite(Number(rawMiles)) ? Number(rawMiles) : 0
-  const milesSource = (drive as DriveEntry & { milesSource?: string }).milesSource
+  const rawMiles         = (drive as DriveEntry & { miles?: unknown }).miles
+  const numericMiles     = Number.isFinite(Number(rawMiles)) ? Number(rawMiles) : 0
+  const milesSource      = (drive as DriveEntry & { milesSource?: string }).milesSource
+  const weather          = (drive as DriveEntry & { weather?: string }).weather
 
-  const handleStartNew = () => setScreen("active")
-  const handleViewSummary = () => setScreen("summary")
+  const handleStartNew      = () => setScreen("active")
+  const handleViewSummary   = () => setScreen("summary")
 
   return (
     <div className="flex w-full flex-col items-center px-3 pb-24 pt-3 text-[#0A1E5E] sm:px-4">
@@ -207,11 +204,11 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
         <div className="mb-4 space-y-2 text-sm text-[#1b2755]">
 
           <p>
-            <strong>Start Time:</strong> {formatDateTime(start)}
+            <strong>Start Time:</strong> {formatDateTime(drive.startTime)}
           </p>
 
           <p>
-            <strong>End Time:</strong> {formatDateTime(end)}
+            <strong>End Time:</strong> {formatDateTime(drive.endTime)}
           </p>
 
           {numericMiles > 0 && (
@@ -227,47 +224,41 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
           )}
 
           <p>
-            <strong>Total Duration:</strong> {formatHours(duration)}
+            <strong>Total Duration:</strong> {formatHours(totalDurationHours)}
           </p>
 
           <p>
             <strong>Lighting:</strong> {lightingLabel}
           </p>
 
-          {dayDuration > 0 && (
+          {dayHours > 0 && (
             <p>
-              <strong>Day Driving:</strong> {formatHours(dayDuration)}
+              <strong>Day Driving:</strong> {formatHours(dayHours)}
               {dayRange && (
                 <span className="ml-1 text-xs text-[#0A1E5E]/60">({dayRange})</span>
               )}
             </p>
           )}
 
-          {nightDuration > 0 && (
+          {nightHours > 0 && (
             <p>
-              <strong>Night Driving:</strong> {formatHours(nightDuration)}
+              <strong>Night Driving:</strong> {formatHours(nightHours)}
               {nightRange && (
                 <span className="ml-1 text-xs text-[#0A1E5E]/60">({nightRange})</span>
               )}
             </p>
           )}
 
-          {/* Weather — optional field, safe-read */}
-          {(() => {
-            const weather = (drive as DriveEntry & { weather?: string }).weather
-            return (
-              <p>
-                <strong>Weather:</strong> {weather || "—"}
-              </p>
-            )
-          })()}
+          <p>
+            <strong>Weather:</strong> {weather || "—"}
+          </p>
 
         </div>
 
-        {notes && (
+        {drive.notes && (
           <div className="mb-4">
             <p className="text-sm text-[#1b2755]">
-              <strong>Notes:</strong> {notes}
+              <strong>Notes:</strong> {drive.notes}
             </p>
           </div>
         )}
@@ -281,7 +272,7 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
             route={safeRoute}
             driveMeta={{
               miles: numericMiles,
-              duration: formatHours(duration),
+              duration: formatHours(totalDurationHours),
               timeOfDay: mapTimeOfDay,
             }}
           />

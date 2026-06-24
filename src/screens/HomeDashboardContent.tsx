@@ -460,10 +460,6 @@ const handleAllowAndContinue = async () => {
                     mi
                   </span>
                 </p>
-
-                <div className="inline-flex h-[26px] min-w-[70px] items-center justify-center rounded-full border border-[#0A1E5E]/10 bg-white px-3 text-[10px] font-bold tracking-[0.14em] text-[#0A1E5E]/70">
-                  INFO
-                </div>
               </div>
             </div>
 

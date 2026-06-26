@@ -11,6 +11,7 @@ import {
   type DriveMode,
   type RouteCoord,
 } from "../state/activeDriveStore"
+import { calculateNightBreakdown } from "../engine/driveEngine"
 import { Geolocation } from "@capacitor/geolocation"
 import { Capacitor } from "@capacitor/core"
 // FIX 1: No top-level ForegroundService import — Android-only plugin crashes
@@ -241,7 +242,6 @@ async function stopForegroundService() {
 }
 // ──────────────────────────────────────────────────────────────────────────────
 
-
 function ActiveDriveContent({
   setScreen,
   setCurrentDrive,
@@ -460,10 +460,26 @@ function ActiveDriveContent({
           ? [...baseTrail, currentEndCoord]
           : baseTrail
 
-      const dayHours = finalDayMs / 3600000
-      const nightHours = finalNightMs / 3600000
+      // ── SOLAR ENGINE FIX ───────────────────────────────────────────────────
+      // Run the solar engine against the real start/end timestamps + GPS
+      // coordinates so day and night drives are properly verified.
+      // Previously this was hardcoded to "dmv-fixed" and never used solar data.
+      const location = fresh.startCoord
+        ? { latitude: fresh.startCoord.lat, longitude: fresh.startCoord.lng }
+        : undefined
+
+      const breakdown = calculateNightBreakdown({
+        start: savedStartTime,
+        end: snapshotTime,
+        location,
+      })
+
+      const nightCalcMode: NightCalcMode = breakdown.mode
+      const nightHours = breakdown.nightDuration / 3600000
+      const dayHours = breakdown.dayDuration / 3600000
       const verifiedNightDurationHours = nightHours
-      const nightCalcMode: NightCalcMode = "dmv-fixed"
+      const isVerifiedDay = breakdown.isVerifiedDay
+      // ──────────────────────────────────────────────────────────────────────
 
       return {
         id: makeDriveId(),
@@ -474,6 +490,7 @@ function ActiveDriveContent({
         nightDurationHours: nightHours,
         verifiedNightDurationHours,
         nightCalcMode,
+        isVerifiedDay,
         source: "timer",
         miles: safeNumber(accurateMiles),
         milesSource,
@@ -1009,27 +1026,27 @@ function ActiveDriveContent({
             </div>
 
             {/* Duration + Distance stacked */}
-<div className="mt-3 flex flex-col gap-2">
-  <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
-    <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-      Duration
-    </p>
-    <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
-      {formattedElapsed}
-    </p>
-  </div>
+            <div className="mt-3 flex flex-col gap-2">
+              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                  Duration
+                </p>
+                <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+                  {formattedElapsed}
+                </p>
+              </div>
 
-  <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
-    <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-      Distance
-    </p>
-    <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
-      {safeNumber(session.liveMiles).toFixed(1)}
-      <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">mi</span>
-    </p>
-    <p className="mt-0.5 text-[9px] text-[#0A1E5E]/35">Live GPS</p>
-  </div>
-</div>
+              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                  Distance
+                </p>
+                <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+                  {safeNumber(session.liveMiles).toFixed(1)}
+                  <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">mi</span>
+                </p>
+                <p className="mt-0.5 text-[9px] text-[#0A1E5E]/35">Live GPS</p>
+              </div>
+            </div>
 
             {/* Start Time + Lighting */}
             <div className="mt-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] px-3 py-3 shadow-sm">

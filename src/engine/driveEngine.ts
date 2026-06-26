@@ -259,8 +259,7 @@ const calculateSolarNightDuration = (
    NIGHT BREAKDOWN
 ------------------------------------------------------- */
 
-
-const calculateNightBreakdown = (params: {
+export const calculateNightBreakdown = (params: {
   start: number
   end: number
   location?: DriveLocation

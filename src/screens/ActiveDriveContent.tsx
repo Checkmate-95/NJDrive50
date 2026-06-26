@@ -220,7 +220,7 @@ async function updateForegroundService(body: string) {
       id: FS_NOTIFICATION_ID,
       title: "NJDrive50 — Drive Active",
       body,
-      smallIcon: "ic_stat_directions_car",
+      smallIcon: "ic_launcher_foreground",
       notificationChannelId: FS_CHANNEL_ID,
     })
   } catch {

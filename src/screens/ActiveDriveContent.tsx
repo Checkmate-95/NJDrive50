@@ -155,6 +155,8 @@ async function getAccurateMileage(
 }
 
 
+
+
 // ─── Foreground Service helpers ────────────────────────────────────────────────
 // All helpers dynamically import ForegroundService so the module is never
 // evaluated on web/iOS where the plugin is not registered.

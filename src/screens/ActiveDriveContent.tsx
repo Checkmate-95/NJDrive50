@@ -960,7 +960,7 @@ function ActiveDriveContent({
         </div>
       </div>
 
-        {/* ── TIMER + PLAY/PAUSE ─────────────────────────────────────────── */}
+         {/* ── TIMER + PLAY/PAUSE ─────────────────────────────────────────── */}
         <div className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
           <p className={`text-sm uppercase tracking-[0.18em] ${statusClass}`}>
             {statusText}
@@ -996,6 +996,19 @@ function ActiveDriveContent({
               {formattedElapsed}
             </div>
           </div>
+
+          {/* ── Background tracking warning ───────────────────────────────── */}
+          {hasActiveDrive && (
+            <div className="mt-3 rounded-lg border border-yellow-300/40 bg-yellow-100/10 px-3 py-2 text-center">
+              <p className="text-[10px] font-semibold text-yellow-300">
+                For best accuracy, keep NJDrive50 open during your drive.
+              </p>
+              <p className="mt-0.5 text-[9px] font-normal leading-tight text-yellow-200/80">
+                Tracking continues in the background, but battery saver or closing the app may reduce accuracy.
+              </p>
+            </div>
+          )}
+
         </div>
 
         {/* ── BOTTOM PANEL: Drive Summary (compact) ─────────────────────── */}

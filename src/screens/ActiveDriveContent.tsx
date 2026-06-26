@@ -1003,9 +1003,7 @@ function ActiveDriveContent({
               <p className="text-[10px] font-semibold text-yellow-300">
                 For best accuracy, keep NJDrive50 open during your drive.
               </p>
-              <p className="mt-0.5 text-[9px] font-normal leading-tight text-yellow-200/80">
-                Tracking continues in the background, but battery saver or closing the app may reduce accuracy.
-              </p>
+              
             </div>
           )}
 

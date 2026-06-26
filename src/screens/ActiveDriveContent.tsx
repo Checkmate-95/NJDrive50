@@ -190,7 +190,7 @@ async function startForegroundService(body: string) {
       id: FS_NOTIFICATION_ID,
       title: "NJDrive50 — Drive Active",
       body,
-      smallIcon: "ic_stat_directions_car",
+      smallIcon: "ic_launcher_foreground",
       silent: true,
       notificationChannelId: FS_CHANNEL_ID,
       serviceType: 8, // Android Location foreground service type

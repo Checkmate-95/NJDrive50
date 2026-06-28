@@ -331,11 +331,7 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
 
           {showSolarExplainer && (
             <p className="mt-2 text-xs leading-relaxed text-[#0A1E5E]/70">
-              The on‑screen timer always switches at 6:00 AM and 6:00 PM for a simple,
-              predictable display. Your teen's logged driving hours, however, use real
-              sunrise and sunset times for your location — the legal standard under
-              New Jersey's GDL rules. Because sunrise and sunset shift slightly each
-              day, the logged Day/Night switch time will also change.
+              NJDrive50 determines Day and Night driving using built‑in solar calculations rather than a fixed 6 AM/PM cutoff. The app computes your exact sunrise and sunset each day based on your location, using those solar events to define when “daylight” and “darkness” legally begin. Because sunrise and sunset shift slightly throughout the year, the logged Day/Night transition updates automatically to reflect the current solar time, ensuring precise, GDL‑compliant tracking.
             </p>
           )}
         </div>

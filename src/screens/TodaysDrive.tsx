@@ -321,7 +321,7 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
             <div className="flex items-center gap-2">
               <span className="text-sm text-[#0A1E5E]/50">ⓘ</span>
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#0A1E5E]/60">
-                Why the Logged Switch Time Change?
+                Why the Logged Switch Time Changes
               </p>
             </div>
             <span className="shrink-0 text-xs text-[#0A1E5E]/40">

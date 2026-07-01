@@ -32,9 +32,12 @@ import LandingPageApp from "./LandingPageApp"
 // ─── Legal ────────────────────────────────────────────────────────────────────
 import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
+import DeleteAccount from "./screens/DeleteAccount"
+import DeleteData from "./screens/DeleteData"
 
 // ─── Capacitor ────────────────────────────────────────────────────────────────
 import { Capacitor } from "@capacitor/core"
+
 
 // ─── Lazy Screens ─────────────────────────────────────────────────────────────
 const LandingPage = lazy(() => import("./landing/LandingPage"))
@@ -247,8 +250,11 @@ export default function App() {
       return <MilestonesContent />
 
     case "deleteAccount":
-    case "deleteData":    
-      return <Settings />
+      return <DeleteAccount />
+
+    case "deleteData":
+      return <DeleteData />
+
 
     case "teenInfo":
     case "parentInfo":

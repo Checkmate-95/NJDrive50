@@ -241,7 +241,7 @@ export default function DeleteAccount() {
                 ? needsRecentLogin
                   ? "Confirming Deletion..."
                   : "Deleting Account..."
-                : "Permanently Delete My Account"}
+                : "Delete My Account"}
             </button>
           </div>
 

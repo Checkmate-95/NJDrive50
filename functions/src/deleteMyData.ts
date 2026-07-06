@@ -84,21 +84,24 @@ export const deleteMyData = onCall<DeleteMyDataRequest>(async (request) => {
     }
 
     if (deleteUploadedDocuments) {
-      const bucket = admin.storage().bucket();
-      const prefixes = [
-        `users/${uid}/documents/`,
-        `users/${uid}/exports/`,
-      ];
+  // ✅ Explicitly reference your Firebase Storage bucket
+  const bucket = admin.storage().bucket("njdrive50-app.firebasestorage.app");
 
-      for (const prefix of prefixes) {
-        logger.info("Deleting Storage files.", { uid, prefix });
+  const prefixes = [
+    `users/${uid}/documents/`,
+    `users/${uid}/exports/`,
+  ];
 
-        await bucket.deleteFiles({
-          prefix,
-          force: true,
-        });
-      }
-    }
+  for (const prefix of prefixes) {
+    logger.info("Deleting Storage files.", { uid, prefix });
+
+    await bucket.deleteFiles({
+      prefix,
+      force: true,
+    });
+  }
+}
+
 
     logger.info("deleteMyData completed successfully.", { uid });
 

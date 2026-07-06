@@ -1,7 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
-import { deleteDocumentAndSubcollections } from "./utils/deleteCollection";
+import { deleteCollectionRecursive } from "./utils/deleteCollection";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -72,12 +72,15 @@ export const deleteMyData = onCall<DeleteMyDataRequest>(async (request) => {
     }
 
     for (const collectionName of firestoreTargets) {
-      logger.info("Deleting Firestore user document.", {
+      const fullCollectionPath = `users/${uid}/${collectionName}`;
+
+      logger.info("Deleting Firestore subcollection.", {
         uid,
-        path: `${collectionName}/${uid}`,
+        fullCollectionPath,
       });
 
-      await deleteDocumentAndSubcollections(collectionName, uid);
+      const collectionRef = admin.firestore().collection(fullCollectionPath);
+      await deleteCollectionRecursive(collectionRef);
     }
 
     if (deleteUploadedDocuments) {

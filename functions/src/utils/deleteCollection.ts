@@ -38,19 +38,3 @@ export async function deleteDocumentRecursive(
     path: docRef.path,
   });
 }
-
-/**
- * Deletes a document inside a top-level collection,
- * including all nested subcollections.
- */
-export async function deleteDocumentAndSubcollections(
-  collectionName: string,
-  docId: string
-): Promise<void> {
-  if (!collectionName || !docId) {
-    throw new Error("collectionName and docId are required.");
-  }
-
-  const docRef = admin.firestore().collection(collectionName).doc(docId);
-  await deleteDocumentRecursive(docRef);
-}

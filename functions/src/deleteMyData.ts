@@ -7,14 +7,14 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-/**
- * Deletes ALL user Firestore data, but does NOT delete the Auth account.
- *
- * This supports Google Play "Delete Data" compliance for apps that
- * allow users to remove their stored data without necessarily deleting
- * the whole account.
- */
-export const deleteMyData = onCall(async (request) => {
+type DeleteMyDataRequest = {
+  deleteDriveLogs?: boolean;
+  deletePracticeSessions?: boolean;
+  deleteSavedVehicles?: boolean;
+  deleteUploadedDocuments?: boolean;
+};
+
+export const deleteMyData = onCall<DeleteMyDataRequest>(async (request) => {
   const uid = request.auth?.uid;
 
   if (!uid) {
@@ -25,22 +25,53 @@ export const deleteMyData = onCall(async (request) => {
     );
   }
 
-  logger.info("Starting deleteMyData.", { uid });
+  const data = request.data ?? {};
+
+  const deleteDriveLogs = data.deleteDriveLogs === true;
+  const deletePracticeSessions = data.deletePracticeSessions === true;
+  const deleteSavedVehicles = data.deleteSavedVehicles === true;
+  const deleteUploadedDocuments = data.deleteUploadedDocuments === true;
+
+  if (
+    !deleteDriveLogs &&
+    !deletePracticeSessions &&
+    !deleteSavedVehicles &&
+    !deleteUploadedDocuments
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "At least one data type must be selected for deletion."
+    );
+  }
+
+  logger.info("Starting deleteMyData.", {
+    uid,
+    deleteDriveLogs,
+    deletePracticeSessions,
+    deleteSavedVehicles,
+    deleteUploadedDocuments,
+  });
 
   try {
-    const collections = [
-      "drives",
-      "exports",
-      "milestones",
-      "onboarding",
-      "paperwork",
-      "teenInfo",
-      "parentInfo",
-      "activeDrive",
-      "settings",
-    ];
+    const firestoreTargets: string[] = [];
 
-    for (const collectionName of collections) {
+    if (deleteDriveLogs) {
+      firestoreTargets.push("drives");
+    }
+
+    if (deletePracticeSessions) {
+      firestoreTargets.push("activeDrive", "milestones");
+    }
+
+    if (deleteSavedVehicles) {
+      firestoreTargets.push("settings");
+    }
+
+    if (deleteUploadedDocuments) {
+      firestoreTargets.push("paperwork", "exports");
+    }
+
+    for (const collectionName of firestoreTargets) {
       logger.info("Deleting Firestore user document.", {
         uid,
         path: `${collectionName}/${uid}`,
@@ -49,11 +80,28 @@ export const deleteMyData = onCall(async (request) => {
       await deleteDocumentAndSubcollections(collectionName, uid);
     }
 
+    if (deleteUploadedDocuments) {
+      const bucket = admin.storage().bucket();
+      const prefixes = [
+        `users/${uid}/documents/`,
+        `users/${uid}/exports/`,
+      ];
+
+      for (const prefix of prefixes) {
+        logger.info("Deleting Storage files.", { uid, prefix });
+
+        await bucket.deleteFiles({
+          prefix,
+          force: true,
+        });
+      }
+    }
+
     logger.info("deleteMyData completed successfully.", { uid });
 
     return {
       success: true,
-      message: "User data deleted successfully.",
+      message: "Selected user data deleted successfully.",
     };
   } catch (error: unknown) {
     logger.error("deleteMyData failed.", {
@@ -61,9 +109,6 @@ export const deleteMyData = onCall(async (request) => {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    throw new HttpsError(
-      "internal",
-      "Failed to delete user data."
-    );
+    throw new HttpsError("internal", "Failed to delete selected user data.");
   }
 });

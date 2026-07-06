@@ -55,21 +55,23 @@ export const deleteMyAccount = onCall(
         await deleteCollectionRecursive(collectionRef);
       }
 
-      const bucket = admin.storage().bucket();
+      // ✅ Explicitly reference your Firebase Storage bucket
+const bucket = admin.storage().bucket("njdrive50-app.firebasestorage.app");
 
-      for (const basePrefix of STORAGE_PREFIXES) {
-        const prefix = `${basePrefix}/${uid}`;
+for (const basePrefix of STORAGE_PREFIXES) {
+  const prefix = `${basePrefix}/${uid}`;
 
-        logger.info("Deleting Storage files.", {
-          uid,
-          prefix,
-        });
+  logger.info("Deleting Storage files.", {
+    uid,
+    prefix,
+  });
 
-        await bucket.deleteFiles({
-          prefix,
-          force: true,
-        });
-      }
+  await bucket.deleteFiles({
+    prefix,
+    force: true,
+  });
+}
+
 
       logger.info("Deleting Firebase Auth user.", { uid });
       await admin.auth().deleteUser(uid);

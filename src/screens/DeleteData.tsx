@@ -1,97 +1,120 @@
 // src/screens/DeleteData.tsx
-import { useMemo, useState } from "react"
-import { httpsCallable } from "firebase/functions"
-import { auth, functions } from "../firebase"
-import { useNav } from "../state/navStore"
+import { useMemo, useState } from "react";
+import { httpsCallable } from "firebase/functions";
+import { auth, functions } from "../firebase";
+import { useNav } from "../state/navStore";
 
 type DeleteDataPayload = {
-  deleteDriveLogs: boolean
-  deletePracticeSessions: boolean
-  deleteSavedVehicles: boolean
-  deleteUploadedDocuments: boolean
-}
+  deleteDriveLogs: boolean;
+  deletePracticeSessions: boolean;
+  deleteSavedVehicles: boolean;
+  deleteUploadedDocuments: boolean;
+};
 
-type Step = "idle" | "working" | "success"
+type DeleteDataResult = {
+  success: boolean;
+  message?: string;
+};
 
-function getErrorMessage(error: unknown): string {
-  const code =
-    typeof error === "object" &&
+type Step = "idle" | "working" | "success";
+
+function getErrorCode(error: unknown): string {
+  return typeof error === "object" &&
     error !== null &&
     "code" in error &&
     typeof (error as { code?: unknown }).code === "string"
-      ? (error as { code: string }).code
-      : ""
+    ? (error as { code: string }).code
+    : "";
+}
 
-  switch (code) {
+function getErrorMessage(error: unknown): string {
+  switch (getErrorCode(error)) {
     case "functions/invalid-argument":
-      return "Please choose at least one type of data to delete."
+      return "Please choose at least one type of data to delete.";
     case "functions/unauthenticated":
-      return "Please sign in again to manage your data."
+      return "Please sign in again to manage your data.";
     case "functions/failed-precondition":
-      return "That data cannot be deleted right now. Please try again."
+      return "That data cannot be deleted right now. Please try again.";
+    case "functions/internal":
+      return "We could not process your data deletion request right now. Please try again.";
     default:
-      return "We could not process your data deletion request right now. Please try again."
+      return "We could not process your data deletion request right now. Please try again.";
   }
 }
 
 export default function DeleteData() {
-  const { goBack, setScreen } = useNav()
+  const { goBack, setScreen } = useNav();
 
-  const [deleteDriveLogs, setDeleteDriveLogs] = useState(false)
-  const [deletePracticeSessions, setDeletePracticeSessions] = useState(false)
-  const [deleteSavedVehicles, setDeleteSavedVehicles] = useState(false)
-  const [deleteUploadedDocuments, setDeleteUploadedDocuments] = useState(false)
-  const [acknowledged, setAcknowledged] = useState(false)
-  const [confirmText, setConfirmText] = useState("")
-  const [step, setStep] = useState<Step>("idle")
-  const [errorMessage, setErrorMessage] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
+  const [deleteDriveLogs, setDeleteDriveLogs] = useState(false);
+  const [deletePracticeSessions, setDeletePracticeSessions] = useState(false);
+  const [deleteSavedVehicles, setDeleteSavedVehicles] = useState(false);
+  const [deleteUploadedDocuments, setDeleteUploadedDocuments] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [step, setStep] = useState<Step>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const requestDeleteData = useMemo(
-    () => httpsCallable<DeleteDataPayload, { success: boolean }>(functions, "deleteMyData"),
+    () =>
+      httpsCallable<DeleteDataPayload, DeleteDataResult>(
+        functions,
+        "deleteMyData"
+      ),
     []
-  )
+  );
 
   const hasSelection =
     deleteDriveLogs ||
     deletePracticeSessions ||
     deleteSavedVehicles ||
-    deleteUploadedDocuments
+    deleteUploadedDocuments;
 
-  const canSubmit = hasSelection && acknowledged && confirmText.trim().toUpperCase() === "DELETE"
+  const canSubmit =
+    hasSelection &&
+    acknowledged &&
+    confirmText.trim().toUpperCase() === "DELETE";
 
   const handleOpenWebDeletion = () => {
-    window.open("https://njdrive50.com/delete-data", "_blank", "noopener,noreferrer")
-  }
+    window.open(
+      "https://njdrive50.com/delete-data",
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
 
   const handleDeleteSelectedData = async () => {
-    if (!auth.currentUser) {
-      setErrorMessage("You must be signed in to manage your app data.")
-      return
+    const user = auth.currentUser;
+
+    if (!user) {
+      setErrorMessage("You must be signed in to manage your app data.");
+      return;
     }
 
-    if (!canSubmit || step === "working") return
+    if (!canSubmit || step === "working") return;
 
-    setErrorMessage("")
-    setSuccessMessage("")
-    setStep("working")
+    setErrorMessage("");
+    setSuccessMessage("");
+    setStep("working");
 
     try {
-      await requestDeleteData({
+      const result = await requestDeleteData({
         deleteDriveLogs,
         deletePracticeSessions,
         deleteSavedVehicles,
         deleteUploadedDocuments,
-      })
+      });
 
-      setSuccessMessage("Your selected data has been deleted.")
-      setStep("success")
-      setScreen("dataCleared")
+      setSuccessMessage(
+        result.data?.message || "Your selected data has been deleted."
+      );
+      setStep("success");
+      setScreen("dataCleared");
     } catch (error) {
-      setStep("idle")
-      setErrorMessage(getErrorMessage(error))
+      setStep("idle");
+      setErrorMessage(getErrorMessage(error));
     }
-  }
+  };
 
   return (
     <main className="min-h-screen bg-[#F7F9FC] px-3 pb-20 pt-3 text-[#08194A]">
@@ -119,8 +142,9 @@ export default function DeleteData() {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-[#08194A]/72">
-            You can delete specific NJDrive50 data without deleting your account. This helps you
-            manage your stored information while keeping access to the app.
+            You can delete specific NJDrive50 data without deleting your account.
+            This helps you manage your stored information while keeping access to
+            the app.
           </p>
         </header>
 
@@ -132,13 +156,18 @@ export default function DeleteData() {
             <ul className="mt-2 space-y-1 text-xs leading-5 text-amber-700">
               <li>• Deleting selected data does not delete your NJDrive50 account.</li>
               <li>• Deleted data may not be recoverable.</li>
-              <li>• Some limited records may be retained where required for legal, security, fraud-prevention, or compliance reasons.</li>
+              <li>
+                • Some limited records may be retained where required for legal,
+                security, fraud-prevention, or compliance reasons.
+              </li>
               <li>• Your Privacy Policy should explain any retention exceptions.</li>
             </ul>
           </div>
 
           <div className="rounded-2xl border border-[#08194A]/10 bg-white px-4 py-4 shadow-sm">
-            <p className="text-sm font-semibold text-[#08194A]">Choose data to delete</p>
+            <p className="text-sm font-semibold text-[#08194A]">
+              Choose data to delete
+            </p>
 
             <div className="mt-3 space-y-3">
               <label className="flex items-start gap-3 rounded-xl border border-[#08194A]/8 bg-[#F7F9FC] px-3 py-3">
@@ -149,7 +178,9 @@ export default function DeleteData() {
                   className="mt-0.5 h-4 w-4 rounded border border-[#08194A]/20"
                 />
                 <span>
-                  <span className="block text-sm font-semibold text-[#08194A]">Drive logs</span>
+                  <span className="block text-sm font-semibold text-[#08194A]">
+                    Drive logs
+                  </span>
                   <span className="block text-xs leading-5 text-[#08194A]/70">
                     Deletes saved driving log entries linked to your account.
                   </span>
@@ -164,7 +195,9 @@ export default function DeleteData() {
                   className="mt-0.5 h-4 w-4 rounded border border-[#08194A]/20"
                 />
                 <span>
-                  <span className="block text-sm font-semibold text-[#08194A]">Practice session history</span>
+                  <span className="block text-sm font-semibold text-[#08194A]">
+                    Practice session history
+                  </span>
                   <span className="block text-xs leading-5 text-[#08194A]/70">
                     Deletes stored session history and related progress records.
                   </span>
@@ -179,7 +212,9 @@ export default function DeleteData() {
                   className="mt-0.5 h-4 w-4 rounded border border-[#08194A]/20"
                 />
                 <span>
-                  <span className="block text-sm font-semibold text-[#08194A]">Saved vehicles</span>
+                  <span className="block text-sm font-semibold text-[#08194A]">
+                    Saved vehicles
+                  </span>
                   <span className="block text-xs leading-5 text-[#08194A]/70">
                     Deletes vehicle profiles and related saved preferences.
                   </span>
@@ -194,7 +229,9 @@ export default function DeleteData() {
                   className="mt-0.5 h-4 w-4 rounded border border-[#08194A]/20"
                 />
                 <span>
-                  <span className="block text-sm font-semibold text-[#08194A]">Uploaded documents</span>
+                  <span className="block text-sm font-semibold text-[#08194A]">
+                    Uploaded documents
+                  </span>
                   <span className="block text-xs leading-5 text-[#08194A]/70">
                     Deletes uploaded files and related stored metadata.
                   </span>
@@ -210,9 +247,9 @@ export default function DeleteData() {
                 className="mt-0.5 h-4 w-4 rounded border border-[#08194A]/20"
               />
               <span className="text-xs leading-5 text-[#08194A]/80">
-                I understand that selected data will be permanently deleted and may not be
-                recoverable, except where limited retention is required as described in the Privacy
-                Policy.
+                I understand that selected data will be permanently deleted and may
+                not be recoverable, except where limited retention is required as
+                described in the Privacy Policy.
               </span>
             </label>
 
@@ -253,7 +290,9 @@ export default function DeleteData() {
               disabled={!canSubmit || step === "working"}
               className="mt-4 h-11 w-full rounded-xl border border-amber-200 bg-amber-500 px-4 text-sm font-extrabold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {step === "working" ? "Deleting Selected Data..." : "Delete Selected Data"}
+              {step === "working"
+                ? "Deleting Selected Data..."
+                : "Delete Selected Data"}
             </button>
           </div>
 
@@ -262,7 +301,8 @@ export default function DeleteData() {
               Need to manage your app data on the website?
             </p>
             <p className="mt-1 text-xs leading-5 text-[#08194A]/70">
-              You can also request deletion of specific NJDrive50 data through our secure web page.
+              You can also request deletion of specific NJDrive50 data through our
+              secure web page.
             </p>
             <button
               type="button"
@@ -275,5 +315,5 @@ export default function DeleteData() {
         </section>
       </div>
     </main>
-  )
+  );
 }

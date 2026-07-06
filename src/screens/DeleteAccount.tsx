@@ -1,116 +1,122 @@
 // src/screens/DeleteAccount.tsx
-import { useMemo, useState } from "react"
-import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth"
-import { httpsCallable } from "firebase/functions"
-import { auth, functions } from "../firebase"
-import { useNav } from "../state/navStore"
+import { useMemo, useState } from "react";
+import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
+import { auth, functions } from "../firebase";
+import { useNav } from "../state/navStore";
 
 type DeleteAccountResult = {
-  success: boolean
-}
+  success: boolean;
+  message?: string;
+};
 
-type DeleteStep = "idle" | "working" | "success"
+type DeleteStep = "idle" | "working" | "success";
 
-function getErrorMessage(error: unknown): string {
-  const code =
-    typeof error === "object" &&
+function getErrorCode(error: unknown): string {
+  return typeof error === "object" &&
     error !== null &&
     "code" in error &&
     typeof (error as { code?: unknown }).code === "string"
-      ? (error as { code: string }).code
-      : ""
+    ? (error as { code: string }).code
+    : "";
+}
 
-  switch (code) {
+function getErrorMessage(error: unknown): string {
+  switch (getErrorCode(error)) {
     case "auth/requires-recent-login":
-      return "For security, please re-enter your password before deleting your account."
+      return "For security, please re-enter your password before deleting your account.";
     case "auth/wrong-password":
-      return "That password is incorrect. Please try again."
+      return "That password is incorrect. Please try again.";
     case "auth/too-many-requests":
-      return "Too many attempts. Please wait a moment and try again."
+      return "Too many attempts. Please wait a moment and try again.";
     case "functions/unauthenticated":
-      return "Please sign in again before deleting your account."
-    case "functions/failed-precondition":
-      return "Your account could not be deleted right now. Please contact support."
+      return "Please sign in again before deleting your account.";
+    case "functions/internal":
+      return "We could not delete your account right now. Please try again.";
     default:
-      return "We could not delete your account right now. Please try again."
+      return "We could not delete your account right now. Please try again.";
   }
 }
 
 export default function DeleteAccount() {
-  const { goBack, setScreen } = useNav()
+  const { goBack, setScreen } = useNav();
 
-  const [acknowledged, setAcknowledged] = useState(false)
-  const [confirmText, setConfirmText] = useState("")
-  const [password, setPassword] = useState("")
-  const [needsRecentLogin, setNeedsRecentLogin] = useState(false)
-  const [step, setStep] = useState<DeleteStep>("idle")
-  const [errorMessage, setErrorMessage] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
-
-  const user = auth.currentUser
-  const email = user?.email ?? ""
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [password, setPassword] = useState("");
+  const [needsRecentLogin, setNeedsRecentLogin] = useState(false);
+  const [step, setStep] = useState<DeleteStep>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const deleteMyAccount = useMemo(
-    () => httpsCallable<Record<string, never>, DeleteAccountResult>(functions, "deleteMyAccount"),
+    () =>
+      httpsCallable<Record<string, never>, DeleteAccountResult>(
+        functions,
+        "deleteMyAccount"
+      ),
     []
-  )
+  );
 
   const canSubmit =
-    acknowledged && confirmText.trim().toUpperCase() === "DELETE"
+    acknowledged && confirmText.trim().toUpperCase() === "DELETE";
 
   const openWebDeletion = () => {
-    window.open("https://njdrive50.com/delete-account", "_blank", "noopener,noreferrer")
-  }
+    window.open(
+      "https://njdrive50.com/delete-account",
+      "_blank",
+      "noopener,noreferrer"
+    );
+  };
 
   const handleDeleteAccount = async () => {
+    const user = auth.currentUser;
+    const email = user?.email ?? "";
+
     if (!user) {
-      setErrorMessage("You must be signed in to delete your account.")
-      return
+      setErrorMessage("You must be signed in to delete your account.");
+      return;
     }
 
-    if (!canSubmit || step === "working") return
+    if (!canSubmit || step === "working") return;
 
-    setErrorMessage("")
-    setSuccessMessage("")
-    setStep("working")
+    setErrorMessage("");
+    setSuccessMessage("");
+    setStep("working");
 
     try {
       if (needsRecentLogin) {
         if (!email || !password.trim()) {
-          setStep("idle")
-          setErrorMessage("Please enter your password to continue.")
-          return
+          setStep("idle");
+          setErrorMessage("Please enter your password to continue.");
+          return;
         }
 
-        const credential = EmailAuthProvider.credential(email, password)
-        await reauthenticateWithCredential(user, credential)
+        const credential = EmailAuthProvider.credential(email, password);
+        await reauthenticateWithCredential(user, credential);
       }
 
-      await deleteMyAccount({})
+      const result = await deleteMyAccount({});
 
-      setSuccessMessage("Your account and associated data have been deleted.")
-      setStep("success")
+      setPassword("");
+      setSuccessMessage(
+        result.data?.message || "Your account and associated data have been deleted."
+      );
+      setStep("success");
 
-      await auth.signOut()
-
-      setScreen("dataCleared")
+      await auth.signOut();
+      setScreen("dataCleared");
     } catch (error) {
-      const code =
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        typeof (error as { code?: unknown }).code === "string"
-          ? (error as { code: string }).code
-          : ""
+      const code = getErrorCode(error);
 
       if (code === "auth/requires-recent-login") {
-        setNeedsRecentLogin(true)
+        setNeedsRecentLogin(true);
       }
 
-      setStep("idle")
-      setErrorMessage(getErrorMessage(error))
+      setStep("idle");
+      setErrorMessage(getErrorMessage(error));
     }
-  }
+  };
 
   return (
     <main className="min-h-screen bg-[#F7F9FC] px-3 pb-20 pt-3 text-[#08194A]">
@@ -138,9 +144,9 @@ export default function DeleteAccount() {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-[#08194A]/72">
-            This permanently deletes your NJDrive50 account and associated personal data. If you
-            only want to remove specific data while keeping your account, use the separate Delete
-            App Data option instead.
+            This permanently deletes your NJDrive50 account and associated personal data.
+            If you only want to remove specific data while keeping your account, use the
+            separate Delete App Data option instead.
           </p>
         </header>
 
@@ -152,13 +158,18 @@ export default function DeleteAccount() {
             <ul className="mt-2 space-y-1 text-xs leading-5 text-red-700">
               <li>• Your NJDrive50 account will be permanently deleted.</li>
               <li>• Your access to sign in and use account-based features will be removed.</li>
-              <li>• Your associated app data will be deleted, except where limited retention is required for legal, security, fraud-prevention, or compliance reasons.</li>
+              <li>
+                • Your associated app data will be deleted, except where limited retention is
+                required for legal, security, fraud-prevention, or compliance reasons.
+              </li>
               <li>• This action cannot be undone.</li>
             </ul>
           </div>
 
           <div className="rounded-2xl border border-[#08194A]/10 bg-white px-4 py-4 shadow-sm">
-            <p className="text-sm font-semibold text-[#08194A]">Confirm permanent deletion</p>
+            <p className="text-sm font-semibold text-[#08194A]">
+              Confirm permanent deletion
+            </p>
 
             <label className="mt-3 flex items-start gap-3">
               <input
@@ -168,9 +179,9 @@ export default function DeleteAccount() {
                 className="mt-0.5 h-4 w-4 rounded border border-[#08194A]/20"
               />
               <span className="text-xs leading-5 text-[#08194A]/80">
-                I understand that deleting my account permanently removes my account access and
-                associated personal data, subject to limited retention explained in the Privacy
-                Policy.
+                I understand that deleting my account permanently removes my account access
+                and associated personal data, subject to limited retention explained in the
+                Privacy Policy.
               </span>
             </label>
 
@@ -264,5 +275,5 @@ export default function DeleteAccount() {
         </section>
       </div>
     </main>
-  )
+  );
 }

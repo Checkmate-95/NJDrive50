@@ -107,11 +107,13 @@ export const deleteMyData = onCall<DeleteMyDataRequest>(async (request) => {
       message: "Selected user data deleted successfully.",
     };
   } catch (error: unknown) {
-    logger.error("deleteMyData failed.", {
-      uid,
-      error: error instanceof Error ? error.message : String(error),
-    });
+  logger.error("deleteMyData failed.", {
+    uid,
+    errorMessage: error instanceof Error ? error.message : String(error),
+    errorStack: error instanceof Error ? error.stack : undefined,
+    errorObject: error,
+  });
 
-    throw new HttpsError("internal", "Failed to delete selected user data.");
-  }
+  throw new HttpsError("internal", "Failed to delete selected user data.");
+}
 });

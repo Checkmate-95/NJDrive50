@@ -86,7 +86,9 @@ const getAddressComponent = (
   return format === "short" ? match.short_name ?? "" : match.long_name ?? ""
 }
 
-const parsePlaceResult = (place: any): ParsedPlaceAddress => {
+const parsePlaceResult = (
+  place: google.maps.places.PlaceResult
+): ParsedPlaceAddress => {
   const components = place?.address_components ?? []
 
   const streetNumber = getAddressComponent(components, "street_number")
@@ -94,11 +96,21 @@ const parsePlaceResult = (place: any): ParsedPlaceAddress => {
   const locality = getAddressComponent(components, "locality")
   const postalTown = getAddressComponent(components, "postal_town")
   const sublocality = getAddressComponent(components, "sublocality_level_1")
-  const adminLevel3 = getAddressComponent(components, "administrative_area_level_3")
+  const adminLevel3 = getAddressComponent(
+    components,
+    "administrative_area_level_3"
+  )
   const postalCode = getAddressComponent(components, "postal_code")
-  const postalCodeSuffix = getAddressComponent(components, "postal_code_suffix")
+  const postalCodeSuffix = getAddressComponent(
+    components,
+    "postal_code_suffix"
+  )
   const county = getAddressComponent(components, "administrative_area_level_2")
-  const state = getAddressComponent(components, "administrative_area_level_1", "long")
+  const state = getAddressComponent(
+    components,
+    "administrative_area_level_1",
+    "long"
+  )
 
   const street =
     [streetNumber, route].filter(Boolean).join(" ").trim() ||
@@ -130,9 +142,6 @@ const emptyResolvedAddress = {
 }
 
 // ─── TeenPanelContent ────────────────────────────────────────────────────────
-// Isolated component with local draft state. Keystrokes stay inside this
-// component and never re-render the parent, which was causing focus to jump
-// back to the first input on every character typed.
 
 type TeenPanelContentProps = {
   initialName: string
@@ -154,6 +163,10 @@ const TeenPanelContent = memo(function TeenPanelContent({
   const [name, setName] = useState(initialName)
   const [birthday, setBirthday] = useState(initialBirthday)
   const [phone, setPhone] = useState(initialPhone)
+
+  useEffect(() => setName(initialName), [initialName])
+  useEffect(() => setBirthday(initialBirthday), [initialBirthday])
+  useEffect(() => setPhone(initialPhone), [initialPhone])
 
   return (
     <div
@@ -223,7 +236,12 @@ const TeenPanelContent = memo(function TeenPanelContent({
 
         <div>
           <label className={labelClass}>State</label>
-          <input type="text" value={stateValue} disabled className={disabledInput} />
+          <input
+            type="text"
+            value={stateValue}
+            disabled
+            className={disabledInput}
+          />
         </div>
       </div>
 
@@ -268,6 +286,11 @@ const ParentPanelContent = memo(function ParentPanelContent({
   const [email, setEmail] = useState(initialEmail)
   const [phone, setPhone] = useState(initialPhone)
   const [rel, setRel] = useState(initialRelationship)
+
+  useEffect(() => setName(initialName), [initialName])
+  useEffect(() => setEmail(initialEmail), [initialEmail])
+  useEffect(() => setPhone(initialPhone), [initialPhone])
+  useEffect(() => setRel(initialRelationship), [initialRelationship])
 
   return (
     <div
@@ -357,9 +380,10 @@ const ParentPanelContent = memo(function ParentPanelContent({
 
 // ─── OnboardingContent ───────────────────────────────────────────────────────
 
-export default function OnboardingContent({ setScreen }: OnboardingContentProps) {
+export default function OnboardingContent({
+  setScreen,
+}: OnboardingContentProps) {
   const [saved, setSaved] = useState<OnboardingData>(() => loadOnboardingData())
-
 
   const { isLoaded } = useMapContext()
 
@@ -389,7 +413,9 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   const [showPhoneInfo, setShowPhoneInfo] = useState(false)
 
   const [teenName, setTeenName] = useState(saved.teenName ?? "")
-  const [permitIssueDate, setPermitIssueDate] = useState(saved.permitIssueDate ?? "")
+  const [permitIssueDate, setPermitIssueDate] = useState(
+    saved.permitIssueDate ?? ""
+  )
   const [stateValue, setStateValue] = useState(saved.state || "New Jersey")
 
   const [teenBirthday, setTeenBirthday] = useState(saved.teenBirthday ?? "")
@@ -449,12 +475,11 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
   ])
 
   const persistOnboarding = (overrides: Partial<OnboardingData> = {}) => {
-  const updated = { ...latestDataRef.current, ...overrides }
-  latestDataRef.current = updated
-  setSaved(updated) // <-- NEW
-  saveOnboardingData(updated)
-}
-
+    const updated = { ...latestDataRef.current, ...overrides }
+    latestDataRef.current = updated
+    setSaved(updated)
+    saveOnboardingData(updated)
+  }
 
   const clearResolvedAddressState = () => {
     setHomeTown("")
@@ -517,7 +542,7 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
     }, 600)
   }
 
-   useEffect(() => {
+  useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current)
@@ -525,88 +550,75 @@ export default function OnboardingContent({ setScreen }: OnboardingContentProps)
     }
   }, [])
 
-  const handleTeenPhotoChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file) return
+  const handleTeenPhotoChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
 
-      // Capture ref before async FileReader so value clear happens after state set
-      const inputEl = e.target
+    const inputEl = e.target
 
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const result = reader.result
-        if (typeof result === "string") {
-          setCropImageSrc(result)
-        }
-        // Clear AFTER setting state — avoids Android WebView race
-        inputEl.value = ""
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const result = reader.result
+      if (typeof result === "string") {
+        setCropImageSrc(result)
       }
-      reader.onerror = () => {
-        inputEl.value = ""
-      }
-      reader.readAsDataURL(file)
-    },
-    []
-  )
+      inputEl.value = ""
+    }
+    reader.onerror = () => {
+      inputEl.value = ""
+    }
+    reader.readAsDataURL(file)
+  }, [])
 
-  const handleTeenPhotoCropSave = useCallback(
-    (croppedDataUrl: string) => {
-      setGlobalTeenPhoto(croppedDataUrl)
-      persistOnboarding({ teenPhoto: croppedDataUrl })
-      setCropImageSrc(null)
-    },
-    // persistOnboarding always reads latestDataRef — no closure dep needed
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  )
+  const handleTeenPhotoCropSave = useCallback((croppedDataUrl: string) => {
+    setGlobalTeenPhoto(croppedDataUrl)
+    persistOnboarding({ teenPhoto: croppedDataUrl })
+    setCropImageSrc(null)
+  }, [])
 
   const handleRemoveTeenPhoto = useCallback(() => {
     setGlobalTeenPhoto("")
     persistOnboarding({ teenPhoto: "" })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const teenComplete = Boolean(teenName.trim() && teenBirthday.trim())
   const parentComplete = Boolean(parentName.trim() && relationship.trim())
 
   const canContinue = Boolean(
-  teenName.trim() &&
-  teenBirthday.trim() &&
-  teenPhone.trim() &&
-  parentName.trim() &&
-  parentPhone.trim() &&
-  relationship.trim() &&
-  permitIssueDate.trim() &&
-  permitNumber.trim() &&
-  address.trim() &&
-  homeTown.trim() &&
-  homeZip.trim() &&
-  homeCounty.trim() &&
-  homeLat !== null &&
-  homeLng !== null
-)
+    teenName.trim() &&
+      teenBirthday.trim() &&
+      teenPhone.trim() &&
+      parentName.trim() &&
+      parentPhone.trim() &&
+      relationship.trim() &&
+      permitIssueDate.trim() &&
+      permitNumber.trim() &&
+      address.trim() &&
+      homeTown.trim() &&
+      homeZip.trim() &&
+      homeCounty.trim() &&
+      homeLat !== null &&
+      homeLng !== null
+  )
 
-const handleContinue = async () => {
-  if (!canContinue) return
-  persistOnboarding()
+  const handleContinue = async () => {
+    if (!canContinue) return
+    persistOnboarding()
 
-  // ⭐ Mark user as onboarded so startupController routes to Home on next launch
-  setProfile({
-    ...getProfile(),
-    teenName: teenName.trim(),
-    isOnboarded: true,
-    profileComplete: true,
-  })
+    setProfile({
+      ...getProfile(),
+      teenName: teenName.trim(),
+      isOnboarded: true,
+      profileComplete: true,
+    })
 
-  setScreen("home")
-}
+    setScreen("home")
+  }
 
   const openPhotoPicker = () => {
     photoInputRef.current?.click()
   }
 
-  // ── Stable panel callbacks ────────────────────────────────────────────────
   const handleClearCrop = useCallback(() => setCropImageSrc(null), [])
   const handleShowTeenPanel = useCallback(() => setShowTeenPanel(true), [])
   const handleShowParentPanel = useCallback(() => setShowParentPanel(true), [])
@@ -615,7 +627,6 @@ const handleContinue = async () => {
   const handlePhoneInfoClose = useCallback(() => setShowPhoneInfo(false), [])
   const handleShowPhoneInfo = useCallback(() => setShowPhoneInfo(true), [])
 
-  // ── Flush local draft from TeenPanelContent into parent state + persist ───
   const handleTeenPanelSave = useCallback(
     (data: { name: string; birthday: string; phone: string }) => {
       setTeenName(data.name)
@@ -628,13 +639,16 @@ const handleContinue = async () => {
       })
       setShowTeenPanel(false)
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 
-  // ── Flush local draft from ParentPanelContent into parent state + persist ─
   const handleParentPanelSave = useCallback(
-    (data: { name: string; email: string; phone: string; relationship: string }) => {
+    (data: {
+      name: string
+      email: string
+      phone: string
+      relationship: string
+    }) => {
       setParentName(data.name)
       setParentEmail(data.email)
       setParentPhone(data.phone)
@@ -647,7 +661,6 @@ const handleContinue = async () => {
       })
       setShowParentPanel(false)
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 
@@ -667,34 +680,34 @@ const handleContinue = async () => {
       <section className="relative mx-auto w-full min-w-0 max-w-[42rem] overflow-hidden rounded-[28px] border border-white/15 bg-[#F8FAFD] shadow-[0_20px_55px_rgba(0,0,0,0.18)]">
         <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#f9c80e] via-white/80 to-[#0A1E5E]" />
 
-        <div className="p-5 pb-10 pt-6 sm:p-6 sm:pb-12 sm:pt-7">
-          <div className="rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white shadow-inner">
-            <div className="flex items-start justify-between gap-4">
+        <div className="p-4 pb-6 pt-5 sm:p-6 sm:pb-8 sm:pt-6">
+          <div className="rounded-[22px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 text-white shadow-inner sm:rounded-[24px] sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] uppercase tracking-[0.24em] text-[#f9c80e]/90">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[#f9c80e]/90 sm:text-[11px]">
                   Driver Setup
                 </p>
-                <h2 className="mt-2 text-2xl font-extrabold leading-tight">
+                <h2 className="mt-2 text-xl font-extrabold leading-tight sm:text-2xl">
                   Let&apos;s set up your driving profile
                 </h2>
-                <p className="mt-2 max-w-[26ch] text-sm leading-relaxed text-white/75">
+                <p className="mt-2 max-w-none text-sm leading-relaxed text-white/75 sm:max-w-[26ch]">
                   Add the teen driver, parent contact, and permit details so
                   progress tracking and reminders are ready from the start.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-white/85">
+                  <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold tracking-[0.14em] text-white/85 sm:px-3 sm:text-[11px]">
                     TEEN PROFILE
                   </span>
-                  <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-white/85">
+                  <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold tracking-[0.14em] text-white/85 sm:px-3 sm:text-[11px]">
                     PARENT CONTACT
                   </span>
-                  <span className="rounded-full border border-[#f9c80e]/35 bg-[#f9c80e]/10 px-3 py-1 text-[11px] font-bold tracking-[0.16em] text-[#f9c80e]">
+                  <span className="rounded-full border border-[#f9c80e]/35 bg-[#f9c80e]/10 px-2.5 py-1 text-[10px] font-bold tracking-[0.14em] text-[#f9c80e] sm:px-3 sm:text-[11px]">
                     NJ PERMIT
                   </span>
                 </div>
               </div>
 
-              <div className="shrink-0">
+              <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto sm:flex-col sm:items-stretch">
                 <input
                   ref={photoInputRef}
                   id="teenPhotoInput"
@@ -708,7 +721,7 @@ const handleContinue = async () => {
                   type="button"
                   onClick={openPhotoPicker}
                   aria-label="Upload teen photo"
-                  className="group relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#f9c80e]/70 bg-white/10 shadow-[0_0_18px_rgba(249,200,14,0.18)] transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_22px_rgba(249,200,14,0.32)]"
+                  className="group relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#f9c80e]/70 bg-white/10 shadow-[0_0_14px_rgba(249,200,14,0.16)] transition duration-200 active:scale-[0.98] sm:h-20 sm:w-20 sm:hover:-translate-y-[1px] sm:hover:bg-white/15 sm:hover:shadow-[0_0_22px_rgba(249,200,14,0.32)]"
                 >
                   {teenPhoto ? (
                     <img
@@ -717,32 +730,36 @@ const handleContinue = async () => {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="px-2 text-center">
-                      <span className="block text-[11px] font-bold uppercase tracking-[0.16em] text-[#f9c80e]">
+                    <div className="px-1 text-center">
+                      <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[#f9c80e] sm:text-[11px]">
                         Add
                       </span>
-                      <span className="block text-[11px] text-white/80">Photo</span>
+                      <span className="block text-[10px] text-white/80 sm:text-[11px]">
+                        Photo
+                      </span>
                     </div>
                   )}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={openPhotoPicker}
-                  className="mt-2 w-full rounded-lg border border-white/15 bg-white/10 px-2 py-1.5 text-[11px] font-semibold text-white/85 transition duration-200 hover:-translate-y-[1px] hover:bg-white/15 hover:shadow-[0_0_16px_rgba(249,200,14,0.22)]"
-                >
-                  {teenPhoto ? "Edit" : "Upload"}
-                </button>
-
-                {teenPhoto && (
+                <div className="min-w-0 flex-1 sm:flex-none">
                   <button
                     type="button"
-                    onClick={handleRemoveTeenPhoto}
-                    className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[11px] font-semibold text-white/70 transition duration-200 hover:bg-white/10 hover:text-white"
+                    onClick={openPhotoPicker}
+                    className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition duration-200 active:scale-[0.98] sm:mt-2 sm:px-2 sm:py-1.5 sm:text-[11px] sm:hover:-translate-y-[1px] sm:hover:bg-white/15 sm:hover:shadow-[0_0_16px_rgba(249,200,14,0.22)]"
                   >
-                    Remove
+                    {teenPhoto ? "Edit" : "Upload"}
                   </button>
-                )}
+
+                  {teenPhoto && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveTeenPhoto}
+                      className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/70 transition duration-200 active:scale-[0.98] sm:px-2 sm:py-1.5 sm:text-[11px] sm:hover:bg-white/10 sm:hover:text-white"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -812,9 +829,12 @@ const handleContinue = async () => {
               <p className="text-[11px] uppercase tracking-[0.22em] text-[#0A1E5E]/55">
                 Permit Details
               </p>
-              <h3 className="mt-1 text-lg font-bold text-[#0A1E5E]">Core setup</h3>
+              <h3 className="mt-1 text-lg font-bold text-[#0A1E5E]">
+                Core setup
+              </h3>
               <p className="mt-1 text-sm text-[#0A1E5E]/68">
-                These details are used for reminders, countdowns, and milestone timing.
+                These details are used for reminders, countdowns, and milestone
+                timing.
               </p>
             </div>
 
@@ -838,7 +858,9 @@ const handleContinue = async () => {
                   autoComplete="off"
                   placeholder="mm/dd/yyyy"
                   value={permitIssueDate}
-                  onChange={(e) => setPermitIssueDate(formatDateInput(e.target.value))}
+                  onChange={(e) =>
+                    setPermitIssueDate(formatDateInput(e.target.value))
+                  }
                   className={panelInput}
                 />
                 <p className={helperClass}>
@@ -858,51 +880,66 @@ const handleContinue = async () => {
               </div>
 
               <div>
-  <label className={labelClass}>Permit Number</label>
-  <input
-    type="text"
-    placeholder="Ex: P123-456-789-000"
-    value={permitNumber}
-    onChange={(e) => setPermitNumber(e.target.value)}
-    className={panelInput}
-  />
-</div>
+                <label className={labelClass}>Permit Number</label>
+                <input
+                  type="text"
+                  placeholder="Ex: P123-456-789-000"
+                  value={permitNumber}
+                  onChange={(e) => setPermitNumber(e.target.value)}
+                  className={panelInput}
+                />
+              </div>
 
-<div>
-  <label className={labelClass} htmlFor="homeAddress">
-    Home Address
-  </label>
+              <div>
+                <label className={labelClass} htmlFor="homeAddress">
+                  Home Address
+                </label>
 
-  <div className="rounded-xl border border-[#0A1E5E]/15 bg-white p-1 shadow-sm transition focus-within:border-[#f9c80e] focus-within:ring-2 focus-within:ring-[#f9c80e]/40">
-    <div className="rounded-[14px] bg-white px-2 py-1">
-      <AddressAutocomplete
-        onChange={handleAddressManualChange}
-        onPlaceSelect={handleAddressSelect}
-        placeholder="Enter address"
-      />
-    </div>
-  </div>
+                <div className="rounded-xl border border-[#0A1E5E]/15 bg-white p-1 shadow-sm transition focus-within:border-[#f9c80e] focus-within:ring-2 focus-within:ring-[#f9c80e]/40">
+                  <div className="rounded-[14px] bg-white px-2 py-1">
+                    <AddressAutocomplete
+                      onChange={handleAddressManualChange}
+                      onPlaceSelect={handleAddressSelect}
+                      placeholder="Enter address"
+                    />
+                  </div>
+                </div>
 
-  <p id="homeAddressHelp" className={helperClass}>
-    {isLoaded
-      ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
-      : "Address search is loading…"}
-  </p>
-</div>
+                <p id="homeAddressHelp" className={helperClass}>
+                  {isLoaded
+                    ? "Start typing and select a suggested address to auto-fill town, ZIP, county, and coordinates."
+                    : "Address search is loading…"}
+                </p>
+              </div>
 
               {hasAddressResolution && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className={labelClass}>Town</label>
-                    <input type="text" value={homeTown} disabled className={disabledInput} />
+                    <input
+                      type="text"
+                      value={homeTown}
+                      disabled
+                      className={disabledInput}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>ZIP</label>
-                    <input type="text" value={homeZip} disabled className={disabledInput} />
+                    <input
+                      type="text"
+                      value={homeZip}
+                      disabled
+                      className={disabledInput}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>County</label>
-                    <input type="text" value={homeCounty} disabled className={disabledInput} />
+                    <input
+                      type="text"
+                      value={homeCounty}
+                      disabled
+                      className={disabledInput}
+                    />
                   </div>
                   <div>
                     <label className={labelClass}>Latitude / Longitude</label>
@@ -922,7 +959,7 @@ const handleContinue = async () => {
             </div>
           </div>
 
-                    <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 pb-6 text-white shadow-[0_14px_34px_rgba(10,30,94,0.18)]">
+          <div className="mt-5 rounded-[24px] border border-[#0A1E5E]/10 bg-[#08194A] p-4 pb-6 text-white shadow-[0_14px_34px_rgba(10,30,94,0.18)]">
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="text-[11px] uppercase tracking-[0.22em] text-[#f9c80e]/85">
@@ -974,10 +1011,9 @@ const handleContinue = async () => {
               </button>
             </div>
           </div>
-          </div>
+        </div>
       </section>
 
-      {/* ── Teen Panel ──────────────────────────────────────────────────────── */}
       <BottomPanel
         open={showTeenPanel}
         onClose={handleTeenPanelClose}
@@ -993,7 +1029,6 @@ const handleContinue = async () => {
         />
       </BottomPanel>
 
-      {/* ── Parent Panel ─────────────────────────────────────────────────────── */}
       <BottomPanel
         open={showParentPanel}
         onClose={handleParentPanelClose}
@@ -1009,7 +1044,6 @@ const handleContinue = async () => {
         />
       </BottomPanel>
 
-      {/* ── Phone Info Panel ─────────────────────────────────────────────────── */}
       <BottomPanel
         open={showPhoneInfo}
         onClose={handlePhoneInfoClose}
@@ -1027,9 +1061,9 @@ const handleContinue = async () => {
           </div>
           <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#EEF2F8] p-4">
             <p className="leading-relaxed text-[#0A1E5E]/82">
-              We use your phone number only for helpful reminders, such as permit
-              deadlines, driving-hour progress, and road-test countdowns. Your number
-              is never shared or sold.
+              We use your phone number only for helpful reminders, such as
+              permit deadlines, driving-hour progress, and road-test
+              countdowns. Your number is never shared or sold.
             </p>
           </div>
           <div className="rounded-2xl border border-[#0A1E5E]/10 bg-[#F4F6FA] p-3">

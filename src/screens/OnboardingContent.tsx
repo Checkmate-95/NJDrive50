@@ -707,60 +707,60 @@ export default function OnboardingContent({
                 </div>
               </div>
 
-              <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto sm:flex-col sm:items-stretch">
-                <input
-                  ref={photoInputRef}
-                  id="teenPhotoInput"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleTeenPhotoChange}
-                />
+              <div className="flex w-full shrink-0 items-center gap-3 sm:w-auto sm:flex-col sm:items-center">
+  <input
+    ref={photoInputRef}
+    id="teenPhotoInput"
+    type="file"
+    accept="image/*"
+    className="hidden"
+    onChange={handleTeenPhotoChange}
+  />
 
-                <button
-                  type="button"
-                  onClick={openPhotoPicker}
-                  aria-label="Upload teen photo"
-                  className="group relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#f9c80e]/70 bg-white/10 shadow-[0_0_14px_rgba(249,200,14,0.16)] transition duration-200 active:scale-[0.98] sm:h-20 sm:w-20 sm:hover:-translate-y-[1px] sm:hover:bg-white/15 sm:hover:shadow-[0_0_22px_rgba(249,200,14,0.32)]"
-                >
-                  {teenPhoto ? (
-                    <img
-                      src={teenPhoto}
-                      alt="Teen profile preview"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="px-1 text-center">
-                      <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[#f9c80e] sm:text-[11px]">
-                        Add
-                      </span>
-                      <span className="block text-[10px] text-white/80 sm:text-[11px]">
-                        Photo
-                      </span>
-                    </div>
-                  )}
-                </button>
+  <button
+    type="button"
+    onClick={openPhotoPicker}
+    aria-label="Upload teen photo"
+    className="group relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#f9c80e]/75 bg-white/10 shadow-[0_0_18px_rgba(249,200,14,0.18)] transition duration-200 active:scale-[0.98] sm:h-28 sm:w-28"
+  >
+    {teenPhoto ? (
+      <img
+        src={teenPhoto}
+        alt="Teen profile preview"
+        className="h-full w-full object-cover"
+      />
+    ) : (
+      <div className="px-1 text-center">
+        <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-[#f9c80e] sm:text-[11px]">
+          Add
+        </span>
+        <span className="block text-[10px] text-white/80 sm:text-[11px]">
+          Photo
+        </span>
+      </div>
+    )}
+  </button>
 
-                <div className="min-w-0 flex-1 sm:flex-none">
-                  <button
-                    type="button"
-                    onClick={openPhotoPicker}
-                    className="w-full rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold text-white/85 transition duration-200 active:scale-[0.98] sm:mt-2 sm:px-2 sm:py-1.5 sm:text-[11px] sm:hover:-translate-y-[1px] sm:hover:bg-white/15 sm:hover:shadow-[0_0_16px_rgba(249,200,14,0.22)]"
-                  >
-                    {teenPhoto ? "Edit" : "Upload"}
-                  </button>
+  <div className="min-w-0 flex-1 sm:w-full sm:flex-none">
+    <button
+      type="button"
+      onClick={openPhotoPicker}
+      className="w-full rounded-full border border-white/12 bg-white/8 px-2.5 py-1 text-[10px] font-semibold text-white/75 transition duration-200 active:scale-[0.98] sm:mt-2 sm:text-[11px]"
+    >
+      {teenPhoto ? "Edit" : "Upload"}
+    </button>
 
-                  {teenPhoto && (
-                    <button
-                      type="button"
-                      onClick={handleRemoveTeenPhoto}
-                      className="mt-2 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/70 transition duration-200 active:scale-[0.98] sm:px-2 sm:py-1.5 sm:text-[11px] sm:hover:bg-white/10 sm:hover:text-white"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
+    {teenPhoto && (
+      <button
+        type="button"
+        onClick={handleRemoveTeenPhoto}
+        className="mt-1.5 w-full rounded-full border border-white/10 bg-transparent px-2.5 py-1 text-[10px] font-medium text-white/60 transition duration-200 active:scale-[0.98] sm:text-[11px]"
+      >
+        Remove
+      </button>
+    )}
+  </div>
+</div>
             </div>
           </div>
 

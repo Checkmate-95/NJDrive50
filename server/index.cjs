@@ -96,15 +96,22 @@ app.use(express.json({ limit: "1mb" }))
 const corsOptions = {
   origin(origin, callback) {
     try {
+      // Allow null origins (Android WebView, file://)
       if (!origin) return callback(null, true)
-      if (!isProd && allowedOrigins.length === 0) return callback(null, true)
+
+      // Allow all origins in development
+      if (!isProd) return callback(null, true)
+
+      // Strict allowlist in production
       if (allowedOrigins.includes(origin)) return callback(null, true)
+
       return callback(createHttpError(403, `CORS blocked for origin: ${origin}`))
     } catch (err) {
       return callback(err instanceof Error ? err : new Error(String(err)))
     }
   },
 }
+
 
 app.use(cors(corsOptions))
 

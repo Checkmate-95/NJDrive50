@@ -3,6 +3,9 @@ import { useEffect, useRef, useState } from "react"
 const RAW_BASE = (import.meta.env.VITE_API_BASE_URL || "").trim()
 const API_BASE = RAW_BASE.replace(/\/+$/, "")
 
+console.log("API_BASE:", API_BASE)
+
+
 const STABLE_HEADERS = {
   "Content-Type": "application/json",
   Accept: "application/json",

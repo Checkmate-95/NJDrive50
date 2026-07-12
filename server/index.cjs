@@ -13,9 +13,12 @@
 // - Async wrapper
 // - Global 404 + global error handler
 // - Graceful shutdown
+// - Optional HTTPS in development/production via server.key + server.cert
 
 const path = require("path")
+const fs = require("fs")
 const http = require("http")
+const https = require("https")
 const dotenv = require("dotenv")
 const express = require("express")
 const cors = require("cors")
@@ -36,6 +39,8 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini"
 const REQUIRE_API_AUTH = isProd || process.env.REQUIRE_API_AUTH === "true"
 const AI_RATE_LIMIT_MAX = Number(process.env.AI_RATE_LIMIT_MAX) || 20
 const TRUST_PROXY = process.env.TRUST_PROXY || (isProd ? "1" : "false")
+const ENABLE_HTTPS = process.env.ENABLE_HTTPS === "true"
+const HTTPS_PORT = Number(process.env.HTTPS_PORT) || 3443
 
 if (!process.env.OPENAI_API_KEY) {
   throw new Error("OPENAI_API_KEY missing from server/.env")
@@ -56,6 +61,10 @@ if (REQUIRE_API_AUTH && !process.env.API_BEARER_TOKEN) {
 
 if (!Number.isFinite(PORT) || PORT <= 0) {
   throw new Error("PORT must be a valid positive number.")
+}
+
+if (!Number.isFinite(HTTPS_PORT) || HTTPS_PORT <= 0) {
+  throw new Error("HTTPS_PORT must be a valid positive number.")
 }
 
 if (!Number.isFinite(AI_RATE_LIMIT_MAX) || AI_RATE_LIMIT_MAX <= 0) {
@@ -80,96 +89,6 @@ if (TRUST_PROXY !== "false") {
 }
 
 // ------------------------------
-// MIDDLEWARE
-// ------------------------------
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-  })
-)
-
-app.use(compression())
-app.use(express.json({ limit: "1mb" }))
-
-// FIX 3 — CORS callback returns createHttpError(403) instead of a plain
-// Error so the global error handler sends 403, not 500, on blocked origins.
-const corsOptions = {
-  origin(origin, callback) {
-    try {
-      // Allow null origins (Android WebView, file://)
-      if (!origin) return callback(null, true)
-
-      // Allow all origins in development
-      if (!isProd) return callback(null, true)
-
-      // Strict allowlist in production
-      if (allowedOrigins.includes(origin)) return callback(null, true)
-
-      return callback(createHttpError(403, `CORS blocked for origin: ${origin}`))
-    } catch (err) {
-      return callback(err instanceof Error ? err : new Error(String(err)))
-    }
-  },
-}
-
-
-app.use(cors(corsOptions))
-
-app.use((req, res, next) => {
-  req.id = randomUUID()
-  res.setHeader("X-Request-Id", req.id)
-  const start = Date.now()
-
-  res.on("finish", () => {
-    const duration = Date.now() - start
-    const log = {
-      timestamp: new Date().toISOString(),
-      level:
-        res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info",
-      requestId: req.id,
-      method: req.method,
-      url: req.originalUrl,
-      status: res.statusCode,
-      durationMs: duration,
-      origin: req.headers.origin || "no-origin",
-      ip: req.ip,
-      userAgent: req.get("user-agent") || "unknown",
-    }
-
-    console.log(JSON.stringify(log))
-  })
-
-  next()
-})
-
-// ------------------------------
-// OPENAI CLIENT
-// ------------------------------
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
-// ------------------------------
-// CONSTANTS
-// ------------------------------
-const ALLOWED_MODES = new Set(["faq", "chat"])
-const MAX_PROMPT_LENGTH = 2000
-
-const aiRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: AI_RATE_LIMIT_MAX,
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res, _next, options) => {
-    const retryAfterSeconds = Math.ceil(options.windowMs / 1000)
-
-    res.status(options.statusCode).json({
-      error: "Too many requests — try again soon.",
-      requestId: req.id,
-      retryAfterSeconds,
-    })
-  },
-})
-
-// ------------------------------
 // HELPERS
 // ------------------------------
 function asyncHandler(fn) {
@@ -183,8 +102,6 @@ function safeTokenEqual(a, b) {
   return timingSafeEqual(aBuf, bBuf)
 }
 
-// NOTE: createHttpError is defined before corsOptions uses it — moved up here
-// so the CORS callback can reference it safely at call time (not at parse time).
 function createHttpError(statusCode, message) {
   const err = new Error(message)
   err.statusCode = statusCode
@@ -246,6 +163,93 @@ function requireTrustedBrowserOrigin(req, res, next) {
 }
 
 // ------------------------------
+// MIDDLEWARE
+// ------------------------------
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+)
+
+app.use(compression())
+app.use(express.json({ limit: "1mb" }))
+
+const corsOptions = {
+  origin(origin, callback) {
+    try {
+      // Allow null origins (Android WebView, file://, direct mobile contexts)
+      if (!origin) return callback(null, true)
+
+      // Allow all origins in development
+      if (!isProd) return callback(null, true)
+
+      // Strict allowlist in production
+      if (allowedOrigins.includes(origin)) return callback(null, true)
+
+      return callback(createHttpError(403, `CORS blocked for origin: ${origin}`))
+    } catch (err) {
+      return callback(err instanceof Error ? err : new Error(String(err)))
+    }
+  },
+}
+
+app.use(cors(corsOptions))
+
+app.use((req, res, next) => {
+  req.id = randomUUID()
+  res.setHeader("X-Request-Id", req.id)
+  const start = Date.now()
+
+  res.on("finish", () => {
+    const duration = Date.now() - start
+    const log = {
+      timestamp: new Date().toISOString(),
+      level:
+        res.statusCode >= 500 ? "error" : res.statusCode >= 400 ? "warn" : "info",
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      status: res.statusCode,
+      durationMs: duration,
+      origin: req.headers.origin || "no-origin",
+      ip: req.ip,
+      userAgent: req.get("user-agent") || "unknown",
+    }
+
+    console.log(JSON.stringify(log))
+  })
+
+  next()
+})
+
+// ------------------------------
+// OPENAI CLIENT
+// ------------------------------
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+// ------------------------------
+// CONSTANTS
+// ------------------------------
+const ALLOWED_MODES = new Set(["faq", "chat"])
+const MAX_PROMPT_LENGTH = 2000
+
+const aiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: AI_RATE_LIMIT_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res, _next, options) => {
+    const retryAfterSeconds = Math.ceil(options.windowMs / 1000)
+
+    res.status(options.statusCode).json({
+      error: "Too many requests — try again soon.",
+      requestId: req.id,
+      retryAfterSeconds,
+    })
+  },
+})
+
+// ------------------------------
 // ROUTES
 // ------------------------------
 app.get("/api/health", (req, res) => {
@@ -254,6 +258,7 @@ app.get("/api/health", (req, res) => {
     service: "NJDrive50 AI",
     requestId: req.id,
     authEnabled: REQUIRE_API_AUTH,
+    httpsEnabled: ENABLE_HTTPS,
   })
 })
 
@@ -328,7 +333,6 @@ Tone: warm, reassuring, detailed when needed.
   })
 )
 
-// FIX 4 — aiRateLimiter added now so it's enforced when this is implemented
 app.post("/api/computeRoutes", requireBearerToken, aiRateLimiter, (req, res) => {
   res.json({
     status: "ok",
@@ -367,7 +371,6 @@ app.use((err, req, res, _next) => {
 
   console.error(JSON.stringify(errorLog))
 
-  // FIX 2 — details now exposes stack trace in dev instead of duplicating message
   res.status(status).json({
     error: message,
     requestId: req.id,
@@ -379,13 +382,30 @@ app.use((err, req, res, _next) => {
 // SERVER START + SHUTDOWN
 // ------------------------------
 const server = http.createServer(app)
+let httpsServer = null
+
+if (ENABLE_HTTPS) {
+  try {
+    const httpsOptions = {
+      key: fs.readFileSync(path.resolve(__dirname, "server.key")),
+      cert: fs.readFileSync(path.resolve(__dirname, "server.cert")),
+    }
+
+    httpsServer = https.createServer(httpsOptions, app)
+  } catch (err) {
+    console.error(
+      "HTTPS disabled: could not load server.key/server.cert",
+      err instanceof Error ? err.message : String(err)
+    )
+  }
+}
 
 server.listen(PORT, "0.0.0.0", () => {
-  // FIX 1 — guard against keys shorter than 8 chars to avoid slice crash
   const key = process.env.OPENAI_API_KEY
   const keyHint = key.length > 8 ? `sk-...${key.slice(-4)}` : "[set]"
 
   console.log(`NJDrive50 AI server running on http://localhost:${PORT}`)
+  console.log(`NJDrive50 AI server LAN   on http://0.0.0.0:${PORT}`)
   console.log(`OPENAI_API_KEY : ${keyHint}`)
   console.log(`OPENAI_MODEL   : ${OPENAI_MODEL}`)
   console.log(`TRUST_PROXY    : ${TRUST_PROXY}`)
@@ -400,23 +420,50 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`RATE_LIMIT     : ${AI_RATE_LIMIT_MAX} requests / 15 min per IP`)
 })
 
+if (httpsServer) {
+  httpsServer.listen(HTTPS_PORT, "0.0.0.0", () => {
+    console.log(`NJDrive50 AI HTTPS server running on https://localhost:${HTTPS_PORT}`)
+    console.log(`NJDrive50 AI HTTPS LAN   running on https://192.168.0.157:${HTTPS_PORT}`)
+  })
+}
+
 function shutdown(signal) {
   console.log(`${signal} received — shutting down NJDrive50 server...`)
-  server.close((err) => {
+
+  const serversToClose = [server]
+  if (httpsServer) serversToClose.push(httpsServer)
+
+  let remaining = serversToClose.length
+  let exited = false
+
+  const finish = (err) => {
+    if (exited) return
+
     if (err) {
+      exited = true
       console.error(
         "Error during shutdown:",
         err instanceof Error ? err.message : String(err)
       )
       process.exit(1)
     }
-    process.exit(0)
-  })
 
-  // FIX 5 — reduced from 10s to 5s; stateless server has no DB to drain
+    remaining -= 1
+    if (remaining === 0) {
+      exited = true
+      process.exit(0)
+    }
+  }
+
+  for (const srv of serversToClose) {
+    srv.close(finish)
+  }
+
   setTimeout(() => {
-    console.error("Forced shutdown after timeout.")
-    process.exit(1)
+    if (!exited) {
+      console.error("Forced shutdown after timeout.")
+      process.exit(1)
+    }
   }, 5000).unref()
 }
 

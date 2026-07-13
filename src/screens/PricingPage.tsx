@@ -57,6 +57,25 @@ function CheckIcon() {
   )
 }
 
+function DownloadIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3v12" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 20h14" />
+    </svg>
+  )
+}
+
 function GooglePlayButton({
   onClick,
   dark = false,
@@ -67,31 +86,60 @@ function GooglePlayButton({
       type="button"
       onClick={onClick}
       aria-label="Get NJDrive50 on Google Play and start your 7-day free trial"
-      className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-offset-2 ${
+      className={`group w-full overflow-hidden rounded-2xl border text-left shadow-sm transition duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-offset-2 ${
         dark
-          ? "border-white/15 bg-white/10 text-white hover:bg-white/15 focus-visible:ring-offset-[#08194A]"
-          : "border-[#08194A]/12 bg-[#08194A] text-white hover:bg-[#0A1E5E]"
+          ? "border-white/15 bg-white/[0.09] text-white hover:bg-white/[0.14] focus-visible:ring-offset-[#08194A]"
+          : "border-[#08194A]/12 bg-white text-[#08194A] hover:border-[#08194A]/20 hover:shadow-md focus-visible:ring-offset-white"
       } ${className}`}
     >
-      <span className="min-w-0">
-        <span className="block text-sm font-extrabold">
-          Get NJDrive50 on Google Play
+      <span className="flex min-h-[72px] items-center gap-3 px-4 py-3">
+        <span
+          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+            dark
+              ? "bg-[#F9C80E] text-[#08194A]"
+              : "bg-[#08194A] text-white"
+          }`}
+        >
+          <DownloadIcon />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-extrabold tracking-tight">
+            Get NJDrive50 on Google Play
+          </span>
+
+          <span
+            className={`mt-0.5 block text-xs leading-5 ${
+              dark ? "text-white/68" : "text-[#08194A]/62"
+            }`}
+          >
+            Start your 7-day free trial in the app
+          </span>
         </span>
 
         <span
-          className={`mt-1 block text-xs leading-5 ${
-            dark ? "text-white/65" : "text-white/70"
+          className={`text-lg font-medium ${
+            dark ? "text-white/60" : "text-[#08194A]/42"
           }`}
+          aria-hidden="true"
         >
-          Start your 7-day free trial in the app
+          ›
         </span>
       </span>
 
-      <img
-        src={GOOGLE_PLAY_BADGE_SRC}
-        alt="Get it on Google Play"
-        className="h-auto w-[140px] shrink-0"
-      />
+      <span
+        className={`flex min-h-[58px] items-center justify-center border-t px-4 py-2.5 ${
+          dark
+            ? "border-white/10 bg-black/10"
+            : "border-[#08194A]/8 bg-[#F7F9FC]"
+        }`}
+      >
+        <img
+          src={GOOGLE_PLAY_BADGE_SRC}
+          alt="Get it on Google Play"
+          className="h-auto w-[170px] max-w-full"
+        />
+      </span>
     </button>
   )
 }

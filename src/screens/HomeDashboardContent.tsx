@@ -242,10 +242,6 @@ const beginDrive = async () => {
 };
 
 
-
-
-
-
   const handleStartDrive = async () => {
   if (startingDrive) return
 

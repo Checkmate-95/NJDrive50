@@ -6,12 +6,14 @@ export default function LandingPage() {
 
   const PAGE_URL = "https://njdrive50.com"
   const OG_IMAGE_URL = "https://njdrive50.com/og-image.png"
-  const PRICING_PAGE_PATH = "/pricing"
+  
+  const GOOGLE_PLAY_URL =
+    "https://play.google.com/store/apps/details?id=com.njdrive50.app"
 
   const metaTitle =
     "NJDrive50 | New Jersey 50-Hour Driving Log App for NJ Supervised Driving Hours"
   const metaDescription =
-    "NJDrive50 is a New Jersey driving log app for parents and teens. Track 50 supervised driving hours, 10 night driving hours, permit milestones, and NJMVC Form BA-CSD progress with a 7-day free trial."
+    "NJDrive50 is a New Jersey driving log app for parents and teens. Track 50 supervised driving hours, 10 night driving hours, permit milestones, and NJMVC Form BA-CSD progress. View plans, then download the app to start a 7-day free trial."
 
   const faqs = [
     {
@@ -52,7 +54,7 @@ export default function LandingPage() {
     {
       question: "Is NJDrive50 free?",
       answer:
-        "NJDrive50 includes a 7-day free trial, then costs $4.99 per month or $39.99 per year for New Jersey families.",
+        "NJDrive50 offers a 7-day free trial inside the app. After the trial, subscriptions are $4.99 per month or $39.99 per year and are managed through Google Play.",
     },
   ]
 
@@ -123,56 +125,57 @@ export default function LandingPage() {
   ]
 
   const softwareAppSchema = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "@id": `${PAGE_URL}#softwareapp`,
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": `${PAGE_URL}#softwareapp`,
+  name: "NJDrive50",
+  url: PAGE_URL,
+  applicationCategory: "UtilitiesApplication",
+  operatingSystem: "Android",
+  description:
+    "NJDrive50 is an NJ driving log app for New Jersey families to track supervised driving hours, night driving hours, permit dates, and progress toward the NJ MVC 50-hour requirement.",
+  image: OG_IMAGE_URL,
+  screenshot: OG_IMAGE_URL,
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Monthly Plan",
+      price: "4.99",
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: GOOGLE_PLAY_URL,        // ← FIXED
+      category: "Subscription",
+    },
+    {
+      "@type": "Offer",
+      name: "Annual Plan",
+      price: "39.99",
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: GOOGLE_PLAY_URL,        // ← FIXED
+      category: "Subscription",
+    },
+  ],
+  areaServed: {
+    "@type": "State",
+    name: "New Jersey",
+  },
+  audience: {
+    "@type": "PeopleAudience",
+    audienceType: "New Jersey parents and teen drivers",
+  },
+  publisher: {
+    "@type": "Organization",
+    "@id": `${PAGE_URL}#organization`,
     name: "NJDrive50",
     url: PAGE_URL,
-    applicationCategory: "UtilitiesApplication",
-    operatingSystem: "Android",
-    description:
-      "NJDrive50 is an NJ driving log app for New Jersey families to track supervised driving hours, night driving hours, permit dates, and progress toward the NJ MVC 50-hour requirement.",
-    image: OG_IMAGE_URL,
-    screenshot: OG_IMAGE_URL,
-    offers: [
-      {
-        "@type": "Offer",
-        name: "Monthly Plan",
-        price: "4.99",
-        priceCurrency: "USD",
-        availability: "https://schema.org/InStock",
-        url: `${PAGE_URL}${PRICING_PAGE_PATH}`,
-        category: "Subscription",
-      },
-      {
-        "@type": "Offer",
-        name: "Annual Plan",
-        price: "39.99",
-        priceCurrency: "USD",
-        availability: "https://schema.org/InStock",
-        url: `${PAGE_URL}${PRICING_PAGE_PATH}`,
-        category: "Subscription",
-      },
-    ],
-    areaServed: {
-      "@type": "State",
-      name: "New Jersey",
+    logo: {
+      "@type": "ImageObject",
+      url: `${PAGE_URL}/njdrive50Logo6.png`,
     },
-    audience: {
-      "@type": "PeopleAudience",
-      audienceType: "New Jersey parents and teen drivers",
-    },
-    publisher: {
-      "@type": "Organization",
-      "@id": `${PAGE_URL}#organization`,
-      name: "NJDrive50",
-      url: PAGE_URL,
-      logo: {
-        "@type": "ImageObject",
-        url: `${PAGE_URL}/njdrive50Logo6.png`,
-      },
-    },
-  }
+  },
+}
+
 
   const faqPageSchema = {
     "@context": "https://schema.org",
@@ -230,7 +233,7 @@ export default function LandingPage() {
     "flex min-h-[48px] w-full items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/5 active:scale-[0.99] sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
 
   const navTextButtonClass =
-    "transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black rounded-sm"
+    "rounded-sm transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
 
   return (
     <>
@@ -271,7 +274,6 @@ export default function LandingPage() {
       </Helmet>
 
       <div className="min-h-screen bg-[#020617] pb-24 text-white md:pb-0">
-        {/* ── Header ── */}
         <header className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
             <div className="flex min-w-0 items-center gap-2.5">
@@ -290,7 +292,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Desktop nav */}
             <nav className="hidden items-center gap-5 text-xs font-semibold text-white/60 md:flex">
               <a href="#how-it-works" className="transition hover:text-white">
                 How it works
@@ -311,8 +312,6 @@ export default function LandingPage() {
               >
                 Pricing
               </button>
-
-              {/* ── Auth buttons ── */}
               <button
                 type="button"
                 onClick={() => setScreen("login")}
@@ -322,17 +321,16 @@ export default function LandingPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setScreen("register")}
+                onClick={() => setScreen("pricing")}
                 className="rounded-lg bg-[#38BDF8] px-4 py-1.5 text-xs font-bold text-[#020617] transition hover:bg-[#0EA5E9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
               >
-                Sign up
+                View plans
               </button>
             </nav>
           </div>
         </header>
 
         <main>
-          {/* ── Hero ── */}
           <section className="relative overflow-hidden border-b border-white/10">
             <div className="pointer-events-none absolute inset-0 -top-32 flex justify-center">
               <div className="h-[420px] w-[420px] rounded-full bg-[#38BDF8]/5 blur-[120px] sm:h-[500px] sm:w-[700px]" />
@@ -382,12 +380,12 @@ export default function LandingPage() {
 
                 <div className="mt-7 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
                   <button
-                    id="get-app"
+                    id="view-plans"
                     type="button"
                     onClick={() => setScreen("pricing")}
                     className={ctaLinkClass}
                   >
-                    Get started free
+                    View plans
                   </button>
                   <a href="#how-it-works" className={secondaryLinkClass}>
                     See how it works
@@ -395,18 +393,20 @@ export default function LandingPage() {
                 </div>
 
                 <p className="mt-3 text-xs leading-6 text-white/45">
-                  7-day free trial · Cancel anytime for monthly plans · $4.99 per month or $39.99
-                  per year · Cancel annual renewal before the next billing date
+                  7-day free trial available in the app · $4.99 per month or $39.99 per year.
+                </p>
+
+                <p className="mt-3 max-w-xl text-xs leading-6 text-white/45">
+                  View subscription options on our pricing page. Free trials, subscriptions,
+                  billing, and cancellations are started and managed securely inside the NJDrive50
+                  app through Google Play. This website does not process payments.
                 </p>
               </div>
 
-              {/* Phone mockup */}
               <div className="flex w-full flex-1 justify-center md:justify-end">
                 <div className="w-full max-w-[220px] sm:max-w-[250px] md:max-w-[270px]">
                   <div className="relative overflow-hidden rounded-[32px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.72)]">
                     <div className="flex flex-col gap-2.5 p-3.5 sm:p-4">
-
-                      {/* Total Hours */}
                       <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
                         <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
                           Total Hours
@@ -435,7 +435,6 @@ export default function LandingPage() {
                         </div>
                       </div>
 
-                      {/* Day / Night */}
                       <div className="grid grid-cols-2 gap-2.5">
                         <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
                           <p className="text-sm font-extrabold tabular-nums text-yellow-400 sm:text-[15px]">
@@ -455,7 +454,6 @@ export default function LandingPage() {
                         </div>
                       </div>
 
-                      {/* Road Test + Night Hrs Left */}
                       <div className="grid grid-cols-2 gap-2.5">
                         <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center">
                           <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
@@ -477,7 +475,6 @@ export default function LandingPage() {
                           </p>
                         </div>
                       </div>
-
                     </div>
                   </div>
                 </div>
@@ -485,7 +482,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── How it works ── */}
           <section
             id="how-it-works"
             className="scroll-mt-24 border-b border-white/10 bg-white/[0.02]"
@@ -503,6 +499,7 @@ export default function LandingPage() {
                   on pace for the 50-hour requirement.
                 </p>
               </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 {steps.map(({ step, title, description }) => (
                   <div
@@ -520,7 +517,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── Features ── */}
           <section id="features" className="scroll-mt-24 border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
@@ -535,6 +531,7 @@ export default function LandingPage() {
                   practice, milestones, and road test readiness.
                 </p>
               </div>
+
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {features.map(({ icon, title, description }) => (
                   <div
@@ -552,7 +549,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── NJ Requirements ── */}
           <section
             id="nj-requirements"
             className="scroll-mt-24 border-b border-white/10 bg-[#38BDF8]/5"
@@ -565,10 +561,12 @@ export default function LandingPage() {
                 >
                   📋
                 </div>
+
                 <div>
                   <h2 className="text-lg font-extrabold text-[#38BDF8]">
                     What are the NJ teen driving requirements?
                   </h2>
+
                   <p className="mt-3 text-base leading-7 text-white/72">
                     Starting February 1, 2025, New Jersey requires permit holders under 21 with
                     permits issued on or after that date to complete{" "}
@@ -576,6 +574,7 @@ export default function LandingPage() {
                     including <strong className="text-white">10 hours at night</strong>, before
                     they can receive a probationary license.
                   </p>
+
                   <p className="mt-3 text-base leading-7 text-white/72">
                     Drivers must also wait at least{" "}
                     <strong className="text-white">6 months</strong> from permit issuance before
@@ -585,6 +584,7 @@ export default function LandingPage() {
                     </strong>{" "}
                     when applying for licensure.
                   </p>
+
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <h3 className="text-sm font-bold text-white">What NJDrive50 tracks</h3>
@@ -593,6 +593,7 @@ export default function LandingPage() {
                         road test eligibility timing, and BA-CSD preparation.
                       </p>
                     </div>
+
                     <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <h3 className="text-sm font-bold text-white">
                         What you need for the NJ MVC
@@ -603,6 +604,7 @@ export default function LandingPage() {
                       </p>
                     </div>
                   </div>
+
                   <a
                     href="https://www.nj.gov/mvc/license/youngadult.htm"
                     target="_blank"
@@ -616,7 +618,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── Checklist ── */}
           <section className="border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
@@ -631,6 +632,7 @@ export default function LandingPage() {
                   rules and probationary license requirements.
                 </p>
               </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 {[
                   "Hold a valid New Jersey special learner's permit or examination permit.",
@@ -651,7 +653,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── FAQ ── */}
           <section id="faq" className="scroll-mt-24 border-b border-white/10">
             <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
               <div className="mb-10 text-center">
@@ -666,6 +667,7 @@ export default function LandingPage() {
                   rules, road test readiness, and pricing.
                 </p>
               </div>
+
               <div className="space-y-3">
                 {faqs.map(({ question, answer }) => (
                   <details
@@ -690,7 +692,6 @@ export default function LandingPage() {
             </div>
           </section>
 
-          {/* ── Final CTA ── */}
           <section className="border-b border-white/10">
             <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:py-20">
               <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
@@ -700,26 +701,31 @@ export default function LandingPage() {
                 Ready to track supervised driving hours in NJ?
               </h2>
               <p className="mx-auto mt-4 max-w-md text-base leading-7 text-white/65">
-                Start your 7-day free trial of NJDrive50 to track driving hours, monitor night
-                driving progress, and stay ready for the NJ road test and NJMVC Form BA-CSD.
+                Explore subscription options, then download NJDrive50 to track driving hours,
+                monitor night driving progress, and stay ready for the NJ road test.
               </p>
+
               <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:justify-center">
                 <button
                   type="button"
                   onClick={() => setScreen("pricing")}
                   className={ctaLinkClass}
                 >
-                  Start 7-Day Free Trial
+                  View plans
                 </button>
                 <a href="#faq" className={secondaryLinkClass}>
                   Check NJ permit FAQs
                 </a>
               </div>
+
+              <p className="mx-auto mt-3 max-w-md text-xs leading-6 text-white/45">
+                Free trials, subscriptions, billing, and cancellations are started and managed
+                securely inside the NJDrive50 app through Google Play.
+              </p>
             </div>
           </section>
         </main>
 
-        {/* ── Footer ── */}
         <footer className="border-t border-white/10 bg-black/40">
           <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -794,7 +800,6 @@ export default function LandingPage() {
           </div>
         </footer>
 
-        {/* ── Mobile sticky CTA ── */}
         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#020617]/95 p-3 backdrop-blur md:hidden">
           <div className="flex items-center gap-2">
             <button
@@ -802,7 +807,7 @@ export default function LandingPage() {
               onClick={() => setScreen("pricing")}
               className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-xl bg-[#38BDF8] px-5 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
             >
-              Start 7-Day Free Trial
+              View plans
             </button>
             <button
               type="button"

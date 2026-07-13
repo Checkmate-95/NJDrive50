@@ -216,15 +216,19 @@ export default function HomeDashboardContent({
         : "Resume Paused Drive"
       : "Start a New Drive"
 
-  const queryLocationPermission = async () => {
-    try {
-      const result = await Geolocation.checkPermissions()
-      return result.location
-    } catch (err) {
-      console.error("Location permission query failed:", err)
-      return null
-    }
+  const hasLocationPermission = async () => {
+  try {
+    const result = await Geolocation.checkPermissions()
+
+    return (
+      result.location === "granted" ||
+      result.coarseLocation === "granted"
+    )
+  } catch (err) {
+    console.error("Location permission query failed:", err)
+    return false
   }
+}
 
   // --- BeginDrive: only resumes existing drives ---
 const beginDrive = async () => {
@@ -243,20 +247,19 @@ const beginDrive = async () => {
 
 
   const handleStartDrive = async () => {
-  if (startingDrive) return;
+  if (startingDrive) return
 
-  // 1. Check if permission already granted
-  const perm = await queryLocationPermission();
+  const permissionGranted = await hasLocationPermission()
 
-  if (perm === "granted") {
-    setLocationPermissionGranted(true);
-    await beginDrive(); // safe to start drive
-    return;
+  if (permissionGranted) {
+    setLocationPermissionGranted(true)
+    await beginDrive()
+    return
   }
 
-  // 2. Not granted → show disclosure modal
-  setShowLocationDisclosure(true);
-};
+  // Not granted: show the disclosure first.
+  setShowLocationDisclosure(true)
+}
 
 
 
@@ -281,23 +284,26 @@ const handleAllowAndContinue = async () => {
     }
 
     // 📱 Native (Android/iOS)
-    const perm = await Geolocation.requestPermissions({ permissions: ["location"] })
-    if (perm.location === "granted") {
-      setLocationPermissionGranted(true)
-      await beginDrive()
-    } else {
-      console.warn("Location permission denied")
-      setLocationPermissionGranted(false)
-    }
-  } catch (err) {
-    console.error("Location permission error:", err)
-    setLocationPermissionGranted(false)
-  }
+const perm = await Geolocation.requestPermissions({
+  permissions: ["location"],
+})
+
+const permissionGranted =
+  perm.location === "granted" ||
+  perm.coarseLocation === "granted"
+
+if (permissionGranted) {
+  setLocationPermissionGranted(true)
+  await beginDrive()
+} else {
+  console.warn("Location permission denied")
+  setLocationPermissionGranted(false)
 }
-
-
-
-
+} catch (err) {
+  console.error("Location permission error:", err)
+  setLocationPermissionGranted(false)
+}
+}
 
   return (
     <>
@@ -319,13 +325,13 @@ const handleAllowAndContinue = async () => {
           id="location-disclosure-description"
           className="mb-6 text-sm leading-6 text-slate-600"
         >
-          NJDrive50 tracks your supervised driving sessions to create accurate
-          mileage logs. To keep tracking even when the screen is off, the app
-          needs location permission while you&apos;re driving.
+          NJDrive50 uses location while you record an active drive to capture the
+          route, distance, start time, and end time for your supervised-driving log.
           <br />
           <br />
-          Location is only used during active drives and never when a drive is
-          not running.
+          Location is used only while an active drive is running, and you can stop
+          recording at any time. For best accuracy, keep NJDrive50 open during your
+          drive.
         </p>
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

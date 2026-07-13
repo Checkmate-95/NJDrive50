@@ -1,6 +1,7 @@
+// src/screens/PricingPage.tsx
 import { Helmet } from "react-helmet-async"
-import { useNav } from "../state/navStore"
 import { useState } from "react"
+import { useNav } from "../state/navStore"
 
 type BillingCycle = "monthly" | "yearly"
 
@@ -20,7 +21,6 @@ type Plan = {
   helperText: string
   trustText: string
   features: string[]
-  cta: string
   featured?: boolean
 }
 
@@ -28,10 +28,17 @@ type PlanCardProps = Plan & {
   onSelect: () => void
 }
 
+type GooglePlayButtonProps = {
+  onClick: () => void
+  dark?: boolean
+  className?: string
+}
+
 const GOOGLE_PLAY_URL =
   "https://play.google.com/store/apps/details?id=com.njdrive50.app"
 
-
+const GOOGLE_PLAY_BADGE_SRC =
+  "/GetItOnGooglePlay_Badge_Web_color_English.svg"
 
 function CheckIcon() {
   return (
@@ -50,6 +57,45 @@ function CheckIcon() {
   )
 }
 
+function GooglePlayButton({
+  onClick,
+  dark = false,
+  className = "",
+}: GooglePlayButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Get NJDrive50 on Google Play and start your 7-day free trial"
+      className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-offset-2 ${
+        dark
+          ? "border-white/15 bg-white/10 text-white hover:bg-white/15 focus-visible:ring-offset-[#08194A]"
+          : "border-[#08194A]/12 bg-[#08194A] text-white hover:bg-[#0A1E5E]"
+      } ${className}`}
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-extrabold">
+          Get NJDrive50 on Google Play
+        </span>
+
+        <span
+          className={`mt-1 block text-xs leading-5 ${
+            dark ? "text-white/65" : "text-white/70"
+          }`}
+        >
+          Start your 7-day free trial in the app
+        </span>
+      </span>
+
+      <img
+        src={GOOGLE_PLAY_BADGE_SRC}
+        alt="Get it on Google Play"
+        className="h-auto w-[140px] shrink-0"
+      />
+    </button>
+  )
+}
+
 function PlanCard({
   name,
   badge,
@@ -59,7 +105,6 @@ function PlanCard({
   helperText,
   trustText,
   features,
-  cta,
   featured = false,
   onSelect,
 }: PlanCardProps) {
@@ -95,6 +140,7 @@ function PlanCard({
 
       <div className="mt-6 flex items-end gap-2">
         <span className="text-4xl font-extrabold tracking-tight">{price}</span>
+
         <span
           className={`pb-1 text-sm ${
             featured ? "text-white/60" : "text-[#08194A]/55"
@@ -120,31 +166,31 @@ function PlanCard({
         {trustText}
       </p>
 
-      <button
-        type="button"
+      <GooglePlayButton
         onClick={onSelect}
-        aria-label={`${cta} for the ${name} plan`}
-        className={`mt-6 min-h-[50px] w-full rounded-2xl px-5 py-3 text-sm font-extrabold transition ${
-          featured
-            ? "bg-[#F9C80E] text-[#08194A] hover:-translate-y-[1px] hover:bg-[#FFD84A]"
-            : "border border-[#08194A]/12 bg-[#08194A] text-white hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
-        }`}
-      >
-        {cta}
-      </button>
+        dark={featured}
+        className="mt-6"
+      />
 
-      <div className={`mt-6 h-px w-full ${featured ? "bg-white/10" : "bg-[#08194A]/8"}`} />
+      <div
+        className={`mt-6 h-px w-full ${
+          featured ? "bg-white/10" : "bg-[#08194A]/8"
+        }`}
+      />
 
       <ul className="mt-6 space-y-3">
         {features.map((feature) => (
           <li key={feature} className="flex items-start gap-3">
             <span
               className={`mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full ${
-                featured ? "bg-white/12 text-white" : "bg-[#EEF3FA] text-[#08194A]"
+                featured
+                  ? "bg-white/12 text-white"
+                  : "bg-[#EEF3FA] text-[#08194A]"
               }`}
             >
               <CheckIcon />
             </span>
+
             <span
               className={`text-sm leading-6 ${
                 featured ? "text-white/78" : "text-[#08194A]/72"
@@ -167,6 +213,7 @@ export default function PricingPage() {
 
   const metaTitle =
     "NJDrive50 Pricing | New Jersey Driving Log App Free Trial, Monthly & Annual Plans"
+
   const metaDescription =
     "See NJDrive50 pricing for New Jersey families. Download the app to start a 7-day free trial, then choose monthly or annual billing to track the NJ 50-hour driving log, night hours, permit milestones, and road test readiness."
 
@@ -178,14 +225,42 @@ export default function PricingPage() {
 
   const comparisonRows: FeatureRow[] = [
     { label: "7-day free trial", monthly: true, yearly: true },
-    { label: "New Jersey 50-hour driving log tracking", monthly: true, yearly: true },
-    { label: "Automatic night-hours tracking", monthly: true, yearly: true },
-    { label: "Progress dashboard for parents and teens", monthly: true, yearly: true },
-    { label: "Road test readiness support", monthly: true, yearly: true },
-    { label: "Permit milestone reminders", monthly: true, yearly: true },
-    { label: "BA-CSD prep support", monthly: true, yearly: true },
+    {
+      label: "New Jersey 50-hour driving log tracking",
+      monthly: true,
+      yearly: true,
+    },
+    {
+      label: "Automatic night-hours tracking",
+      monthly: true,
+      yearly: true,
+    },
+    {
+      label: "Progress dashboard for parents and teens",
+      monthly: true,
+      yearly: true,
+    },
+    {
+      label: "Road test readiness support",
+      monthly: true,
+      yearly: true,
+    },
+    {
+      label: "Permit milestone reminders",
+      monthly: true,
+      yearly: true,
+    },
+    {
+      label: "BA-CSD prep support",
+      monthly: true,
+      yearly: true,
+    },
     { label: "Cancel anytime", monthly: true, yearly: false },
-    { label: "Cancel before yearly renewal", monthly: false, yearly: true },
+    {
+      label: "Cancel before yearly renewal",
+      monthly: false,
+      yearly: true,
+    },
   ]
 
   const pricingFaqs = [
@@ -237,7 +312,7 @@ export default function PricingPage() {
     description: metaDescription,
   }
 
-  const handleGoToStore = () => {
+  function handleGoToStore() {
     window.location.href = GOOGLE_PLAY_URL
   }
 
@@ -253,14 +328,13 @@ export default function PricingPage() {
           priceSuffix: "/ year",
           helperText: `7-day free trial, then $39.99/year. About $${yearlyMonthlyEquivalent}/month and save $${yearlySavings} vs monthly.`,
           trustText:
-            "Billing and cancellation are handled securely through the Google Play Store or App Store inside the NJDrive50 app.",
+            "Billing and cancellation are handled securely through the Google Play Store inside the NJDrive50 app.",
           features: [
             "Everything NJDrive50 offers in one annual subscription",
             "Ideal for the full New Jersey learner permit period",
             "Better overall value for families planning ahead",
             "Fewer renewals while your teen completes required practice",
           ],
-          cta: "Start in the App",
           featured: true,
         }
       : {
@@ -273,14 +347,13 @@ export default function PricingPage() {
           priceSuffix: "/ month",
           helperText: "7-day free trial, then $4.99/month. Cancel anytime.",
           trustText:
-            "Billing and cancellation are handled securely through the Google Play Store or App Store inside the NJDrive50 app.",
+            "Billing and cancellation are handled securely through the Google Play Store inside the NJDrive50 app.",
           features: [
             "Full NJDrive50 access with no feature limits",
             "Great for short-term flexibility",
             "Simple monthly renewal while building driving hours",
             "Easy option for families who want to start small",
           ],
-          cta: "Start in the App",
           featured: true,
         }
 
@@ -296,14 +369,13 @@ export default function PricingPage() {
           priceSuffix: "/ month",
           helperText: "7-day free trial, then $4.99/month. Cancel anytime.",
           trustText:
-            "Billing and cancellation are handled securely through the Google Play Store or App Store inside the NJDrive50 app.",
+            "Billing and cancellation are handled securely through the Google Play Store inside the NJDrive50 app.",
           features: [
             "Track all supervised driving hours in New Jersey",
             "Monitor required night driving hours",
             "Use reminders and progress tools",
             "Switch plans later if needed",
           ],
-          cta: "Start in the App",
           featured: false,
         }
       : {
@@ -316,14 +388,13 @@ export default function PricingPage() {
           priceSuffix: "/ year",
           helperText: `7-day free trial, then $39.99/year. About $${yearlyMonthlyEquivalent}/month.`,
           trustText:
-            "Billing and cancellation are handled securely through the Google Play Store or App Store inside the NJDrive50 app.",
+            "Billing and cancellation are handled securely through the Google Play Store inside the NJDrive50 app.",
           features: [
             "Lower total annual cost than paying monthly",
             "Best fit for the complete learner permit timeline",
             "No feature differences from monthly",
             "Designed for long-term family use",
           ],
-          cta: "Start in the App",
           featured: false,
         }
 
@@ -335,8 +406,12 @@ export default function PricingPage() {
         <title>{metaTitle}</title>
         <meta name="description" content={metaDescription} />
         <link rel="canonical" href={PAGE_URL} />
-        <script type="application/ld+json">{JSON.stringify(webPageSchema)}</script>
-        <script type="application/ld+json">{JSON.stringify(faqPageSchema)}</script>
+        <script type="application/ld+json">
+          {JSON.stringify(webPageSchema)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(faqPageSchema)}
+        </script>
       </Helmet>
 
       <div className="min-h-screen w-full bg-[#F7F9FC] text-[#08194A]">
@@ -361,20 +436,22 @@ export default function PricingPage() {
                 </h1>
 
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-[#08194A]/65 sm:text-base">
-                  Start with a 7-day free trial, then choose the plan that fits your family.
-                  NJDrive50 helps parents and teens track the New Jersey 50-hour driving log,
-                  required night hours, permit milestones, and road test readiness in one place.
+                  Get NJDrive50 on Google Play to start your 7-day free trial
+                  in the app, then choose the plan that fits your family.
+                  NJDrive50 helps parents and teens track the New Jersey
+                  50-hour driving log, required night hours, permit milestones,
+                  and road test readiness in one place.
                 </p>
 
                 <p className="mt-2 text-xs text-[#08194A]/55">
-                  All billing, free trials, and cancellations are handled securely through the
-                  Google Play Store or App Store inside the NJDrive50 app. This website does not
-                  process payments directly.
+                  All billing, free trials, and cancellations are handled
+                  securely through Google Play inside the NJDrive50 app. This
+                  website does not process payments directly.
                 </p>
 
                 <p className="mt-3 text-sm font-medium text-[#08194A]/62">
-                  Start free in the app, choose monthly flexibility, or save more with annual
-                  billing.
+                  Download the app, start your free trial, then choose monthly
+                  flexibility or annual savings.
                 </p>
 
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-[#08194A]/62">
@@ -439,11 +516,15 @@ export default function PricingPage() {
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
                     Included with every plan
                   </p>
-                  <h2 className="mt-2 text-2xl font-extrabold tracking-tight">What you get</h2>
+
+                  <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
+                    What you get
+                  </h2>
                 </div>
 
                 <p className="text-sm text-[#08194A]/55">
-                  Same core New Jersey features. Choose the billing option that fits your family.
+                  Same core New Jersey features. Choose the billing option that
+                  fits your family.
                 </p>
               </div>
 
@@ -460,7 +541,9 @@ export default function PricingPage() {
                       key={row.label}
                       className="grid grid-cols-[minmax(0,1.6fr)_120px_120px] items-center px-4 py-4 text-sm sm:px-5"
                     >
-                      <div className="pr-4 font-medium text-[#08194A]">{row.label}</div>
+                      <div className="pr-4 font-medium text-[#08194A]">
+                        {row.label}
+                      </div>
 
                       <div className="flex justify-center">
                         {row.monthly ? (
@@ -496,15 +579,24 @@ export default function PricingPage() {
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
                   FAQs
                 </p>
+
                 <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
                   Common billing questions
                 </h2>
 
                 <div className="mt-5 space-y-4">
                   {pricingFaqs.map(({ question, answer }) => (
-                    <div key={question} className="rounded-2xl bg-[#F7F9FC] px-4 py-4">
-                      <h3 className="text-sm font-bold text-[#08194A]">{question}</h3>
-                      <p className="mt-2 text-sm leading-6 text-[#08194A]/68">{answer}</p>
+                    <div
+                      key={question}
+                      className="rounded-2xl bg-[#F7F9FC] px-4 py-4"
+                    >
+                      <h3 className="text-sm font-bold text-[#08194A]">
+                        {question}
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-[#08194A]/68">
+                        {answer}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -521,33 +613,35 @@ export default function PricingPage() {
                   </h2>
 
                   <p className="mt-3 text-sm leading-6 text-white/72">
-                    $39.99 per year works out to about ${yearlyMonthlyEquivalent}/month, which
-                    saves ${yearlySavings} compared with paying $4.99 monthly for 12 months.
+                    $39.99 per year works out to about $
+                    {yearlyMonthlyEquivalent}/month, which saves ${yearlySavings}
+                    compared with paying $4.99 monthly for 12 months.
                   </p>
 
                   <div className="mt-5 rounded-2xl bg-white/8 p-4">
                     <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
                       Annual value
                     </p>
-                    <p className="mt-2 text-3xl font-extrabold tracking-tight">$39.99/year</p>
+
+                    <p className="mt-2 text-3xl font-extrabold tracking-tight">
+                      $39.99/year
+                    </p>
+
                     <p className="mt-1 text-sm text-white/62">
                       Includes a 7-day free trial first for New Jersey families.
                     </p>
                   </div>
 
-                  <button
-                    type="button"
+                  <GooglePlayButton
                     onClick={handleGoToStore}
-                    aria-label="Open NJDrive50 in the Google Play Store to start your trial"
-                    className="mt-5 min-h-[50px] w-full rounded-2xl bg-[#F9C80E] px-5 py-3 text-sm font-extrabold text-[#08194A] transition hover:-translate-y-[1px] hover:bg-[#FFD84A]"
-                  >
-                    Start in the App
-                  </button>
+                    dark
+                    className="mt-5"
+                  />
 
                   <p className="mt-3 text-xs leading-5 text-white/56">
-                    NJDrive50 subscriptions and free trials are started securely inside the app
-                    through the Google Play Store or App Store. Cancel anytime according to your
-                    store’s subscription settings.
+                    NJDrive50 subscriptions and free trials are started securely
+                    inside the app through Google Play. Cancel according to your
+                    Google Play subscription settings.
                   </p>
                 </div>
               </aside>
@@ -563,8 +657,8 @@ export default function PricingPage() {
               </h2>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
-                Review the NJDrive50 privacy policy and terms before starting a trial or choosing
-                a billing plan in the app.
+                Review the NJDrive50 privacy policy and terms before starting a
+                trial or choosing a billing plan in the app.
               </p>
 
               <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">

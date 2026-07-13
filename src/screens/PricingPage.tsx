@@ -28,6 +28,11 @@ type PlanCardProps = Plan & {
   onSelect: () => void
 }
 
+const GOOGLE_PLAY_URL =
+  "https://play.google.com/store/apps/details?id=com.njdrive50.app"
+
+
+
 function CheckIcon() {
   return (
     <svg
@@ -99,7 +104,11 @@ function PlanCard({
         </span>
       </div>
 
-      <p className={`mt-2 text-sm ${featured ? "text-white/78" : "text-[#08194A]/62"}`}>
+      <p
+        className={`mt-2 text-sm ${
+          featured ? "text-white/78" : "text-[#08194A]/62"
+        }`}
+      >
         {helperText}
       </p>
 
@@ -159,7 +168,7 @@ export default function PricingPage() {
   const metaTitle =
     "NJDrive50 Pricing | New Jersey Driving Log App Free Trial, Monthly & Annual Plans"
   const metaDescription =
-    "See NJDrive50 pricing for New Jersey families. Start a 7-day free trial, then choose monthly or annual billing to track the NJ 50-hour driving log, night hours, permit milestones, and road test readiness."
+    "See NJDrive50 pricing for New Jersey families. Download the app to start a 7-day free trial, then choose monthly or annual billing to track the NJ 50-hour driving log, night hours, permit milestones, and road test readiness."
 
   const monthlyPrice = 4.99
   const yearlyPrice = 39.99
@@ -183,7 +192,7 @@ export default function PricingPage() {
     {
       question: "Does the free trial apply to both plans?",
       answer:
-        "Yes. Families can start with a 7-day free trial before monthly or annual billing begins.",
+        "Yes. Families can start a 7-day free trial inside the NJDrive50 app before monthly or annual billing begins.",
     },
     {
       question: "Are there different features in each plan?",
@@ -193,7 +202,7 @@ export default function PricingPage() {
     {
       question: "Can I cancel anytime?",
       answer:
-        "Yes. Monthly plans can be canceled anytime. Annual plans can be canceled before the next renewal date.",
+        "Subscriptions and cancellations are managed through your Google Play Store or App Store subscription settings.",
     },
     {
       question: "Which plan is best for most families?",
@@ -228,9 +237,9 @@ export default function PricingPage() {
     description: metaDescription,
   }
 
-  const handleStartTrial = (_cycle: BillingCycle) => {
-  setScreen("register")
-}
+  const handleGoToStore = () => {
+    window.location.href = GOOGLE_PLAY_URL
+  }
 
   const primaryPlan: Plan =
     billing === "yearly"
@@ -244,14 +253,14 @@ export default function PricingPage() {
           priceSuffix: "/ year",
           helperText: `7-day free trial, then $39.99/year. About $${yearlyMonthlyEquivalent}/month and save $${yearlySavings} vs monthly.`,
           trustText:
-            "Cancel annual renewal anytime before your next billing date. Final billing terms should match your App Store or Play Store setup exactly.",
+            "Billing and cancellation are handled securely through the Google Play Store or App Store inside the NJDrive50 app.",
           features: [
             "Everything NJDrive50 offers in one annual subscription",
             "Ideal for the full New Jersey learner permit period",
             "Better overall value for families planning ahead",
             "Fewer renewals while your teen completes required practice",
           ],
-          cta: "Start Annual Trial",
+          cta: "Start in the App",
           featured: true,
         }
       : {
@@ -264,14 +273,14 @@ export default function PricingPage() {
           priceSuffix: "/ month",
           helperText: "7-day free trial, then $4.99/month. Cancel anytime.",
           trustText:
-            "No long-term commitment. Final billing and cancellation terms should match your App Store or Play Store setup exactly.",
+            "Billing and cancellation are handled securely through the Google Play Store or App Store inside the NJDrive50 app.",
           features: [
             "Full NJDrive50 access with no feature limits",
             "Great for short-term flexibility",
             "Simple monthly renewal while building driving hours",
             "Easy option for families who want to start small",
           ],
-          cta: "Start Monthly Trial",
+          cta: "Start in the App",
           featured: true,
         }
 
@@ -287,14 +296,14 @@ export default function PricingPage() {
           priceSuffix: "/ month",
           helperText: "7-day free trial, then $4.99/month. Cancel anytime.",
           trustText:
-            "No long-term commitment. Final billing and cancellation terms should match your App Store or Play Store setup exactly.",
+            "Billing and cancellation are handled securely through the Google Play Store or App Store inside the NJDrive50 app.",
           features: [
             "Track all supervised driving hours in New Jersey",
             "Monitor required night driving hours",
             "Use reminders and progress tools",
             "Switch plans later if needed",
           ],
-          cta: "Choose Monthly",
+          cta: "Start in the App",
           featured: false,
         }
       : {
@@ -307,14 +316,14 @@ export default function PricingPage() {
           priceSuffix: "/ year",
           helperText: `7-day free trial, then $39.99/year. About $${yearlyMonthlyEquivalent}/month.`,
           trustText:
-            "Cancel annual renewal anytime before the next billing date. Final billing terms should match your App Store or Play Store setup exactly.",
+            "Billing and cancellation are handled securely through the Google Play Store or App Store inside the NJDrive50 app.",
           features: [
             "Lower total annual cost than paying monthly",
             "Best fit for the complete learner permit timeline",
             "No feature differences from monthly",
             "Designed for long-term family use",
           ],
-          cta: "Choose Annual",
+          cta: "Start in the App",
           featured: false,
         }
 
@@ -357,8 +366,15 @@ export default function PricingPage() {
                   required night hours, permit milestones, and road test readiness in one place.
                 </p>
 
+                <p className="mt-2 text-xs text-[#08194A]/55">
+                  All billing, free trials, and cancellations are handled securely through the
+                  Google Play Store or App Store inside the NJDrive50 app. This website does not
+                  process payments directly.
+                </p>
+
                 <p className="mt-3 text-sm font-medium text-[#08194A]/62">
-                  Start free, choose monthly flexibility, or save more with annual billing.
+                  Start free in the app, choose monthly flexibility, or save more with annual
+                  billing.
                 </p>
 
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-[#08194A]/62">
@@ -412,7 +428,7 @@ export default function PricingPage() {
                 <PlanCard
                   key={`${plan.billingCycle}-${plan.name}`}
                   {...plan}
-                  onSelect={() => handleStartTrial(plan.billingCycle)}
+                  onSelect={handleGoToStore}
                 />
               ))}
             </section>
@@ -505,8 +521,8 @@ export default function PricingPage() {
                   </h2>
 
                   <p className="mt-3 text-sm leading-6 text-white/72">
-                    $39.99 per year works out to about ${yearlyMonthlyEquivalent}/month, which saves
-                    ${yearlySavings} compared with paying $4.99 monthly for 12 months.
+                    $39.99 per year works out to about ${yearlyMonthlyEquivalent}/month, which
+                    saves ${yearlySavings} compared with paying $4.99 monthly for 12 months.
                   </p>
 
                   <div className="mt-5 rounded-2xl bg-white/8 p-4">
@@ -521,16 +537,17 @@ export default function PricingPage() {
 
                   <button
                     type="button"
-                    onClick={() => handleStartTrial("yearly")}
-                    aria-label="Start 7-day free trial with annual billing"
+                    onClick={handleGoToStore}
+                    aria-label="Open NJDrive50 in the Google Play Store to start your trial"
                     className="mt-5 min-h-[50px] w-full rounded-2xl bg-[#F9C80E] px-5 py-3 text-sm font-extrabold text-[#08194A] transition hover:-translate-y-[1px] hover:bg-[#FFD84A]"
                   >
-                    Start 7-Day Free Trial
+                    Start in the App
                   </button>
 
                   <p className="mt-3 text-xs leading-5 text-white/56">
-                    7-day free trial. Cancel anytime for monthly plans, or cancel annual renewal
-                    before your next billing date.
+                    NJDrive50 subscriptions and free trials are started securely inside the app
+                    through the Google Play Store or App Store. Cancel anytime according to your
+                    store’s subscription settings.
                   </p>
                 </div>
               </aside>
@@ -546,7 +563,8 @@ export default function PricingPage() {
               </h2>
 
               <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70">
-                Review the NJDrive50 privacy policy and terms before starting a trial or choosing a billing plan.
+                Review the NJDrive50 privacy policy and terms before starting a trial or choosing
+                a billing plan in the app.
               </p>
 
               <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">

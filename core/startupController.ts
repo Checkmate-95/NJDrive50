@@ -1,31 +1,46 @@
 import { useNav } from "../src/state/navStore"
 import { getProfile, hasProfile } from "../src/state/profileStore"
 import type { User } from "firebase/auth"
+import { Capacitor } from "@capacitor/core"
 
-// ⭐ FUTURE: Replace this with real Google Play Billing check
+// ⭐ REAL purchase check (kept ON)
 async function getPurchaseStatus(_uid: string) {
-  // For now, always return false (no purchase)
-  // Later, this will check Firebase for hasPurchased or validate token
-  return { hasPurchased: false }
+  return { hasPurchased: false }   // stays false until billing is added
 }
 
-// ⭐ Your developer UID (you will always bypass payment)
+// ⭐ Your developer UID
 const DEV_UID = "YOUR_FIREBASE_UID_HERE"
 
 export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
 
   // ───────────────────────────────────────────────
-  // ⭐ 1. Developer bypass (works anywhere, offline)
+  // ⭐ 1. DEV BYPASS: Your Firebase UID
   // ───────────────────────────────────────────────
   if (authUser?.uid === DEV_UID) {
-    nav.resetTo("landingApp")
+    nav.resetTo("home")
     return
   }
 
   // ───────────────────────────────────────────────
-  // ⭐ 2. User not logged in → Preview Mode
-  // Show landingApp (NOT login)
+  // ⭐ 2. DEV BYPASS: Desktop/Web Preview
+  // ───────────────────────────────────────────────
+  if (!Capacitor.isNativePlatform()) {
+    nav.resetTo("home")
+    return
+  }
+
+  // ───────────────────────────────────────────────
+  // ⭐ 3. DEV BYPASS: Android Debug Build
+  // Works in Vite/React dev mode AND Capacitor dev mode
+  // ───────────────────────────────────────────────
+  if (import.meta.env.DEV) {
+    nav.resetTo("home")
+    return
+  }
+
+  // ───────────────────────────────────────────────
+  // ⭐ 4. User not logged in → Preview Mode
   // ───────────────────────────────────────────────
   if (!authUser) {
     nav.resetTo("landingApp")
@@ -33,19 +48,17 @@ export async function startupController(authUser: User | null) {
   }
 
   // ───────────────────────────────────────────────
-  // ⭐ 3. User logged in → Check purchase status
-  // (Google Play Billing token will update this later)
+  // ⭐ 5. User logged in → Check purchase status
   // ───────────────────────────────────────────────
   const { hasPurchased } = await getPurchaseStatus(authUser.uid)
 
-  // ⭐ 3A. Logged in but unpaid → Pricing
   if (!hasPurchased) {
     nav.resetTo("pricing")
     return
   }
 
   // ───────────────────────────────────────────────
-  // ⭐ 4. User purchased → Check profile
+  // ⭐ 6. Purchased → Check profile
   // ───────────────────────────────────────────────
   if (!hasProfile()) {
     nav.resetTo("intro")
@@ -54,16 +67,13 @@ export async function startupController(authUser: User | null) {
 
   const { isOnboarded } = getProfile()
 
-  // ───────────────────────────────────────────────
-  // ⭐ 5. Purchased but not onboarded → Intro
-  // ───────────────────────────────────────────────
   if (!isOnboarded) {
     nav.resetTo("intro")
     return
   }
 
   // ───────────────────────────────────────────────
-  // ⭐ 6. Fully onboarded → Home
+  // ⭐ 7. Fully onboarded → Home
   // ───────────────────────────────────────────────
   nav.resetTo("home")
 }

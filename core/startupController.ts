@@ -4,26 +4,28 @@ import { getProfile, hasProfile } from "../src/state/profileStore"
 import type { User } from "firebase/auth"
 
 // Keep this false until Google Play Billing / entitlement verification is live.
-async function getPurchaseStatus(_uid: string): Promise<{
-  hasPurchased: boolean
-}> {
+async function getPurchaseStatus(
+  _uid: string
+): Promise<{ hasPurchased: boolean }> {
   return { hasPurchased: false }
 }
 
-// Optional local-development convenience only.
-// Do not treat this as production purchase security.
+// Local-development convenience only. Never use this as real purchase security.
 const DEV_UID = import.meta.env.VITE_DEV_UID ?? ""
 
 export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
 
-  // Development-only bypasses.
-  if (import.meta.env.DEV || (DEV_UID && authUser?.uid === DEV_UID)) {
+  const isDevBuild =
+    import.meta.env.DEV ||
+    import.meta.env.VITE_BYPASS_ENTITLEMENT === "true" ||
+    Boolean(DEV_UID && authUser?.uid === DEV_UID)
+
+  if (isDevBuild) {
     nav.resetTo("home")
     return
   }
 
-  // Guest / preview experience.
   if (!authUser) {
     nav.resetTo("landingApp")
     return
@@ -47,8 +49,6 @@ export async function startupController(authUser: User | null) {
     nav.resetTo("home")
   } catch (error) {
     console.error("Unable to determine startup access:", error)
-
-    // Fail closed: do not grant paid access when entitlement is unknown.
     nav.resetTo("pricing")
   }
 }

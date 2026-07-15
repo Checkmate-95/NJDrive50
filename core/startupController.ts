@@ -3,29 +3,30 @@ import { useNav } from "../src/state/navStore"
 import { getProfile, hasProfile } from "../src/state/profileStore"
 import type { User } from "firebase/auth"
 
-// Keep this false until Google Play Billing / entitlement verification is live.
+// Temporary placeholder until Google Play Billing / verified
+// entitlement lookup has been implemented.
 async function getPurchaseStatus(
   _uid: string
 ): Promise<{ hasPurchased: boolean }> {
   return { hasPurchased: false }
 }
 
-// Local-development convenience only. Never use this as real purchase security.
-const DEV_UID = import.meta.env.VITE_DEV_UID ?? ""
-
 export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
 
-  const isDevBuild =
+  // Development-only bypass.
+  // Controlled by C:\Dev\NJDRIVE50\.env.development.local:
+  // VITE_BYPASS_ENTITLEMENT=true
+  const shouldBypassEntitlement =
     import.meta.env.DEV ||
-    import.meta.env.VITE_BYPASS_ENTITLEMENT === "true" ||
-    Boolean(DEV_UID && authUser?.uid === DEV_UID)
+    import.meta.env.VITE_BYPASS_ENTITLEMENT === "true"
 
-  if (isDevBuild) {
+  if (shouldBypassEntitlement) {
     nav.resetTo("home")
     return
   }
 
+  // Signed-out production users see the app landing screen.
   if (!authUser) {
     nav.resetTo("landingApp")
     return
@@ -49,6 +50,8 @@ export async function startupController(authUser: User | null) {
     nav.resetTo("home")
   } catch (error) {
     console.error("Unable to determine startup access:", error)
+
+    // Do not grant paid access if the entitlement lookup fails.
     nav.resetTo("pricing")
   }
 }

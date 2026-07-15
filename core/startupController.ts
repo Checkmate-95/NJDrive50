@@ -1,79 +1,54 @@
+// core/startupController.ts
 import { useNav } from "../src/state/navStore"
 import { getProfile, hasProfile } from "../src/state/profileStore"
 import type { User } from "firebase/auth"
-import { Capacitor } from "@capacitor/core"
 
-// ⭐ REAL purchase check (kept ON)
-async function getPurchaseStatus(_uid: string) {
-  return { hasPurchased: false }   // stays false until billing is added
+// Keep this false until Google Play Billing / entitlement verification is live.
+async function getPurchaseStatus(_uid: string): Promise<{
+  hasPurchased: boolean
+}> {
+  return { hasPurchased: false }
 }
 
-// ⭐ Your developer UID
-const DEV_UID = "YOUR_FIREBASE_UID_HERE"
+// Optional local-development convenience only.
+// Do not treat this as production purchase security.
+const DEV_UID = import.meta.env.VITE_DEV_UID ?? ""
 
 export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
 
-  // ───────────────────────────────────────────────
-  // ⭐ 1. DEV BYPASS: Your Firebase UID
-  // ───────────────────────────────────────────────
-  if (authUser?.uid === DEV_UID) {
+  // Development-only bypasses.
+  if (import.meta.env.DEV || (DEV_UID && authUser?.uid === DEV_UID)) {
     nav.resetTo("home")
     return
   }
 
-  // ───────────────────────────────────────────────
-  // ⭐ 2. DEV BYPASS: Desktop/Web Preview
-  // ───────────────────────────────────────────────
-  if (!Capacitor.isNativePlatform()) {
-    nav.resetTo("home")
-    return
-  }
-
-  // ───────────────────────────────────────────────
-  // ⭐ 3. DEV BYPASS: Android Debug Build
-  // Works in Vite/React dev mode AND Capacitor dev mode
-  // ───────────────────────────────────────────────
-  if (import.meta.env.DEV) {
-    nav.resetTo("home")
-    return
-  }
-
-  // ───────────────────────────────────────────────
-  // ⭐ 4. User not logged in → Preview Mode
-  // ───────────────────────────────────────────────
+  // Guest / preview experience.
   if (!authUser) {
     nav.resetTo("landingApp")
     return
   }
 
-  // ───────────────────────────────────────────────
-  // ⭐ 5. User logged in → Check purchase status
-  // ───────────────────────────────────────────────
-  const { hasPurchased } = await getPurchaseStatus(authUser.uid)
+  try {
+    const { hasPurchased } = await getPurchaseStatus(authUser.uid)
 
-  if (!hasPurchased) {
+    if (!hasPurchased) {
+      nav.resetTo("pricing")
+      return
+    }
+
+    const profile = getProfile()
+
+    if (!hasProfile() || !profile.isOnboarded) {
+      nav.resetTo("intro")
+      return
+    }
+
+    nav.resetTo("home")
+  } catch (error) {
+    console.error("Unable to determine startup access:", error)
+
+    // Fail closed: do not grant paid access when entitlement is unknown.
     nav.resetTo("pricing")
-    return
   }
-
-  // ───────────────────────────────────────────────
-  // ⭐ 6. Purchased → Check profile
-  // ───────────────────────────────────────────────
-  if (!hasProfile()) {
-    nav.resetTo("intro")
-    return
-  }
-
-  const { isOnboarded } = getProfile()
-
-  if (!isOnboarded) {
-    nav.resetTo("intro")
-    return
-  }
-
-  // ───────────────────────────────────────────────
-  // ⭐ 7. Fully onboarded → Home
-  // ───────────────────────────────────────────────
-  nav.resetTo("home")
 }

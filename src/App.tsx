@@ -117,24 +117,27 @@ export default function App() {
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
 
   // ─── Firebase Auth + Startup Controller ─────────────────────────────────────
-  useEffect(() => {
+useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     setAuthUser(user)
-
-    // ⭐ Route first, then reveal UI — prevents landingApp flash
-    await startupController(user)
     setAuthReady(true)
+
+    // ⭐ Run startup AFTER authReady is true — prevents pricing redirect loop
+    requestAnimationFrame(() => {
+      startupController(user)
+    })
   })
 
   return () => unsubscribe()
 }, [])
 
-  // ─── Location Permission ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) {
-      setLocationPermissionGranted(true)
-    }
-  }, [])
+// ─── Location Permission ───────────────────────────────────────────────────
+useEffect(() => {
+  if (!Capacitor.isNativePlatform()) {
+    setLocationPermissionGranted(true)
+  }
+}, [])
+
 
   // ─── Safe Screen Fallback ───────────────────────────────────────────────────
   const safeScreen: Screen = screen ?? "landingApp"

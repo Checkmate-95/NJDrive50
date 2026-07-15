@@ -1,5 +1,6 @@
 import { Helmet } from "react-helmet-async"
-import { useNav } from "../state/navStore"
+import { useNav } from "../src/state/navStore";
+
 
 export default function LandingPage() {
   const setScreen = useNav((s) => s.setScreen)

@@ -40,7 +40,7 @@ import { Capacitor } from "@capacitor/core"
 
 
 // ─── Lazy Screens ─────────────────────────────────────────────────────────────
-const LandingPage = lazy(() => import("./landing/LandingPage"))
+const LandingPage = lazy(() => import("../website/LandingPage"))
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
 const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"))
 const MilestonesContent = lazy(() => import("./screens/MilestonesContent"))
@@ -58,7 +58,8 @@ const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
 const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPage"))
 const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
-const PricingPage = lazy(() => import("./screens/PricingPage"))
+const PricingPage = lazy(() => import("../website/PricingPage"))
+
 
 // ─── State ─────────────────────────────────────────────────────────────────────
 import { useNav } from "./state/navStore"
@@ -137,6 +138,7 @@ useEffect(() => {
     setLocationPermissionGranted(true)
   }
 }, [])
+
 
 
   // ─── Safe Screen Fallback ───────────────────────────────────────────────────

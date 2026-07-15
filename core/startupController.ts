@@ -14,21 +14,19 @@ async function getPurchaseStatus(
 export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
 
-  // Development-only bypass.
-  // Controlled by C:\Dev\NJDRIVE50\.env.development.local:
-  // VITE_BYPASS_ENTITLEMENT=true
   const shouldBypassEntitlement =
     import.meta.env.DEV ||
     import.meta.env.VITE_BYPASS_ENTITLEMENT === "true"
 
-  if (shouldBypassEntitlement) {
-    nav.resetTo("home")
+  // Always show the app landing page to signed-out users.
+  if (!authUser) {
+    nav.resetTo("landingApp")
     return
   }
 
-  // Signed-out production users see the app landing screen.
-  if (!authUser) {
-    nav.resetTo("landingApp")
+  // Dev-only: logged-in users skip the temporary purchase check.
+  if (shouldBypassEntitlement) {
+    nav.resetTo("home")
     return
   }
 
@@ -50,8 +48,6 @@ export async function startupController(authUser: User | null) {
     nav.resetTo("home")
   } catch (error) {
     console.error("Unable to determine startup access:", error)
-
-    // Do not grant paid access if the entitlement lookup fails.
     nav.resetTo("pricing")
   }
 }

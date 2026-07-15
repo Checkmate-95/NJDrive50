@@ -1,7 +1,9 @@
 // src/screens/PricingPage.tsx
 import { Helmet } from "react-helmet-async"
 import { useState } from "react"
-import { useNav } from "../state/navStore"
+import { useNav } from "../src/state/navStore"
+
+
 
 type BillingCycle = "monthly" | "yearly"
 

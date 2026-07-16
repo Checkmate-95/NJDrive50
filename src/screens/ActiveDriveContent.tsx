@@ -1039,27 +1039,27 @@ function ActiveDriveContent({
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] p-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                  Duration
-                </p>
-                <p className="mt-1 text-xl font-black tabular-nums sm:text-2xl">
-                  {formattedElapsed}
-                </p>
-              </div>
+  <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] p-3 text-center shadow-sm">
+    <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+      Duration
+    </p>
+    <p className="mt-1 whitespace-nowrap text-[clamp(1rem,5.5vw,1.5rem)] font-black tabular-nums leading-tight">
+      {formattedElapsed}
+    </p>
+  </div>
 
-              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] p-3 text-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                  Distance
-                </p>
-                <p className="mt-1 text-xl font-black tabular-nums sm:text-2xl">
-                  {safeNumber(session.liveMiles).toFixed(1)}
-                  <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">
-                    mi
-                  </span>
-                </p>
-              </div>
-            </div>
+  <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] p-3 text-center shadow-sm">
+    <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+      Distance
+    </p>
+    <p className="mt-1 whitespace-nowrap text-[clamp(1rem,5.5vw,1.5rem)] font-black tabular-nums leading-tight">
+      {safeNumber(session.liveMiles).toFixed(1)}
+      <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">
+        mi
+      </span>
+    </p>
+  </div>
+</div>
 
             <div className="mt-2 grid grid-cols-3 gap-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] p-3 text-center">
               <div>

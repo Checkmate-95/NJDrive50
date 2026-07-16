@@ -889,7 +889,7 @@ function ActiveDriveContent({
   const solarVerificationText =
     session.solarStatus === "verified"
       ? "Lighting calculated from local sunrise and sunset"
-      : "Some time is awaiting solar verification"
+      : "Solar verification pending"
 
   return (
     <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">

@@ -1,74 +1,74 @@
 // src/screens/ActiveDriveContent.tsx
-import { useEffect, useRef, useState, useCallback, useId } from "react"
+
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
+import {
+  MoonIcon,
+  SunIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/solid"
+import { Capacitor } from "@capacitor/core"
+import { Geolocation } from "@capacitor/geolocation"
+
 import type { Screen } from "../App"
-import { SunIcon, MoonIcon } from "@heroicons/react/24/solid"
 import { saveDrive } from "../state/driveStore"
 import type { DriveEntry, NightCalcMode } from "../state/driveStore"
 import {
   useActiveDriveStore,
-  type NightOverride,
-  type DriveMode,
   type RouteCoord,
 } from "../state/activeDriveStore"
-import { calculateNightBreakdown } from "../engine/driveEngine"
-import { Geolocation } from "@capacitor/geolocation"
-import { Capacitor } from "@capacitor/core"
-// FIX 1: No top-level ForegroundService import — Android-only plugin crashes
-// on web/iOS if imported statically. Each helper lazy-imports it instead.
-
 
 type ActiveDriveContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
   setCurrentDrive: Dispatch<SetStateAction<DriveEntry | null>>
 }
 
-
 type DriveSnapshot = DriveEntry & {
   isPreview?: boolean
 }
 
-
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
-const ROUTE_TIMEOUT_MS = 8000
+const ROUTE_TIMEOUT_MS = 8_000
 const FS_NOTIFICATION_ID = 1001
 const FS_CHANNEL_ID = "njdrive50_drive"
 
+let foregroundServiceStarted = false
 
-const safeNumber = (value: unknown) => {
-  const num = Number(value)
-  return Number.isFinite(num) ? num : 0
+function safeNumber(value: unknown): number {
+  const numberValue = Number(value)
+  return Number.isFinite(numberValue) ? numberValue : 0
 }
 
-
-const formatTime = (ms: number) => {
-  const totalSec = Math.max(0, Math.floor(ms / 1000))
-  const hours = Math.floor(totalSec / 3600)
-  const minutes = Math.floor((totalSec % 3600) / 60)
-  const seconds = totalSec % 60
+function formatTime(milliseconds: number): string {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1_000))
+  const hours = Math.floor(totalSeconds / 3_600)
+  const minutes = Math.floor((totalSeconds % 3_600) / 60)
+  const seconds = totalSeconds % 60
 
   return [hours, minutes, seconds]
     .map((part) => String(part).padStart(2, "0"))
     .join(":")
 }
 
+function formatHours(hours: number): string {
+  return `${Math.max(0, hours).toFixed(2)} hr`
+}
 
-const sameCoord = (
+function sameCoord(
   a: RouteCoord | null | undefined,
   b: RouteCoord | null | undefined
-) => {
+): boolean {
   if (!a || !b) return false
   return a.lat === b.lat && a.lng === b.lng
 }
 
-
-function makeDriveId() {
+function makeDriveId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID()
   }
+
   return `drive-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
-
 
 function composeAbortSignal(
   external?: AbortSignal,
@@ -76,7 +76,7 @@ function composeAbortSignal(
 ): { signal: AbortSignal; cleanup: () => void } {
   const AbortSignalCtor = globalThis.AbortSignal as
     | (typeof AbortSignal & {
-        timeout?: (ms: number) => AbortSignal
+        timeout?: (milliseconds: number) => AbortSignal
         any?: (signals: AbortSignal[]) => AbortSignal
       })
     | undefined
@@ -87,6 +87,7 @@ function composeAbortSignal(
     typeof AbortSignalCtor.any === "function"
   ) {
     const timeoutSignal = AbortSignalCtor.timeout(timeoutMs)
+
     return {
       signal: external
         ? AbortSignalCtor.any([external, timeoutSignal])
@@ -110,28 +111,39 @@ function composeAbortSignal(
   }
 }
 
-
 async function getAccurateMileage(
   start: RouteCoord,
   end: RouteCoord,
   signal?: AbortSignal
-) {
-  try {
-    if (!API_BASE_URL) return null
+): Promise<number | null> {
+  if (!API_BASE_URL) return null
 
+  try {
     const { signal: requestSignal, cleanup } = composeAbortSignal(signal)
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
+      const response = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         signal: requestSignal,
         body: JSON.stringify({
           origin: {
-            location: { latLng: { latitude: start.lat, longitude: start.lng } },
+            location: {
+              latLng: {
+                latitude: start.lat,
+                longitude: start.lng,
+              },
+            },
           },
           destination: {
-            location: { latLng: { latitude: end.lat, longitude: end.lng } },
+            location: {
+              latLng: {
+                latitude: end.lat,
+                longitude: end.lng,
+              },
+            },
           },
           travelMode: "DRIVE",
           routingPreference: "TRAFFIC_AWARE",
@@ -139,11 +151,14 @@ async function getAccurateMileage(
         }),
       })
 
-      if (!res.ok) return null
+      if (!response.ok) return null
 
-      const data = await res.json()
+      const data = await response.json()
       const meters = data?.routes?.[0]?.distanceMeters
-      if (typeof meters !== "number") return null
+
+      if (typeof meters !== "number" || !Number.isFinite(meters)) {
+        return null
+      }
 
       return meters / 1609.34
     } finally {
@@ -154,40 +169,35 @@ async function getAccurateMileage(
   }
 }
 
+async function ensureForegroundServiceChannel(): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return
 
-
-
-// ─── Foreground Service helpers ────────────────────────────────────────────────
-// All helpers dynamically import ForegroundService so the module is never
-// evaluated on web/iOS where the plugin is not registered.
-
-// Tracks whether startForegroundService has fully resolved so that
-// updateForegroundService never fires before the service is running.
-let fsStarted = false
-
-async function ensureForegroundServiceChannel() {
   try {
     const { ForegroundService } = await import(
       "@capawesome-team/capacitor-android-foreground-service"
     )
+
     await ForegroundService.createNotificationChannel({
       id: FS_CHANNEL_ID,
       name: "NJDrive50 Active Drive",
-      description: "Keeps your drive timer and GPS running in the background.",
-      importance: 2, // IMPORTANCE_LOW — no sound, no heads-up banner
+      description: "Keeps your active drive timer and location tracking running.",
+      importance: 2,
     })
   } catch {
-    // Channel may already exist on subsequent launches; safe to ignore
+    // A channel can already exist. Notification setup is non-critical.
   }
 }
 
-async function startForegroundService(body: string) {
+async function startForegroundService(body: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
+
   try {
     await ensureForegroundServiceChannel()
+
     const { ForegroundService } = await import(
       "@capawesome-team/capacitor-android-foreground-service"
     )
+
     await ForegroundService.startForegroundService({
       id: FS_NOTIFICATION_ID,
       title: "NJDrive50 — Drive Active",
@@ -195,29 +205,24 @@ async function startForegroundService(body: string) {
       smallIcon: "ic_launcher_foreground",
       silent: true,
       notificationChannelId: FS_CHANNEL_ID,
-      serviceType: 8, // Android Location foreground service type
+      serviceType: 8,
     })
-    // FIX: Only mark as started AFTER the native call resolves.
-    // updateForegroundService checks this flag and no-ops if false,
-    // preventing the crash where update fires before start completes.
-    fsStarted = true
-  } catch (err) {
-    console.warn("[ForegroundService] start failed:", err)
-    fsStarted = false
+
+    foregroundServiceStarted = true
+  } catch (error) {
+    console.warn("[ForegroundService] Unable to start:", error)
+    foregroundServiceStarted = false
   }
 }
 
-async function updateForegroundService(body: string) {
-  if (!Capacitor.isNativePlatform()) return
-  // FIX: Guard — do not call update if the service has not started yet.
-  // This is the primary crash fix: the notification sync interval was
-  // calling update immediately on mount before startForegroundService
-  // resolved, causing Android to throw a native exception.
-  if (!fsStarted) return
+async function updateForegroundService(body: string): Promise<void> {
+  if (!Capacitor.isNativePlatform() || !foregroundServiceStarted) return
+
   try {
     const { ForegroundService } = await import(
       "@capawesome-team/capacitor-android-foreground-service"
     )
+
     await ForegroundService.updateForegroundService({
       id: FS_NOTIFICATION_ID,
       title: "NJDrive50 — Drive Active",
@@ -226,23 +231,25 @@ async function updateForegroundService(body: string) {
       notificationChannelId: FS_CHANNEL_ID,
     })
   } catch {
-    // Notification update failure is non-critical — ignore silently
+    // Failure to refresh a notification must not interrupt drive tracking.
   }
 }
 
-async function stopForegroundService() {
+async function stopForegroundService(): Promise<void> {
+  foregroundServiceStarted = false
+
   if (!Capacitor.isNativePlatform()) return
-  fsStarted = false
+
   try {
     const { ForegroundService } = await import(
       "@capawesome-team/capacitor-android-foreground-service"
     )
+
     await ForegroundService.stopForegroundService()
   } catch {
-    // Ignore cleanup errors
+    // Cleanup failure is non-critical.
   }
 }
-// ──────────────────────────────────────────────────────────────────────────────
 
 function ActiveDriveContent({
   setScreen,
@@ -250,22 +257,19 @@ function ActiveDriveContent({
 }: ActiveDriveContentProps) {
   const [locationError, setLocationError] = useState<string | null>(null)
   const [showStopConfirm, setShowStopConfirm] = useState(false)
-  const [isStopping, setIsStopping] = useState(false)
-  const [isPreviewing, setIsPreviewing] = useState(false)
   const [isPreparingStop, setIsPreparingStop] = useState(false)
-  const [showWeatherHelp, setShowWeatherHelp] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isPreviewing, setIsPreviewing] = useState(false)
 
+  const mountedRef = useRef(true)
   const watchIdRef = useRef<string | null>(null)
   const frozenSnapshotRef = useRef<Promise<DriveSnapshot | null> | null>(null)
-  const isSavingRef = useRef(false)
-  const weatherHelpRef = useRef<HTMLDivElement | null>(null)
+  const snapshotAbortRef = useRef<AbortController | null>(null)
   const wasRunningBeforeStopRef = useRef(false)
-  const inflightLocationRef = useRef<Promise<RouteCoord | null> | null>(null)
-  const activeSnapshotAbortRef = useRef<AbortController | null>(null)
-  const mountedRef = useRef(true)
-  const fsUpdateIntervalRef = useRef<ReturnType<typeof globalThis.setInterval> | null>(null)
-  const weatherHelpButtonId = useId()
-  const weatherHelpPanelId = useId()
+  const locationRequestRef = useRef<Promise<RouteCoord | null> | null>(null)
+  const notificationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  )
 
   const {
     session,
@@ -274,63 +278,76 @@ function ActiveDriveContent({
     resumeDrive,
     hardReset,
     tick,
-    setNightOverride,
     setWeather,
-    getCurrentMode,
   } = useActiveDriveStore()
 
   const clearGpsWatch = useCallback(async () => {
-    if (watchIdRef.current !== null) {
-      try {
-        await Geolocation.clearWatch({ id: watchIdRef.current })
-      } catch {
-        // ignore cleanup errors
-      }
-      watchIdRef.current = null
+    const watchId = watchIdRef.current
+    if (!watchId) return
+
+    watchIdRef.current = null
+
+    try {
+      await Geolocation.clearWatch({ id: watchId })
+    } catch {
+      // Ignore watch cleanup errors.
     }
   }, [])
 
-  const clearAllLoops = useCallback(() => {
+  const clearNotificationInterval = useCallback(() => {
+    if (notificationIntervalRef.current !== null) {
+      globalThis.clearInterval(notificationIntervalRef.current)
+      notificationIntervalRef.current = null
+    }
+  }, [])
+
+  const clearRuntimeLoops = useCallback(() => {
     void clearGpsWatch()
-    if (fsUpdateIntervalRef.current !== null) {
-      globalThis.clearInterval(fsUpdateIntervalRef.current)
-      fsUpdateIntervalRef.current = null
-    }
-  }, [clearGpsWatch])
+    clearNotificationInterval()
+  }, [clearGpsWatch, clearNotificationInterval])
 
-  const requestAndGetLocation = useCallback(async (): Promise<RouteCoord | null> => {
-    if (inflightLocationRef.current) {
-      return inflightLocationRef.current
+  const getCurrentLocation = useCallback(async (): Promise<RouteCoord | null> => {
+    if (locationRequestRef.current) {
+      return locationRequestRef.current
     }
 
-    const promise = (async () => {
+    const locationPromise = (async () => {
       try {
         if (Capacitor.isNativePlatform()) {
           const permission = await Geolocation.checkPermissions()
 
-          const needsLocation =
+          const needsPermission =
             permission.location !== "granted" &&
             permission.coarseLocation !== "granted"
 
-          if (needsLocation) {
+          if (needsPermission) {
             const requested = await Geolocation.requestPermissions()
+
             const granted =
               requested.location === "granted" ||
               requested.coarseLocation === "granted"
+
             if (!granted) return null
           }
 
-          const pos = await Geolocation.getCurrentPosition({
+          const position = await Geolocation.getCurrentPosition({
             enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 5000,
+            timeout: 15_000,
+            maximumAge: 5_000,
           })
 
-          const lat = pos.coords.latitude
-          const lng = pos.coords.longitude
+          const { latitude: lat, longitude: lng } = position.coords
 
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
-          if (lat === 0 && lng === 0) return null
+          if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lng) ||
+            lat < -90 ||
+            lat > 90 ||
+            lng < -180 ||
+            lng > 180
+          ) {
+            return null
+          }
 
           return { lat, lng }
         }
@@ -339,270 +356,249 @@ function ActiveDriveContent({
 
         return await new Promise<RouteCoord | null>((resolve) => {
           navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const lat = pos.coords.latitude
-              const lng = pos.coords.longitude
-              if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            (position) => {
+              const { latitude: lat, longitude: lng } = position.coords
+
+              if (
+                !Number.isFinite(lat) ||
+                !Number.isFinite(lng) ||
+                lat < -90 ||
+                lat > 90 ||
+                lng < -180 ||
+                lng > 180
+              ) {
                 resolve(null)
                 return
               }
-              if (lat === 0 && lng === 0) {
-                resolve(null)
-                return
-              }
+
               resolve({ lat, lng })
             },
             () => resolve(null),
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+            {
+              enableHighAccuracy: true,
+              timeout: 15_000,
+              maximumAge: 5_000,
+            }
           )
         })
-      } catch (err) {
-        console.error("Location error:", err)
+      } catch {
         return null
       } finally {
-        inflightLocationRef.current = null
+        locationRequestRef.current = null
       }
     })()
 
-    inflightLocationRef.current = promise
-    return promise
+    locationRequestRef.current = locationPromise
+    return locationPromise
   }, [])
 
-  const primeSessionCoord = useCallback((coord: RouteCoord) => {
-    useActiveDriveStore.setState((state) => {
-      const s = state.session
-      const hasStart = !!s.startCoord
-      const sameAsLast =
-        !!s.lastCoord &&
-        s.lastCoord.lat === coord.lat &&
-        s.lastCoord.lng === coord.lng
+  const getTotalActiveMs = useCallback(() => {
+    const activeSession = useActiveDriveStore.getState().session
+    const accumulatedMs =
+      activeSession.dayMs +
+      activeSession.nightMs +
+      activeSession.unverifiedMs
 
-      return {
-        session: {
-          ...s,
-          startCoord: s.startCoord ?? coord,
-          lastCoord: coord,
-          routeTrail:
-            hasStart && sameAsLast
-              ? s.routeTrail
-              : [...s.routeTrail, coord].slice(-500),
-          lastUpdated: Date.now(),
-        },
-      }
-    })
+    if (
+      activeSession.isActive &&
+      activeSession.isRunning &&
+      activeSession.lastTickAt !== null
+    ) {
+      return accumulatedMs + Math.max(0, Date.now() - activeSession.lastTickAt)
+    }
+
+    return accumulatedMs
   }, [])
 
   const buildDriveSnapshot = useCallback(
-    async (opts?: {
+    async (options?: {
       isPreview?: boolean
       signal?: AbortSignal
     }): Promise<DriveSnapshot | null> => {
-      const state = useActiveDriveStore.getState()
-      const sessionSnapshot = state.session
-
-      const savedStartTime = sessionSnapshot.startTime
-      if (!savedStartTime) return null
-
       const snapshotTime = Date.now()
+      const stateBeforeSnapshot = useActiveDriveStore.getState()
 
-      useActiveDriveStore.getState().tick(undefined, snapshotTime)
+      if (!stateBeforeSnapshot.session.startTime) return null
+
+      /*
+       * If the timer is running, the store classifies the final active interval
+       * using its last known GPS location. It never classifies paused time.
+       */
+      if (stateBeforeSnapshot.session.isRunning) {
+        stateBeforeSnapshot.tick(undefined, snapshotTime)
+      }
 
       const freshState = useActiveDriveStore.getState()
       const fresh = freshState.session
-      const liveMode = freshState.getCurrentMode() ?? fresh.currentMode ?? "day"
+      const savedStartTime = fresh.startTime
 
-      const currentEndCoord = await requestAndGetLocation()
-      if (opts?.signal?.aborted) return null
+      if (!savedStartTime) return null
 
-      const finalElapsedMs = fresh.dayMs + fresh.nightMs
-      if (finalElapsedMs <= 0) return null
+      const currentEndCoord = await getCurrentLocation()
 
-      let finalDayMs = Math.max(0, fresh.dayMs)
-      let finalNightMs = Math.max(0, fresh.nightMs)
-      const bucketTotal = finalDayMs + finalNightMs
+      if (options?.signal?.aborted) return null
 
-      if (bucketTotal < finalElapsedMs) {
-        const remainder = finalElapsedMs - bucketTotal
-        if (liveMode === "night") {
-          finalNightMs += remainder
-        } else {
-          finalDayMs += remainder
-        }
-      } else if (bucketTotal <= 0) {
-        if (liveMode === "night") {
-          finalNightMs = finalElapsedMs
-        } else {
-          finalDayMs = finalElapsedMs
-        }
-      }
+      const totalActiveMs =
+        fresh.dayMs + fresh.nightMs + fresh.unverifiedMs
 
-      const normalizedTotalMs = Math.max(finalElapsedMs, finalDayMs + finalNightMs)
+      if (totalActiveMs <= 0) return null
 
-      let accurateMiles = safeNumber(fresh.liveMiles)
+      let miles = safeNumber(fresh.liveMiles)
       let milesSource: DriveEntry["milesSource"] = "gps-accumulated"
 
       if (fresh.startCoord && currentEndCoord) {
         const routeMiles = await getAccurateMileage(
           fresh.startCoord,
           currentEndCoord,
-          opts?.signal
+          options?.signal
         )
-        if (opts?.signal?.aborted) return null
+
+        if (options?.signal?.aborted) return null
+
         if (routeMiles !== null) {
-          accurateMiles = routeMiles
+          miles = routeMiles
           milesSource = "routes-api"
         }
       }
 
-      const baseTrail = Array.isArray(fresh.routeTrail) ? fresh.routeTrail : []
-      const lastTrailCoord = baseTrail.length > 0 ? baseTrail[baseTrail.length - 1] : null
+      const routeCoords = Array.isArray(fresh.routeTrail)
+        ? [...fresh.routeTrail]
+        : []
 
-      const finalTrail =
-        currentEndCoord && !sameCoord(lastTrailCoord, currentEndCoord)
-          ? [...baseTrail, currentEndCoord]
-          : baseTrail
+      const lastRouteCoord = routeCoords.at(-1) ?? null
 
-      // ── SOLAR ENGINE FIX ───────────────────────────────────────────────────
-      // Run the solar engine against the real start/end timestamps + GPS
-      // coordinates so day and night drives are properly verified.
-      // Previously this was hardcoded to "dmv-fixed" and never used solar data.
-      const location = fresh.startCoord
-        ? { latitude: fresh.startCoord.lat, longitude: fresh.startCoord.lng }
-        : undefined
+      if (currentEndCoord && !sameCoord(lastRouteCoord, currentEndCoord)) {
+        routeCoords.push(currentEndCoord)
+      }
 
-      const breakdown = calculateNightBreakdown({
-        start: savedStartTime,
-        end: snapshotTime,
-        location,
-      })
+            const hasUnverifiedTime = fresh.unverifiedMs > 0
 
-      const nightCalcMode: NightCalcMode = breakdown.mode
-      const nightHours = breakdown.nightDuration / 3600000
-      const dayHours = breakdown.dayDuration / 3600000
-      const verifiedNightDurationHours = nightHours
-      const isVerifiedDay = breakdown.isVerifiedDay
-      // ──────────────────────────────────────────────────────────────────────
+      /*
+       * This is intentionally based only on accumulated active solar intervals.
+       * No wall-clock start-to-end recalculation occurs here, so pause time
+       * cannot be saved as daylight or darkness.
+       */
+      const nightCalcMode = (
+        hasUnverifiedTime ? "unverified" : "solar"
+      ) as NightCalcMode
 
       return {
         id: makeDriveId(),
         startTime: new Date(savedStartTime).toISOString(),
         endTime: new Date(snapshotTime).toISOString(),
-        totalDurationHours: normalizedTotalMs / 3600000,
-        dayDurationHours: dayHours,
-        nightDurationHours: nightHours,
-        verifiedNightDurationHours,
+
+        totalDurationHours: totalActiveMs / 3_600_000,
+        dayDurationHours: fresh.dayMs / 3_600_000,
+        nightDurationHours: fresh.nightMs / 3_600_000,
+        unverifiedDurationHours: fresh.unverifiedMs / 3_600_000,
+
+        /*
+         * nightMs only ever accumulates solar-verified segments (see
+         * splitIntervalBySolar in activeDriveStore.ts) — unverified time is
+         * tracked separately in unverifiedMs. So nightMs is already pure
+         * verified-night time and should not be zeroed out just because some
+         * other, unrelated segment of the drive was unverified.
+         */
+        verifiedNightDurationHours: fresh.nightMs / 3_600_000,
+
         nightCalcMode,
-        isVerifiedDay,
+        isVerifiedDay:
+          !hasUnverifiedTime &&
+          fresh.dayMs > 0 &&
+          fresh.nightMs === 0,
+
         source: "timer",
-        miles: safeNumber(accurateMiles),
+        miles: safeNumber(miles),
         milesSource,
         weather: fresh.weather,
-        routeCoords: finalTrail,
+        routeCoords,
         startLatitude: fresh.startCoord?.lat ?? null,
         startLongitude: fresh.startCoord?.lng ?? null,
-        isPreview: opts?.isPreview ?? false,
+        isPreview: options?.isPreview ?? false,
       }
     },
-    [requestAndGetLocation]
+    [getCurrentLocation]
   )
 
-  const startFrozenSnapshot = useCallback(
-    (opts?: { isPreview?: boolean }) => {
-      activeSnapshotAbortRef.current?.abort()
+  const createFrozenSnapshot = useCallback(
+    (options?: { isPreview?: boolean }) => {
+      snapshotAbortRef.current?.abort()
+
       const controller = new AbortController()
-      activeSnapshotAbortRef.current = controller
-      const promise = buildDriveSnapshot({
-        isPreview: opts?.isPreview,
+      snapshotAbortRef.current = controller
+
+      const snapshotPromise = buildDriveSnapshot({
+        isPreview: options?.isPreview,
         signal: controller.signal,
       })
-      frozenSnapshotRef.current = promise
-      return promise
+
+      frozenSnapshotRef.current = snapshotPromise
+
+      return snapshotPromise
     },
     [buildDriveSnapshot]
   )
 
-  const [displayedMs, setDisplayedMs] = useState(() => {
-    const s = useActiveDriveStore.getState().session
-    return s.dayMs + s.nightMs
-  })
+  const [displayedMs, setDisplayedMs] = useState(() => getTotalActiveMs())
 
-  // ── Mount / unmount ────────────────────────────────────────────────────────
   useEffect(() => {
     mountedRef.current = true
+
     return () => {
       mountedRef.current = false
-      activeSnapshotAbortRef.current?.abort()
+      snapshotAbortRef.current?.abort()
     }
   }, [])
 
-  // ── Display timer — ticks every 500ms ─────────────────────────────────────
   useEffect(() => {
-    const id = globalThis.setInterval(() => {
-      const s = useActiveDriveStore.getState().session
-      if (!s.isActive) {
-        setDisplayedMs(s.dayMs + s.nightMs)
-        return
-      }
-      if (s.isRunning && s.lastTickAt !== null) {
-        const accumulated = s.dayMs + s.nightMs
-        const liveDelta = Math.max(0, Date.now() - s.lastTickAt)
-        setDisplayedMs(accumulated + liveDelta)
-      } else {
-        setDisplayedMs(s.dayMs + s.nightMs)
-      }
+    const intervalId = globalThis.setInterval(() => {
+      setDisplayedMs(getTotalActiveMs())
     }, 500)
-    return () => globalThis.clearInterval(id)
-  }, [])
 
-  // ── Foreground service notification sync — updates every 30s ──────────────
-  // FIX: Removed the immediate syncNotification() call that was here before.
-  // Calling updateForegroundService() immediately when session.isRunning
-  // becomes true caused a crash because startForegroundService() (called in
-  // handlePress) had not yet resolved — Android threw a native exception
-  // trying to update a service that hadn't started. The fsStarted flag in
-  // updateForegroundService() is the primary guard, but we also delay the
-  // first interval tick by 2 seconds to give the native start call time to
-  // fully resolve before any update is attempted.
+    return () => globalThis.clearInterval(intervalId)
+  }, [getTotalActiveMs])
+
   useEffect(() => {
     if (!session.isRunning) {
-      if (fsUpdateIntervalRef.current !== null) {
-        globalThis.clearInterval(fsUpdateIntervalRef.current)
-        fsUpdateIntervalRef.current = null
-      }
+      clearNotificationInterval()
       return
     }
 
     const syncNotification = () => {
-      const s = useActiveDriveStore.getState().session
-      const accumulated = s.dayMs + s.nightMs
-      const liveDelta =
-        s.lastTickAt !== null ? Math.max(0, Date.now() - s.lastTickAt) : 0
-      const elapsed = formatTime(accumulated + liveDelta)
-      const miles = safeNumber(s.liveMiles).toFixed(1)
-      void updateForegroundService(`${elapsed} elapsed · ${miles} mi`)
+      const activeSession = useActiveDriveStore.getState().session
+      const elapsed = formatTime(
+        activeSession.dayMs +
+          activeSession.nightMs +
+          activeSession.unverifiedMs +
+          (activeSession.lastTickAt
+            ? Math.max(0, Date.now() - activeSession.lastTickAt)
+            : 0)
+      )
+
+      void updateForegroundService(
+        `${elapsed} elapsed · ${safeNumber(activeSession.liveMiles).toFixed(1)} mi`
+      )
     }
 
-    // Delay first sync by 2s to ensure startForegroundService has resolved.
-    // The fsStarted guard in updateForegroundService is the hard safety net;
-    // this delay just avoids the unnecessary no-op on the first tick.
-    const firstSyncTimeout = globalThis.setTimeout(() => {
+    const startupTimeout = globalThis.setTimeout(() => {
       if (!mountedRef.current) return
+
       syncNotification()
-      fsUpdateIntervalRef.current = globalThis.setInterval(syncNotification, 30000)
-    }, 2000)
+      notificationIntervalRef.current = globalThis.setInterval(
+        syncNotification,
+        30_000
+      )
+    }, 2_000)
 
     return () => {
-      globalThis.clearTimeout(firstSyncTimeout)
-      if (fsUpdateIntervalRef.current !== null) {
-        globalThis.clearInterval(fsUpdateIntervalRef.current)
-        fsUpdateIntervalRef.current = null
-      }
+      globalThis.clearTimeout(startupTimeout)
+      clearNotificationInterval()
     }
-  }, [session.isRunning])
+  }, [clearNotificationInterval, session.isRunning])
 
-  // ── GPS watch — only runs while drive is running ───────────────────────────
   useEffect(() => {
     void clearGpsWatch()
+
     if (!session.isRunning) return
 
     let active = true
@@ -611,37 +607,55 @@ function ActiveDriveContent({
       try {
         if (Capacitor.isNativePlatform()) {
           const permission = await Geolocation.checkPermissions()
-          const needsLocation =
+
+          const needsPermission =
             permission.location !== "granted" &&
             permission.coarseLocation !== "granted"
 
-          if (needsLocation) {
+          if (needsPermission) {
             const requested = await Geolocation.requestPermissions()
+
             const granted =
               requested.location === "granted" ||
               requested.coarseLocation === "granted"
+
             if (!granted) {
-              setLocationError("Location access is required for accurate mileage.")
+              setLocationError(
+                "Location access is needed to verify sunlight and darkness hours."
+              )
               return
             }
           }
         }
 
         const id = await Geolocation.watchPosition(
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 },
-          (pos) => {
+          {
+            enableHighAccuracy: true,
+            timeout: 15_000,
+            maximumAge: 5_000,
+          },
+          (position) => {
             if (!mountedRef.current || !active) return
 
-            if (!pos) {
-              setLocationError("Location access is required for accurate mileage.")
+            if (!position) {
+              setLocationError(
+                "Location updates are unavailable. Time will remain unverified until location returns."
+              )
               return
             }
 
-            const lat = pos.coords.latitude
-            const lng = pos.coords.longitude
+            const { latitude: lat, longitude: lng } = position.coords
 
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
-            if (lat === 0 && lng === 0) return
+            if (
+              !Number.isFinite(lat) ||
+              !Number.isFinite(lng) ||
+              lat < -90 ||
+              lat > 90 ||
+              lng < -180 ||
+              lng > 180
+            ) {
+              return
+            }
 
             setLocationError(null)
             tick({ lat, lng }, Date.now())
@@ -654,7 +668,9 @@ function ActiveDriveContent({
           await Geolocation.clearWatch({ id })
         }
       } catch {
-        setLocationError("Location access is required for accurate mileage.")
+        setLocationError(
+          "Location access is needed to verify sunlight and darkness hours."
+        )
       }
     }
 
@@ -664,111 +680,106 @@ function ActiveDriveContent({
       active = false
       void clearGpsWatch()
     }
-  }, [session.isRunning, tick, clearGpsWatch])
+  }, [clearGpsWatch, session.isRunning, tick])
 
-  // ── Prime initial coord when session becomes active ────────────────────────
-  useEffect(() => {
-    if (!session.isActive) return
-
-    let cancelled = false
-
-    ;(async () => {
-      const coord = await requestAndGetLocation()
-      if (cancelled || !mountedRef.current) return
-
-      if (coord) {
-        primeSessionCoord(coord)
-        setLocationError(null)
-      }
-
-      tick(undefined, Date.now())
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [session.isActive, primeSessionCoord, requestAndGetLocation, tick])
-
-  // ── Cleanup all loops on unmount ───────────────────────────────────────────
   useEffect(() => {
     return () => {
-      clearAllLoops()
+      clearRuntimeLoops()
       void stopForegroundService()
     }
-  }, [clearAllLoops])
+  }, [clearRuntimeLoops])
 
-  // ── Weather help popover dismiss handlers ──────────────────────────────────
-  useEffect(() => {
-    if (!showWeatherHelp) return
-
-    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-      const target = event.target as Node
-      if (weatherHelpRef.current && !weatherHelpRef.current.contains(target)) {
-        setShowWeatherHelp(false)
-      }
-    }
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setShowWeatherHelp(false)
-    }
-
-    document.addEventListener("mousedown", handlePointerDown)
-    document.addEventListener("touchstart", handlePointerDown)
-    document.addEventListener("keydown", handleEscape)
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown)
-      document.removeEventListener("touchstart", handlePointerDown)
-      document.removeEventListener("keydown", handleEscape)
-    }
-  }, [showWeatherHelp])
-
-  // ── Derived state ──────────────────────────────────────────────────────────
   const isRunning = session.isRunning
   const hasActiveDrive = session.isActive
+  const isNight = session.currentMode === "night"
+  const isSolarUnverified = session.currentMode === "unverified"
+  const formattedElapsed = formatTime(displayedMs)
+
+  const lightingLabel = isSolarUnverified
+    ? "Lighting unverified"
+    : isNight
+      ? "Night driving"
+      : "Day driving"
+
   const saveDisabled =
-    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreparingStop
+    !hasActiveDrive ||
+    displayedMs < 10_000 ||
+    isSaving ||
+    isPreparingStop
+
   const previewDisabled =
-    !hasActiveDrive || displayedMs < 10000 || isStopping || isPreviewing || isPreparingStop
+    !hasActiveDrive ||
+    displayedMs < 10_000 ||
+    isSaving ||
+    isPreparingStop ||
+    isPreviewing
 
-  // ── Button handlers ────────────────────────────────────────────────────────
-  const handlePress = async () => {
-    if (isStopping || isPreviewing || isPreparingStop) return
+  const startNewDrive = async () => {
+    const now = Date.now()
 
-    if (session.isRunning) {
-      pauseDrive()
-      void updateForegroundService("Drive paused — tap to resume")
-      setShowStopConfirm(false)
-      return
-    }
-
-    if (session.isActive) {
-      resumeDrive()
-      setShowStopConfirm(false)
-      setLocationError(null)
-      // On resume, call start (not update) so service is guaranteed running
-      void startForegroundService("Drive resumed — tracking active")
-      requestAndGetLocation().then((coord) => {
-        if (coord && mountedRef.current) primeSessionCoord(coord)
-      })
-      return
-    }
-
-    startDrive(Date.now(), null)
-    setShowStopConfirm(false)
+    startDrive(now, null)
     setLocationError(null)
+    setShowStopConfirm(false)
 
-    void startForegroundService("Drive started — tracking time & location")
+    void startForegroundService("Drive started — tracking time and location")
 
-    requestAndGetLocation().then((coord) => {
-      if (!mountedRef.current) return
-      if (!coord) {
-        setLocationError("Location access is required for accurate mileage.")
-        return
-      }
-      setLocationError(null)
-      primeSessionCoord(coord)
-    })
+    const coord = await getCurrentLocation()
+
+    if (!mountedRef.current) return
+
+    if (!coord) {
+      setLocationError(
+        "Location access is needed to verify sunlight and darkness hours."
+      )
+      return
+    }
+
+    setLocationError(null)
+    tick(coord, Date.now())
+  }
+
+  const resumeCurrentDrive = async () => {
+    resumeDrive(Date.now())
+    setLocationError(null)
+    setShowStopConfirm(false)
+
+    void startForegroundService("Drive resumed — tracking active")
+
+    const coord = await getCurrentLocation()
+
+    if (!mountedRef.current || !coord) return
+
+    tick(coord, Date.now())
+  }
+
+  const pauseCurrentDrive = () => {
+    const now = Date.now()
+
+    /*
+     * Force the final active interval into the solar counters before pause.
+     * `pauseDrive()` then changes isRunning to false, so paused time is excluded.
+     */
+    tick(undefined, now)
+    pauseDrive(now)
+
+    void updateForegroundService("Drive paused — tap Resume to continue")
+    setShowStopConfirm(false)
+  }
+
+  const handlePrimaryAction = () => {
+    if (isSaving || isPreparingStop || isPreviewing) return
+
+    if (isRunning) {
+      pauseCurrentDrive()
+      return
+    }
+
+    if (hasActiveDrive) {
+      void resumeCurrentDrive()
+      return
+    }
+
+    void startNewDrive()
   }
 
   const handleStopRequest = () => {
@@ -776,60 +787,77 @@ function ActiveDriveContent({
 
     wasRunningBeforeStopRef.current = session.isRunning
 
-    if (session.isRunning) pauseDrive()
+    if (session.isRunning) {
+      pauseCurrentDrive()
+    }
 
     setShowStopConfirm(true)
     setIsPreparingStop(true)
 
-    startFrozenSnapshot({ isPreview: false }).finally(() => {
-      if (mountedRef.current) setIsPreparingStop(false)
+    createFrozenSnapshot({ isPreview: false }).finally(() => {
+      if (mountedRef.current) {
+        setIsPreparingStop(false)
+      }
     })
   }
 
   const handleCancelStop = () => {
-    activeSnapshotAbortRef.current?.abort()
-    activeSnapshotAbortRef.current = null
+    snapshotAbortRef.current?.abort()
+    snapshotAbortRef.current = null
     frozenSnapshotRef.current = null
+
     setShowStopConfirm(false)
     setIsPreparingStop(false)
 
-    if (wasRunningBeforeStopRef.current) resumeDrive()
+    if (wasRunningBeforeStopRef.current) {
+      void resumeCurrentDrive()
+    }
+
+    wasRunningBeforeStopRef.current = false
   }
 
   const handleSaveDrive = async () => {
-    if (isSavingRef.current || isPreparingStop) return
+    if (isSaving || isPreparingStop) return
 
-    isSavingRef.current = true
-    setIsStopping(true)
+    setIsSaving(true)
 
     try {
-      clearAllLoops()
+      clearRuntimeLoops()
 
       const finalizedDrive = frozenSnapshotRef.current
         ? await frozenSnapshotRef.current
-        : await startFrozenSnapshot({ isPreview: false })
+        : await createFrozenSnapshot({ isPreview: false })
 
-      if (!finalizedDrive) return
+      if (!finalizedDrive) {
+        setLocationError(
+          "This drive could not be saved because it has no recorded active time."
+        )
+        return
+      }
 
-      const { isPreview: _stripped, ...driveToSave } = finalizedDrive
+      const { isPreview: _isPreview, ...driveToSave } = finalizedDrive
 
       saveDrive(driveToSave)
       setCurrentDrive(driveToSave)
-      setShowStopConfirm(false)
 
       void stopForegroundService()
 
-      setScreen("todaysDrive")
       hardReset()
-    } catch (err) {
-      console.error("[ActiveDrive] Save failed:", err)
-      setLocationError("Drive save failed. Please try again before closing the app.")
+      setShowStopConfirm(false)
+      setScreen("todaysDrive")
+    } catch (error) {
+      console.error("[ActiveDrive] Save failed:", error)
+      setLocationError(
+        "Drive save failed. Please try again before closing the app."
+      )
     } finally {
-      isSavingRef.current = false
-      setIsStopping(false)
-      setIsPreparingStop(false)
+      if (mountedRef.current) {
+        setIsSaving(false)
+        setIsPreparingStop(false)
+      }
+
       frozenSnapshotRef.current = null
-      activeSnapshotAbortRef.current = null
+      snapshotAbortRef.current = null
       wasRunningBeforeStopRef.current = false
     }
   }
@@ -839,139 +867,105 @@ function ActiveDriveContent({
 
     try {
       setIsPreviewing(true)
-      const previewDrive = await startFrozenSnapshot({ isPreview: true })
 
-      if (!mountedRef.current) return
-      if (!previewDrive) return
+      const previewDrive = await createFrozenSnapshot({
+        isPreview: true,
+      })
+
+      if (!mountedRef.current || !previewDrive) return
 
       setCurrentDrive(previewDrive)
       setScreen("summary")
     } finally {
-      if (mountedRef.current) setIsPreviewing(false)
+      frozenSnapshotRef.current = null
+      snapshotAbortRef.current = null
+
+      if (mountedRef.current) {
+        setIsPreviewing(false)
+      }
     }
   }
 
-  const formattedElapsed = formatTime(displayedMs)
-
-  const effectiveMode: DriveMode | null = hasActiveDrive
-    ? getCurrentMode()
-    : session.currentMode
-
-  const effectiveNight = effectiveMode === "night"
-
-  const statusClass = isRunning ? "text-[#00C851]" : "text-red-400"
-  const statusText = isRunning
-    ? "Drive Active"
-    : hasActiveDrive
-      ? "Drive Paused"
-      : "Ready to Start"
+  const solarVerificationText =
+    session.solarStatus === "verified"
+      ? "Lighting calculated from local sunrise and sunset"
+      : "Some time is awaiting solar verification"
 
   return (
-  <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
-    <div className="w-full max-w-[46rem]">
-
-      {/* ── TOP PANEL: Live Tracking ───────────────────────────────────── */}
-      <div className="mx-auto w-full max-w-[42rem]">
-        <div className="relative overflow-hidden rounded-[28px] border border-white/15 bg-white/8 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
+    <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
+      <div className="w-full max-w-[46rem]">
+        <section className="mx-auto w-full max-w-[42rem] overflow-hidden rounded-[28px] border border-white/15 bg-white/10 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
 
           <div className="p-4 sm:p-5">
-            <div className="rounded-[24px] border border-white/10 bg-[#08194A]/78 px-4 py-4 shadow-inner sm:px-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[clamp(1.6rem,5vw,2.5rem)] font-extrabold leading-none tracking-tight text-white">
+            <div className="rounded-[24px] border border-white/10 bg-[#08194A]/80 px-4 py-5 shadow-inner sm:px-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[clamp(1.6rem,5vw,2.5rem)] font-extrabold leading-none tracking-tight">
                     Live Tracking
                   </p>
 
-                  <div className="mt-2 flex items-center gap-2">
-                    <p className="text-sm font-medium text-white/82 sm:text-base">
-                      {isRunning
-                        ? "Drive in Progress"
-                        : hasActiveDrive
-                          ? "Drive Paused"
-                          : "Ready to Start"}
-                    </p>
-
-                    {/* ⭐ Pulsing Green Dot */}
-                    <span className="relative flex h-3 w-3 items-center justify-center">
-                      <span
-                        className={`absolute h-3 w-3 rounded-full ${
-                          isRunning
-                            ? "bg-[#35ff69]/35 animate-live-ping"
-                            : "bg-white/15"
-                        }`}
-                      />
-                      <span
-                        className={`relative h-2.5 w-2.5 rounded-full ${
-                          isRunning
-                            ? "bg-[#35ff69] shadow-[0_0_12px_rgba(53,255,105,0.95)]"
-                            : "bg-white/35"
-                        }`}
-                      />
-                    </span>
-                  </div>
+                  <p className="mt-2 text-sm font-medium text-white/80 sm:text-base">
+                    {isRunning
+                      ? "Drive in progress"
+                      : hasActiveDrive
+                        ? "Drive paused"
+                        : "Ready to start"}
+                  </p>
                 </div>
 
                 <div
-                  className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
-                    effectiveNight
-                      ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/40"
-                      : "bg-white text-[#08194A]"
+                  className={`rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
+                    isSolarUnverified
+                      ? "bg-amber-300 text-[#08194A]"
+                      : isNight
+                        ? "bg-[#112869] text-white ring-1 ring-[#f9c80e]/40"
+                        : "bg-white text-[#08194A]"
                   }`}
                 >
-                  {effectiveNight ? "NIGHT" : "DAY"}
+                  {isSolarUnverified ? "VERIFYING" : isNight ? "NIGHT" : "DAY"}
                 </div>
               </div>
 
-              <div className="mt-4 rounded-full bg-[#06153E]/95 p-1">
-                <div className="grid grid-cols-3 gap-1">
-                  {(["auto", "day", "night"] as NightOverride[]).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() => setNightOverride(mode)}
-                      aria-pressed={session.nightOverride === mode}
-                      className={`rounded-full px-2 py-2.5 text-sm font-extrabold transition ${
-                        session.nightOverride === mode
-                          ? mode === "auto"
-                            ? "bg-[#f9d65c] text-[#08194A] shadow-[0_8px_20px_rgba(249,214,92,0.26)]"
-                            : mode === "day"
-                              ? "bg-white text-[#08194A] shadow-md"
-                              : "bg-[#112869] text-white ring-1 ring-[#f9c80e]/35 shadow-md"
-                          : "bg-transparent text-white/88 hover:bg-white/8"
-                      }`}
-                    >
-                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <div className="mt-5 rounded-xl border border-white/10 bg-[#06153E]/95 px-3 py-3 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  {isSolarUnverified ? (
+                    <QuestionMarkCircleIcon className="h-5 w-5 text-[#f9c80e]" />
+                  ) : isNight ? (
+                    <MoonIcon className="h-5 w-5 text-[#f9c80e]" />
+                  ) : (
+                    <SunIcon className="h-5 w-5 text-[#f9c80e]" />
+                  )}
 
-              <div className="mt-4 flex items-center justify-center gap-2 text-center">
-                {effectiveNight ? (
-                  <MoonIcon className="h-5 w-5 text-[#f9c80e]" />
-                ) : (
-                  <SunIcon className="h-5 w-5 text-[#f9c80e]" />
-                )}
-                <p className="text-sm font-semibold text-white/84">
-                  {effectiveNight ? "Night Mode" : "Day Mode"}
+                  <p className="text-sm font-bold">{lightingLabel}</p>
+                </div>
+
+                <p className="mt-1 text-xs text-white/70">
+                  {solarVerificationText}
                 </p>
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-         {/* ── TIMER + PLAY/PAUSE ─────────────────────────────────────────── */}
-        <div className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
-          <p className={`text-sm uppercase tracking-[0.18em] ${statusClass}`}>
-            {statusText}
+        <section className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
+          <p
+            className={`text-sm uppercase tracking-[0.18em] ${
+              isRunning ? "text-[#35ff69]" : "text-red-300"
+            }`}
+          >
+            {isRunning
+              ? "Drive Active"
+              : hasActiveDrive
+                ? "Drive Paused"
+                : "Ready to Start"}
           </p>
 
           <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
             <button
-              onClick={handlePress}
               type="button"
+              onClick={handlePrimaryAction}
+              disabled={isSaving || isPreparingStop || isPreviewing}
               aria-label={
                 isRunning
                   ? "Pause drive timer"
@@ -979,177 +973,157 @@ function ActiveDriveContent({
                     ? "Resume drive timer"
                     : "Start drive timer"
               }
-              className={`flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-95 ${
+              className={`flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-500 ${
                 isRunning
-                  ? "animate-pulse-slow bg-[#00A651]"
+                  ? "bg-[#00A651]"
                   : hasActiveDrive
                     ? "bg-green-600"
                     : "bg-red-600"
               }`}
             >
               {isRunning ? (
-                <div className="h-3.5 w-3.5 rounded-sm bg-white" />
+                <span className="h-4 w-4 rounded-sm bg-white" />
               ) : (
-                <div className="ml-1 h-0 w-0 border-b-[7px] border-l-[12px] border-t-[7px] border-b-transparent border-l-white border-t-transparent" />
+                <span className="ml-1 h-0 w-0 border-b-[8px] border-l-[13px] border-t-[8px] border-b-transparent border-l-white border-t-transparent" />
               )}
             </button>
 
-            <div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(2rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums text-white">
+            <p className="text-[clamp(2rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums">
               {formattedElapsed}
-            </div>
+            </p>
           </div>
 
-          {/* ── Background tracking warning ───────────────────────────────── */}
           {hasActiveDrive && (
-            <div className="mt-3 rounded-lg border border-yellow-300/40 bg-yellow-100/10 px-3 py-2 text-center">
-              <p className="text-[10px] font-semibold text-yellow-300">
-                For best accuracy, keep NJDrive50 open during your drive.
+            <div className="rounded-lg border border-yellow-300/40 bg-yellow-100/10 px-3 py-2 text-center">
+              <p className="text-[10px] font-semibold text-yellow-200">
+                Keep NJDrive50 open for the most accurate location and solar timing.
               </p>
-              
             </div>
           )}
+        </section>
 
-        </div>
-
-        {/* ── BOTTOM PANEL: Drive Summary (compact) ─────────────────────── */}
-        <div className="mx-auto mt-4 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#0A1E5E] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
+        <section className="mx-auto mt-5 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#08194A] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#0A1E5E]" />
 
           <div className="p-4 sm:p-5">
-
-            {/* Header */}
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0 flex-1">
+              <div>
                 <p className="text-[10px] uppercase tracking-[0.18em] text-[#0A1E5E]/50">
                   Active Drive
                 </p>
-                <h3 className="mt-0.5 text-base font-extrabold leading-tight text-[#08194A] sm:text-lg">
-                  Drive Summary
-                </h3>
+                <h2 className="mt-0.5 text-lg font-extrabold">Drive Summary</h2>
               </div>
-              <div
-                className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.14em] ${
-                  effectiveNight
-                    ? "bg-[#0A1E5E] text-white ring-1 ring-[#f9c80e]/35"
-                    : "bg-[#F4F6FA] text-[#08194A] ring-1 ring-[#0A1E5E]/10"
-                }`}
-              >
-                {effectiveNight ? "Night Mode" : "Day Mode"}
-              </div>
+
+              <span className="rounded-full bg-[#F4F6FA] px-3 py-1 text-[10px] font-bold tracking-[0.14em] text-[#08194A] ring-1 ring-[#0A1E5E]/10">
+                {lightingLabel}
+              </span>
             </div>
 
-            {/* Duration + Distance stacked */}
-            <div className="mt-3 flex flex-col gap-2">
-              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] p-3 text-center shadow-sm">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
                   Duration
                 </p>
-                <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+                <p className="mt-1 text-2xl font-black tabular-nums">
                   {formattedElapsed}
                 </p>
               </div>
 
-              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-3 py-3 text-center shadow-sm">
+              <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] p-3 text-center shadow-sm">
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
                   Distance
                 </p>
-                <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.1rem,4.5vw,1.75rem)] font-black leading-none tracking-tight tabular-nums text-[#08194A]">
+                <p className="mt-1 text-2xl font-black tabular-nums">
                   {safeNumber(session.liveMiles).toFixed(1)}
-                  <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">mi</span>
+                  <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">
+                    mi
+                  </span>
                 </p>
-                <p className="mt-0.5 text-[9px] text-[#0A1E5E]/35">Live GPS</p>
               </div>
             </div>
 
-            {/* Start Time + Lighting */}
-            <div className="mt-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] px-3 py-3 shadow-sm">
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                    Start Time
-                  </p>
-                  <p className="mt-1 tabular-nums text-sm font-semibold text-[#08194A]">
-                    {session.startTime
-                      ? new Date(session.startTime).toLocaleTimeString()
-                      : "--"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                    Lighting
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#08194A]">
-                    {effectiveNight ? "Night driving" : "Day driving"}
-                  </p>
-                </div>
+            <div className="mt-2 grid grid-cols-3 gap-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] p-3 text-center">
+              <div>
+                <p className="text-[9px] uppercase tracking-[0.12em] text-[#0A1E5E]/50">
+                  Day
+                </p>
+                <p className="mt-1 text-sm font-bold">
+                  {formatHours(session.dayMs / 3_600_000)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[9px] uppercase tracking-[0.12em] text-[#0A1E5E]/50">
+                  Darkness
+                </p>
+                <p className="mt-1 text-sm font-bold">
+                  {formatHours(session.nightMs / 3_600_000)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[9px] uppercase tracking-[0.12em] text-[#0A1E5E]/50">
+                  Unverified
+                </p>
+                <p className="mt-1 text-sm font-bold">
+                  {formatHours(session.unverifiedMs / 3_600_000)}
+                </p>
               </div>
             </div>
 
-            {/* Weather */}
-            <div className="mt-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] px-3 py-3 shadow-sm">
-              <div
-                ref={weatherHelpRef}
-                className="relative flex items-center justify-center gap-1"
-              >
+            <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] p-3 text-center">
+              <div>
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                  Weather Conditions
+                  Start Time
                 </p>
-                <button
-                  id={weatherHelpButtonId}
-                  type="button"
-                  aria-label="Weather conditions help"
-                  aria-expanded={showWeatherHelp}
-                  aria-controls={weatherHelpPanelId}
-                  onClick={() => setShowWeatherHelp((prev) => !prev)}
-                  className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-[#0A1E5E]/45 transition hover:bg-[#0A1E5E]/5 hover:text-[#0A1E5E]/70"
-                >
-                  ⓘ
-                </button>
-
-                {showWeatherHelp && (
-                  <div
-                    id={weatherHelpPanelId}
-                    aria-labelledby={weatherHelpButtonId}
-                    className="absolute left-1/2 top-full z-20 mt-2 w-64 max-w-[80vw] -translate-x-1/2 rounded-lg bg-white p-3 text-left text-xs text-[#08194A] shadow-lg ring-1 ring-black/10"
-                  >
-                    <p className="font-semibold text-[#0A1E5E]">Optional Weather Tag</p>
-                    <p className="mt-1 leading-snug">
-                      This is optional and does not affect drive time, mileage, or
-                      day/night status. Choose a weather condition only if you want it
-                      included in the saved summary.
-                    </p>
-                    <p className="mt-1 italic text-[#0A1E5E]/70">
-                      If you don't select anything, weather will simply be left blank.
-                    </p>
-                  </div>
-                )}
+                <p className="mt-1 text-sm font-semibold">
+                  {session.startTime
+                    ? new Date(session.startTime).toLocaleTimeString()
+                    : "--"}
+                </p>
               </div>
 
-              {/* 4-col weather buttons */}
-              <div className="mt-2 grid grid-cols-4 gap-1.5">
-                {["Clear", "Rain", "Snow", "Fog"].map((w) => {
-                  const isSelected = session.weather === w
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                  Weather
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {session.weather ?? "Not selected"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <p className="mb-2 text-center text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                Weather Conditions
+              </p>
+
+              <div className="grid grid-cols-4 gap-1.5">
+                {["Clear", "Rain", "Snow", "Fog"].map((weather) => {
+                  const selected = session.weather === weather
+
                   return (
                     <button
-                      key={w}
+                      key={weather}
                       type="button"
-                      onClick={() => setWeather(isSelected ? null : w)}
-                      className={`rounded-full border px-1 py-1.5 text-xs font-semibold transition ${
-                        isSelected
+                      onClick={() =>
+                        setWeather(selected ? null : weather)
+                      }
+                      className={`rounded-full border px-1 py-2 text-xs font-semibold transition ${
+                        selected
                           ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_10px_rgba(249,200,14,0.25)]"
                           : "border-[#0A1E5E]/12 bg-white text-[#0A1E5E]/65 hover:bg-[#f9c80e]/10"
                       }`}
                     >
-                      {w}
+                      {weather}
                     </button>
                   )
                 })}
               </div>
             </div>
 
-            {/* Location error */}
             {locationError && (
-              <div className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 px-3 py-2.5 text-left shadow-sm">
+              <div className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 px-3 py-2.5 text-left">
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-red-600">
                   Location Issue
                 </p>
@@ -1159,147 +1133,89 @@ function ActiveDriveContent({
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="mt-4 space-y-2.5">
-              <div className="grid grid-cols-2 gap-2 max-[380px]:grid-cols-1">
-                <button
-                  type="button"
-                  onClick={handlePress}
-                  disabled={isStopping || isPreviewing || isPreparingStop}
-                  className={`w-full rounded-xl py-3.5 text-sm font-bold transition shadow-md ${
-                    isStopping || isPreviewing || isPreparingStop
-                      ? "cursor-not-allowed bg-gray-300 text-gray-600"
-                      : isRunning
-                        ? "bg-red-600 text-white hover:bg-red-700"
-                        : hasActiveDrive
-                          ? "bg-green-600 text-white hover:bg-green-700"
-                          : "bg-[#08194A] text-white hover:bg-[#0A1E5E]"
-                  }`}
-                >
-                  {isRunning
-                    ? "Pause Timer"
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handlePrimaryAction}
+                disabled={isSaving || isPreparingStop || isPreviewing}
+                className={`rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 ${
+                  isRunning
+                    ? "bg-red-600 hover:bg-red-700"
                     : hasActiveDrive
-                      ? "Resume Timer"
-                      : "Start Timer"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleStopRequest}
-                  disabled={saveDisabled}
-                  className={`w-full rounded-xl py-3.5 text-sm font-bold transition ${
-                    saveDisabled
-                      ? "cursor-not-allowed bg-gray-300 text-gray-500"
-                      : "bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.22)] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
-                  }`}
-                >
-                  {isPreparingStop ? "Preparing..." : "Stop Drive"}
-                </button>
-              </div>
-
-              {/* Stop confirm dialog */}
-              {showStopConfirm && (
-                <div className="rounded-xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                    Confirm Stop
-                  </p>
-                  <h4 className="mt-1 text-base font-extrabold text-[#08194A]">
-                    End and save this drive?
-                  </h4>
-                  <p className="mt-1 text-xs text-[#0A1E5E]/70">
-                    This will save the current duration, mileage, route trail,
-                    and lighting conditions.
-                  </p>
-
-                  {isPreparingStop && (
-                    <p className="mt-2 text-xs font-semibold text-[#0A1E5E]">
-                      Preparing final snapshot...
-                    </p>
-                  )}
-
-                  <div className="mt-3 grid grid-cols-2 gap-2 max-[380px]:grid-cols-1">
-                    <button
-                      type="button"
-                      onClick={handleCancelStop}
-                      disabled={isStopping}
-                      className="w-full rounded-xl border border-[#0A1E5E]/15 bg-white py-3.5 text-sm font-bold text-[#08194A] transition hover:bg-[#F7F9FC]"
-                    >
-                      Cancel
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleSaveDrive}
-                      disabled={isStopping || isPreparingStop}
-                      className={`w-full rounded-xl py-3.5 text-sm font-bold transition ${
-                        isStopping || isPreparingStop
-                          ? "cursor-not-allowed bg-gray-300 text-gray-500"
-                          : "bg-[#08194A] text-white shadow-[0_14px_28px_rgba(8,25,74,0.22)] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
-                      }`}
-                    >
-                      {isStopping ? "Saving..." : "Save and End"}
-                    </button>
-                  </div>
-                </div>
-              )}
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-[#08194A] hover:bg-[#0A1E5E]"
+                }`}
+              >
+                {isRunning
+                  ? "Pause Timer"
+                  : hasActiveDrive
+                    ? "Resume Timer"
+                    : "Start Timer"}
+              </button>
 
               <button
                 type="button"
-                onClick={handlePreviewSummary}
-                disabled={previewDisabled}
-                className={`w-full rounded-xl border-2 border-[#0A1E5E]/50 py-3.5 text-sm font-bold transition ${
-                  previewDisabled
-                    ? "cursor-not-allowed bg-gray-200 text-gray-500"
-                    : "bg-white text-[#08194A] shadow-sm hover:-translate-y-[1px] hover:shadow-[0_0_16px_rgba(249,200,14,0.18)]"
-                }`}
+                onClick={handleStopRequest}
+                disabled={saveDisabled}
+                className="rounded-xl bg-[#08194A] py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
               >
-                {isPreviewing
-                  ? "Opening Preview..."
-                  : "Preview Summary (Not Saved)"}
+                {isPreparingStop ? "Preparing..." : "Stop Drive"}
               </button>
             </div>
+
+            {showStopConfirm && (
+              <div className="mt-3 rounded-xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                  Confirm Stop
+                </p>
+
+                <h3 className="mt-1 text-base font-extrabold">
+                  End and save this drive?
+                </h3>
+
+                <p className="mt-1 text-xs text-[#0A1E5E]/70">
+                  Active time is split using local sunrise and sunset. Paused time
+                  is excluded.
+                </p>
+
+                {isPreparingStop && (
+                  <p className="mt-2 text-xs font-semibold text-[#0A1E5E]">
+                    Preparing final snapshot...
+                  </p>
+                )}
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelStop}
+                    disabled={isSaving}
+                    className="rounded-xl border border-[#0A1E5E]/15 bg-white py-3 text-sm font-bold text-[#08194A] transition hover:bg-[#F7F9FC] disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveDrive}
+                    disabled={isSaving || isPreparingStop}
+                    className="rounded-xl bg-[#08194A] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                  >
+                    {isSaving ? "Saving..." : "Save and End"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handlePreviewSummary}
+              disabled={previewDisabled}
+              className="mt-3 w-full rounded-xl border-2 border-[#0A1E5E]/50 bg-white py-3.5 text-sm font-bold text-[#08194A] shadow-sm transition hover:-translate-y-px hover:shadow-[0_16px_rgba(249,200,14,0.18)] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
+            >
+              {isPreviewing ? "Opening Preview..." : "Preview Summary — Not Saved"}
+            </button>
           </div>
-        </div>
-
-        <style>
-          {`
-            @keyframes pulse-slow {
-              0% { transform: scale(1); }
-              50% { transform: scale(1.06); }
-              100% { transform: scale(1); }
-            }
-
-            .animate-pulse-slow {
-              animation: pulse-slow 2.5s ease-in-out infinite;
-            }
-
-            @keyframes live-ping {
-              0% {
-                transform: scale(0.9);
-                opacity: 0.85;
-              }
-              70% {
-                transform: scale(1.9);
-                opacity: 0;
-              }
-              100% {
-                transform: scale(1.9);
-                opacity: 0;
-              }
-            }
-
-            .animate-live-ping {
-              animation: live-ping 1.6s ease-out infinite;
-            }
-
-            @media (prefers-reduced-motion: reduce) {
-              .animate-pulse-slow,
-              .animate-live-ping {
-                animation: none;
-              }
-            }
-          `}
-        </style>
+        </section>
       </div>
     </div>
   )

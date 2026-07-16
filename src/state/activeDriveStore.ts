@@ -1,13 +1,15 @@
 // src/state/activeDriveStore.ts
 
-import { create } from "zustand"
-import { persist, createJSONStorage } from "zustand/middleware"
-import { isNightByDMV } from "../engine/solarEngine"
-// ✅ ADDED: Capacitor App listener for foreground resume
 import { App as CapacitorApp } from "@capacitor/app"
+import { create } from "zustand"
+import { createJSONStorage, persist } from "zustand/middleware"
+import {
+  computeDayNightSplit,
+  getCurrentSolarMode,
+  getSolarWindowForDate,
+} from "../engine/solarEngine"
 
-export type DriveMode = "day" | "night"
-export type NightOverride = "auto" | "day" | "night"
+export type DriveMode = "day" | "night" | "unverified"
 
 export type RouteCoord = {
   lat: number
@@ -24,16 +26,13 @@ export type ActiveDriveSession = {
 
   dayMs: number
   nightMs: number
+  unverifiedMs: number
 
   currentMode: DriveMode
-  nightOverride: NightOverride
-  lastModeChangeAt: number | null
+  solarStatus: "verified" | "unverified"
 
   lastUpdated: number | null
   lastTickAt: number | null
-
-  solarSunrise: number | null
-  solarSunset: number | null
 
   weather: string | null
 
@@ -44,9 +43,6 @@ export type ActiveDriveSession = {
 }
 
 type StartDriveOptions = {
-  override?: NightOverride
-  sunrise?: number | null
-  sunset?: number | null
   weather?: string | null
 }
 
@@ -54,43 +50,57 @@ type ActiveDriveStore = {
   session: ActiveDriveSession
 
   hardReset: () => void
+
   startDrive: (
     now?: number,
     coord?: RouteCoord | null,
     options?: StartDriveOptions
   ) => void
+
   pauseDrive: (now?: number) => void
   resumeDrive: (now?: number) => void
   stopDrive: (now?: number) => void
 
   tick: (coord?: RouteCoord | null, nowOverride?: number) => void
-  setNightOverride: (mode: NightOverride) => void
+
   setWeather: (weather: string | null) => void
   appendRoutePoint: (coord: RouteCoord) => void
   clearRoute: () => void
 
   getElapsedSeconds: () => number
+
   getDayNightSeconds: () => {
     daySeconds: number
     nightSeconds: number
+    unverifiedSeconds: number
   }
+
   getCurrentMode: () => DriveMode
 
   _tickInterval: number | null
-  // ✅ ADDED: tracks Capacitor foreground listener cleanup
   _appStateListener: (() => void) | null
+
   startGlobalTick: () => void
   stopGlobalTick: () => void
+}
+
+type SolarIntervalSplit = {
+  dayMs: number
+  nightMs: number
+  unverifiedMs: number
+  mode: DriveMode
+  solarStatus: "verified" | "unverified"
 }
 
 const STORAGE_KEY = "njdrive50_active_drive"
 const MAX_ROUTE_POINTS = 500
 const EARTH_RADIUS_MILES = 3958.7613
-const GLOBAL_TICK_MS = 1000
+const GLOBAL_TICK_MS = 1_000
 const MIN_MOVEMENT_MILES = 0.01
-const MAX_SINGLE_POINT_JUMP_MILES = 2.0
+const MAX_SINGLE_POINT_JUMP_MILES = 2
+const MAX_COORD_AGE_MS = 15 * 60 * 1000 // 15 minutes
 
-function isBrowser() {
+function isBrowser(): boolean {
   return typeof window !== "undefined"
 }
 
@@ -110,16 +120,13 @@ function createInitialSession(): ActiveDriveSession {
 
     dayMs: 0,
     nightMs: 0,
+    unverifiedMs: 0,
 
-    currentMode: "day",
-    nightOverride: "auto",
-    lastModeChangeAt: null,
+    currentMode: "unverified",
+    solarStatus: "unverified",
 
     lastUpdated: null,
     lastTickAt: null,
-
-    solarSunrise: null,
-    solarSunset: null,
 
     weather: null,
 
@@ -135,7 +142,31 @@ function normalizeNumber(value: unknown): number | null {
 }
 
 function normalizeNonNegativeNumber(value: unknown, fallback = 0): number {
-  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : fallback
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(0, value)
+    : fallback
+}
+
+function isValidCoord(
+  coord: RouteCoord | null | undefined
+): coord is RouteCoord {
+  return Boolean(
+    coord &&
+      Number.isFinite(coord.lat) &&
+      Number.isFinite(coord.lng) &&
+      coord.lat >= -90 &&
+      coord.lat <= 90 &&
+      coord.lng >= -180 &&
+      coord.lng <= 180
+  )
+}
+
+function isCoordStale(
+  coord: RouteCoord | null | undefined,
+  now: number
+): boolean {
+  if (!coord || typeof coord.at !== "number") return false
+  return now - coord.at > MAX_COORD_AGE_MS
 }
 
 function normalizeRouteCoord(value: unknown): RouteCoord | null {
@@ -143,13 +174,29 @@ function normalizeRouteCoord(value: unknown): RouteCoord | null {
 
   const raw = value as Partial<RouteCoord>
 
-  if (typeof raw.lat !== "number" || !Number.isFinite(raw.lat)) return null
-  if (typeof raw.lng !== "number" || !Number.isFinite(raw.lng)) return null
+  const lat = raw.lat
+  const lng = raw.lng
+
+  if (
+    typeof lat !== "number" ||
+    !Number.isFinite(lat) ||
+    lat < -90 ||
+    lat > 90 ||
+    typeof lng !== "number" ||
+    !Number.isFinite(lng) ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return null
+  }
 
   return {
-    lat: raw.lat,
-    lng: raw.lng,
-    at: typeof raw.at === "number" && Number.isFinite(raw.at) ? raw.at : undefined,
+    lat,
+    lng,
+    at:
+      typeof raw.at === "number" && Number.isFinite(raw.at)
+        ? raw.at
+        : undefined,
   }
 }
 
@@ -165,18 +212,14 @@ function normalizeRouteTrail(value: unknown): RouteCoord[] {
 function normalizeSession(value: unknown): ActiveDriveSession {
   const initial = createInitialSession()
 
-  if (!value || typeof value !== "object") {
-    return initial
-  }
+  if (!value || typeof value !== "object") return initial
 
   const raw = value as Partial<ActiveDriveSession>
 
-  const currentMode: DriveMode = raw.currentMode === "night" ? "night" : "day"
-
-  const nightOverride: NightOverride =
-    raw.nightOverride === "day" || raw.nightOverride === "night"
-      ? raw.nightOverride
-      : "auto"
+  const currentMode: DriveMode =
+    raw.currentMode === "day" || raw.currentMode === "night"
+      ? raw.currentMode
+      : "unverified"
 
   return {
     isActive: raw.isActive === true,
@@ -187,16 +230,13 @@ function normalizeSession(value: unknown): ActiveDriveSession {
 
     dayMs: normalizeNonNegativeNumber(raw.dayMs),
     nightMs: normalizeNonNegativeNumber(raw.nightMs),
+    unverifiedMs: normalizeNonNegativeNumber(raw.unverifiedMs),
 
     currentMode,
-    nightOverride,
+    solarStatus: raw.solarStatus === "verified" ? "verified" : "unverified",
 
-    lastModeChangeAt: normalizeNumber(raw.lastModeChangeAt),
     lastUpdated: normalizeNumber(raw.lastUpdated),
     lastTickAt: normalizeNumber(raw.lastTickAt),
-
-    solarSunrise: normalizeNumber(raw.solarSunrise),
-    solarSunset: normalizeNumber(raw.solarSunset),
 
     weather: typeof raw.weather === "string" ? raw.weather : null,
 
@@ -208,24 +248,118 @@ function normalizeSession(value: unknown): ActiveDriveSession {
   }
 }
 
-function resolveDriveMode(
-  now: number,
-  override: NightOverride
-): DriveMode {
-  if (override === "day") return "day"
-  if (override === "night") return "night"
-  return isNightByDMV(new Date(now)) ? "night" : "day"
+function normalizeIncomingCoord(coord: RouteCoord, now: number): RouteCoord {
+  return {
+    lat: coord.lat,
+    lng: coord.lng,
+    at:
+      typeof coord.at === "number" && Number.isFinite(coord.at)
+        ? coord.at
+        : now,
+  }
 }
 
+function getStartOfNextLocalDay(timestamp: number): number {
+  const next = new Date(timestamp)
+  next.setHours(24, 0, 0, 0)
+  return next.getTime()
+}
+
+/**
+ * Classifies an active interval by splitting it at local midnight, then
+ * calculating daylight overlap for each calendar-day section.
+ * Accumulates unrounded milliseconds to avoid per-tick rounding drift;
+ * rounding only happens when values are converted for display.
+ */
+function splitIntervalBySolar(
+  startMs: number,
+  endMs: number,
+  coord: RouteCoord | null | undefined
+): SolarIntervalSplit {
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+    return {
+      dayMs: 0,
+      nightMs: 0,
+      unverifiedMs: 0,
+      mode: "unverified",
+      solarStatus: "unverified",
+    }
+  }
+
+  if (!isValidCoord(coord)) {
+    return {
+      dayMs: 0,
+      nightMs: 0,
+      unverifiedMs: endMs - startMs,
+      mode: "unverified",
+      solarStatus: "unverified",
+    }
+  }
+
+  let cursor = startMs
+  let dayMs = 0
+  let nightMs = 0
+  let unverifiedMs = 0
+
+  while (cursor < endMs) {
+    const nextMidnightMs = getStartOfNextLocalDay(cursor)
+    const segmentEndMs =
+      nextMidnightMs > cursor
+        ? Math.min(endMs, nextMidnightMs)
+        : endMs
+
+    const segmentStart = new Date(cursor)
+    const segmentEnd = new Date(segmentEndMs)
+
+    const solarWindow = getSolarWindowForDate(
+      coord.lat,
+      coord.lng,
+      segmentStart
+    )
+
+    const split = computeDayNightSplit(
+      segmentStart,
+      segmentEnd,
+      solarWindow
+    )
+
+    if (split.mode === "solar") {
+      dayMs += split.dayHours * 3_600_000
+      nightMs += split.nightHours * 3_600_000
+    } else {
+      unverifiedMs += segmentEndMs - cursor
+    }
+
+    cursor = segmentEndMs
+  }
+
+  const mode = getCurrentSolarMode(new Date(endMs), coord.lat, coord.lng)
+
+  return {
+    dayMs,
+    nightMs,
+    unverifiedMs,
+    mode,
+    solarStatus: unverifiedMs === 0 ? "verified" : "unverified",
+  }
+}
+
+/**
+ * Flushes elapsed active time since lastTickAt into the permanent buckets.
+ * It never runs while paused, so paused time cannot be credited.
+ * A fallback coordinate older than MAX_COORD_AGE_MS is treated as absent,
+ * so a stale GPS fix from far away can't silently classify new time.
+ */
 function flushSessionToNow(
   session: ActiveDriveSession,
-  now: number
+  now: number,
+  coord?: RouteCoord | null
 ): ActiveDriveSession {
   if (!session.isActive || !session.isRunning || session.startTime === null) {
     return session
   }
 
-  const baseline = session.lastTickAt ?? session.lastModeChangeAt ?? session.startTime
+  const baseline = session.lastTickAt ?? session.startTime
 
   if (!Number.isFinite(baseline) || now <= baseline) {
     return {
@@ -234,34 +368,37 @@ function flushSessionToNow(
     }
   }
 
-  const delta = Math.max(0, now - baseline)
+  const candidateCoord = coord ?? session.lastCoord ?? session.startCoord
+  const solarCoord = isCoordStale(candidateCoord, now) ? null : candidateCoord
 
-  let dayMs = session.dayMs
-  let nightMs = session.nightMs
-
-  if (session.currentMode === "night") {
-    nightMs += delta
-  } else {
-    dayMs += delta
-  }
+  const split = splitIntervalBySolar(baseline, now, solarCoord)
 
   return {
     ...session,
-    dayMs,
-    nightMs,
+    dayMs: session.dayMs + split.dayMs,
+    nightMs: session.nightMs + split.nightMs,
+    unverifiedMs: session.unverifiedMs + split.unverifiedMs,
+
+    currentMode: split.mode,
+
+    solarStatus:
+      session.solarStatus === "unverified" ||
+      split.solarStatus === "unverified"
+        ? "unverified"
+        : "verified",
+
     lastUpdated: now,
     lastTickAt: now,
   }
 }
 
 function haversineMiles(a: RouteCoord, b: RouteCoord): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180
 
-  const dLat = toRad(b.lat - a.lat)
-  const dLng = toRad(b.lng - a.lng)
-
-  const lat1 = toRad(a.lat)
-  const lat2 = toRad(b.lat)
+  const dLat = toRadians(b.lat - a.lat)
+  const dLng = toRadians(b.lng - a.lng)
+  const lat1 = toRadians(a.lat)
+  const lat2 = toRadians(b.lat)
 
   const sinDLat = Math.sin(dLat / 2)
   const sinDLng = Math.sin(dLng / 2)
@@ -274,18 +411,11 @@ function haversineMiles(a: RouteCoord, b: RouteCoord): number {
 }
 
 function shouldCountDistance(deltaMiles: number): boolean {
-  if (!Number.isFinite(deltaMiles)) return false
-  if (deltaMiles < MIN_MOVEMENT_MILES) return false
-  if (deltaMiles > MAX_SINGLE_POINT_JUMP_MILES) return false
-  return true
-}
-
-function normalizeIncomingCoord(coord: RouteCoord, now: number): RouteCoord {
-  return {
-    lat: coord.lat,
-    lng: coord.lng,
-    at: typeof coord.at === "number" && Number.isFinite(coord.at) ? coord.at : now,
-  }
+  return (
+    Number.isFinite(deltaMiles) &&
+    deltaMiles >= MIN_MOVEMENT_MILES &&
+    deltaMiles <= MAX_SINGLE_POINT_JUMP_MILES
+  )
 }
 
 export const useActiveDriveStore = create<ActiveDriveStore>()(
@@ -300,33 +430,44 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
 
       startDrive: (nowArg, coord, options) => {
         const now = nowArg ?? Date.now()
-        const initialCoord = coord ? normalizeIncomingCoord(coord, now) : null
 
-        const override = options?.override ?? "auto"
-        const weather = options?.weather ?? null
+        const initialCoord =
+          coord && isValidCoord(coord)
+            ? normalizeIncomingCoord(coord, now)
+            : null
 
-        const sunrise = options?.sunrise ?? null
-        const sunset = options?.sunset ?? null
-
-        const currentMode = resolveDriveMode(now, override)
+        const currentMode = initialCoord
+          ? getCurrentSolarMode(
+              new Date(now),
+              initialCoord.lat,
+              initialCoord.lng
+            )
+          : "unverified"
 
         get().stopGlobalTick()
 
         set({
           session: {
             ...createInitialSession(),
+
             isActive: true,
             isRunning: true,
+
             startTime: now,
             stopTime: null,
-            currentMode,
-            nightOverride: override,
-            lastModeChangeAt: now,
-            lastUpdated: now,
+
             lastTickAt: now,
-            solarSunrise: sunrise,
-            solarSunset: sunset,
-            weather,
+            lastUpdated: now,
+
+            currentMode,
+
+            solarStatus:
+              initialCoord && currentMode !== "unverified"
+                ? "verified"
+                : "unverified",
+
+            weather: options?.weather ?? null,
+
             startCoord: initialCoord,
             lastCoord: initialCoord,
             routeTrail: initialCoord ? [initialCoord] : [],
@@ -340,10 +481,13 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         const now = nowArg ?? Date.now()
 
         set((state) => {
-          const s = state.session
-          if (!s.isActive || !s.isRunning) return { session: s }
+          const session = state.session
 
-          const flushed = flushSessionToNow(s, now)
+          if (!session.isActive || !session.isRunning) {
+            return { session }
+          }
+
+          const flushed = flushSessionToNow(session, now)
 
           return {
             session: {
@@ -362,18 +506,32 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         const now = nowArg ?? Date.now()
 
         set((state) => {
-          const s = state.session
-          if (!s.isActive || s.isRunning) return { session: s }
+          const session = state.session
 
-          const currentMode = resolveDriveMode(now, s.nightOverride)
+          if (!session.isActive || session.isRunning) {
+            return { session }
+          }
+
+          const coord = session.lastCoord ?? session.startCoord
+          const currentMode = coord
+            ? getCurrentSolarMode(new Date(now), coord.lat, coord.lng)
+            : "unverified"
 
           return {
             session: {
-              ...s,
+              ...session,
+
               isRunning: true,
               stopTime: null,
+
               currentMode,
-              lastModeChangeAt: now,
+
+              solarStatus:
+                session.solarStatus === "unverified" ||
+                currentMode === "unverified"
+                  ? "unverified"
+                  : "verified",
+
               lastUpdated: now,
               lastTickAt: now,
             },
@@ -387,14 +545,13 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         const now = nowArg ?? Date.now()
 
         set((state) => {
-          const s = state.session
-          const next = flushSessionToNow(s, now)
+          const flushed = flushSessionToNow(state.session, now)
 
           return {
             session: {
-              ...next,
-              isRunning: false,
+              ...flushed,
               isActive: false,
+              isRunning: false,
               stopTime: now,
               lastUpdated: now,
             },
@@ -408,68 +565,63 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         const now = nowOverride ?? Date.now()
 
         set((state) => {
-          const s = state.session
-          let next = flushSessionToNow(s, now)
+          const session = state.session
 
-          if (!next.isActive || !next.isRunning || next.startTime === null) {
-            return { session: next }
+          if (
+            !session.isActive ||
+            !session.isRunning ||
+            session.startTime === null
+          ) {
+            return { session }
           }
 
-          const resolvedMode = resolveDriveMode(now, next.nightOverride)
+          const incomingCoord =
+            coord && isValidCoord(coord)
+              ? normalizeIncomingCoord(coord, now)
+              : null
 
-          if (resolvedMode !== next.currentMode) {
-            next = {
-              ...next,
-              currentMode: resolvedMode,
-              lastModeChangeAt: now,
-            }
-          }
+          /*
+           * If a new valid coordinate arrived, use it to classify the active
+           * interval ending now. Otherwise use the last valid coordinate.
+           */
+          const next = flushSessionToNow(session, now, incomingCoord)
 
           let liveMiles = next.liveMiles
           let lastCoord = next.lastCoord
           let routeTrail = next.routeTrail
+          let startCoord = next.startCoord
 
-          if (coord) {
-            const normalizedCoord = normalizeIncomingCoord(coord, now)
-
+          if (incomingCoord) {
             if (lastCoord) {
-              const deltaMiles = haversineMiles(lastCoord, normalizedCoord)
+              const deltaMiles = haversineMiles(lastCoord, incomingCoord)
+
               if (shouldCountDistance(deltaMiles)) {
                 liveMiles += deltaMiles
               }
             }
 
-            lastCoord = normalizedCoord
-            routeTrail = [...routeTrail, normalizedCoord].slice(-MAX_ROUTE_POINTS)
+            startCoord = startCoord ?? incomingCoord
+            lastCoord = incomingCoord
+
+            const lastTrailPoint = routeTrail.at(-1)
+
+            const isDuplicate =
+              lastTrailPoint?.lat === incomingCoord.lat &&
+              lastTrailPoint?.lng === incomingCoord.lng
+
+            routeTrail = isDuplicate
+              ? routeTrail
+              : [...routeTrail, incomingCoord].slice(-MAX_ROUTE_POINTS)
           }
 
           return {
             session: {
               ...next,
               liveMiles,
+              startCoord,
               lastCoord,
               routeTrail,
               lastUpdated: now,
-            },
-          }
-        })
-      },
-
-      setNightOverride: (mode) => {
-        set((state) => {
-          const s = state.session
-          const now = Date.now()
-          const flushed = flushSessionToNow(s, now)
-          const currentMode = resolveDriveMode(now, mode)
-
-          return {
-            session: {
-              ...flushed,
-              nightOverride: mode,
-              currentMode,
-              lastModeChangeAt: now,
-              lastUpdated: now,
-              lastTickAt: flushed.isActive && flushed.isRunning ? now : flushed.lastTickAt,
             },
           }
         })
@@ -486,31 +638,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
       },
 
       appendRoutePoint: (coord) => {
-        set((state) => {
-          const s = state.session
-          const now = Date.now()
-          const normalizedCoord = normalizeIncomingCoord(coord, now)
-          const routeTrail = [...s.routeTrail, normalizedCoord].slice(-MAX_ROUTE_POINTS)
-
-          let liveMiles = s.liveMiles
-          if (s.lastCoord) {
-            const deltaMiles = haversineMiles(s.lastCoord, normalizedCoord)
-            if (shouldCountDistance(deltaMiles)) {
-              liveMiles += deltaMiles
-            }
-          }
-
-          return {
-            session: {
-              ...s,
-              routeTrail,
-              lastCoord: normalizedCoord,
-              startCoord: s.startCoord ?? normalizedCoord,
-              liveMiles,
-              lastUpdated: now,
-            },
-          }
-        })
+        get().tick(coord, Date.now())
       },
 
       clearRoute: () => {
@@ -521,114 +649,154 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             liveMiles: 0,
             startCoord: null,
             lastCoord: null,
+            currentMode: "unverified",
+            solarStatus: "unverified",
             lastUpdated: Date.now(),
           },
         }))
       },
 
       getElapsedSeconds: () => {
-        const { session: s } = get()
-        const now = Date.now()
+        const session = get().session
 
-        if (!s.isActive || s.startTime === null) return 0
+        const accumulatedMs =
+          session.dayMs + session.nightMs + session.unverifiedMs
 
-        const accumulated = s.dayMs + s.nightMs
-        const baseline = s.lastTickAt ?? s.startTime
-        const liveDelta = Math.max(0, now - baseline)
-
-        if (s.isRunning) {
-          return Math.floor((accumulated + liveDelta) / 1000)
+        if (
+          !session.isActive ||
+          !session.isRunning ||
+          session.lastTickAt === null
+        ) {
+          return Math.floor(accumulatedMs / 1_000)
         }
 
-        return Math.floor(accumulated / 1000)
+        const liveDelta = Math.max(0, Date.now() - session.lastTickAt)
+
+        return Math.floor((accumulatedMs + liveDelta) / 1_000)
       },
 
       getDayNightSeconds: () => {
-        const { session: s } = get()
-        const now = Date.now()
+        const session = get().session
 
-        const flushed = flushSessionToNow(s, now)
+        const flushed =
+          session.isActive && session.isRunning
+            ? flushSessionToNow(session, Date.now())
+            : session
 
         return {
-          daySeconds: Math.floor(flushed.dayMs / 1000),
-          nightSeconds: Math.floor(flushed.nightMs / 1000),
+          daySeconds: Math.floor(flushed.dayMs / 1_000),
+          nightSeconds: Math.floor(flushed.nightMs / 1_000),
+          unverifiedSeconds: Math.floor(flushed.unverifiedMs / 1_000),
         }
       },
 
+      /**
+       * Returns the frozen last-known mode while inactive or paused.
+       * Only recomputes live when a drive is actively running, since a
+       * paused drive's mode must stay fixed at its last verified state.
+       */
       getCurrentMode: () => {
-        const { session: s } = get()
-        if (!s.isActive) return s.currentMode
-        return resolveDriveMode(Date.now(), s.nightOverride)
+        const session = get().session
+        const coord = session.lastCoord ?? session.startCoord
+
+        if (!session.isActive || !session.isRunning || !coord) {
+          return session.currentMode
+        }
+
+        return getCurrentSolarMode(new Date(), coord.lat, coord.lng)
       },
 
       _tickInterval: null,
-      // ✅ ADDED: holds cleanup fn for Capacitor foreground listener
       _appStateListener: null,
 
       startGlobalTick: () => {
-        if (!isBrowser()) return
+        if (!isBrowser() || get()._tickInterval !== null) return
 
-        const existing = get()._tickInterval
-        if (existing !== null) return
+        const intervalId = window.setInterval(() => {
+          const session = get().session
 
-        // Regular 1-second interval while app is in foreground
-        const id = window.setInterval(() => {
-          const s = get().session
-          if (!s.isActive || !s.isRunning) {
+          if (!session.isActive || !session.isRunning) {
             get().stopGlobalTick()
             return
           }
+
           get().tick(undefined, Date.now())
         }, GLOBAL_TICK_MS)
 
-        set({ _tickInterval: id })
+        set({ _tickInterval: intervalId })
 
-        // ✅ ADDED: Capacitor foreground listener
-        // Fires when app comes back from background on Android
-        // Forces immediate tick so day/night mode catches up from wall clock
         CapacitorApp.addListener("appStateChange", ({ isActive }) => {
-          if (!isActive) return // going to background — nothing to do
+          if (!isActive) return
 
-          const s = get().session
-          if (!s.isActive || !s.isRunning) return
+          const session = get().session
 
-          // Single tick with real current time — flushSessionToNow catches
-          // up all elapsed ms correctly from lastTickAt regardless of gap
-          get().tick(undefined, Date.now())
+          if (session.isActive && session.isRunning) {
+            get().tick(undefined, Date.now())
+          }
         }).then((handle) => {
-          set({ _appStateListener: () => handle.remove() })
+          /*
+           * The asynchronous listener may resolve after the drive has been
+           * paused/stopped. Remove it immediately in that case.
+           */
+          if (get()._tickInterval === null) {
+            void handle.remove()
+            return
+          }
+
+          set({
+            _appStateListener: () => {
+              void handle.remove()
+            },
+          })
         })
       },
 
       stopGlobalTick: () => {
-        if (!isBrowser()) {
-          set({ _tickInterval: null, _appStateListener: null })
-          return
+        const intervalId = get()._tickInterval
+
+        if (isBrowser() && intervalId !== null) {
+          window.clearInterval(intervalId)
         }
 
-        const id = get()._tickInterval
-        if (id !== null) {
-          window.clearInterval(id)
-          set({ _tickInterval: null })
-        }
-
-        // ✅ ADDED: clean up Capacitor foreground listener
         const removeListener = get()._appStateListener
+
         if (removeListener) {
           removeListener()
-          set({ _appStateListener: null })
         }
+
+        set({
+          _tickInterval: null,
+          _appStateListener: null,
+        })
       },
     }),
     {
       name: STORAGE_KEY,
-      storage: createJSONStorage(() => (isBrowser() ? localStorage : noopStorage)),
-      version: 5,
-      // ✅ _appStateListener intentionally excluded — it's a runtime fn, not serializable
-      partialize: (state) => ({ session: state.session }),
+      storage: createJSONStorage(() =>
+        isBrowser() ? localStorage : noopStorage
+      ),
+      version: 7,
+      partialize: (state) => ({
+        session: state.session,
+      }),
       migrate: (persisted: unknown) => {
         const raw = persisted as { session?: unknown } | null
-        return { session: normalizeSession(raw?.session) }
+
+        return {
+          session: normalizeSession(raw?.session),
+        }
+      },
+      /*
+       * If the app was killed while a drive was running, restart the
+       * global tick loop on load so the timer and solar classification
+       * resume immediately instead of sitting stale until some other
+       * action fires tick() manually.
+       */
+      onRehydrateStorage: () => (state) => {
+        if (state?.session.isActive && state.session.isRunning) {
+          state.tick(undefined, Date.now())
+          state.startGlobalTick()
+        }
       },
     }
   )

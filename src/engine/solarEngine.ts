@@ -14,12 +14,21 @@ export type DayNightSplit = {
   mode: SolarSplitMode
 }
 
-function isFiniteCoord(value: number): boolean {
-  return Number.isFinite(value)
+export type SolarMode = "day" | "night" | "unverified"
+
+function isValidDate(value: unknown): value is Date {
+  return value instanceof Date && Number.isFinite(value.getTime())
 }
 
-function isValidDate(value: Date): boolean {
-  return value instanceof Date && !Number.isNaN(value.getTime())
+function isValidCoordinates(latitude: number, longitude: number): boolean {
+  return (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= -90 &&
+    latitude <= 90 &&
+    longitude >= -180 &&
+    longitude <= 180
+  )
 }
 
 function getOverlapMs(
@@ -28,61 +37,101 @@ function getOverlapMs(
   windowStart: number,
   windowEnd: number
 ): number {
-  return Math.max(0, Math.min(rangeEnd, windowEnd) - Math.max(rangeStart, windowStart))
+  return Math.max(
+    0,
+    Math.min(rangeEnd, windowEnd) - Math.max(rangeStart, windowStart)
+  )
 }
 
 /**
- * Returns sunrise and sunset times for a given location and date.
- * Invalid coordinates or invalid solar results return null values safely.
+ * Single source of truth for the night-boundary rule: a timestamp counts as
+ * night when it falls before sunrise or at/after sunset. Both
+ * getCurrentSolarMode() and isNightDrive() delegate here so the rule can
+ * never drift between the two call sites.
+ */
+function isBeforeSunriseOrAfterSunset(
+  timestamp: Date,
+  sunrise: Date,
+  sunset: Date
+): boolean {
+  return timestamp < sunrise || timestamp >= sunset
+}
+
+/**
+ * Returns the sunrise and sunset for the supplied coordinates and local date.
+ * Invalid input or an invalid solar calculation returns null values.
  */
 export function getSolarWindowForDate(
   latitude: number,
   longitude: number,
   date: Date = new Date()
 ): SolarWindow {
-  if (!isFiniteCoord(latitude) || !isFiniteCoord(longitude) || !isValidDate(date)) {
+  if (!isValidCoordinates(latitude, longitude) || !isValidDate(date)) {
     return { sunrise: null, sunset: null }
   }
 
   try {
-    const rawSunrise = getSunrise(latitude, longitude, date) ?? null
-    const rawSunset = getSunset(latitude, longitude, date) ?? null
+    const rawSunrise = getSunrise(latitude, longitude, date)
+    const rawSunset = getSunset(latitude, longitude, date)
 
-    const safeSunrise =
-      rawSunrise !== null && isValidDate(rawSunrise) ? rawSunrise : null
-    const safeSunset =
-      rawSunset !== null && isValidDate(rawSunset) ? rawSunset : null
+    const sunrise = isValidDate(rawSunrise) ? rawSunrise : null
+    const sunset = isValidDate(rawSunset) ? rawSunset : null
 
-    if (!safeSunrise || !safeSunset || safeSunset <= safeSunrise) {
+    if (!sunrise || !sunset || sunset.getTime() <= sunrise.getTime()) {
       return { sunrise: null, sunset: null }
     }
 
-    return { sunrise: safeSunrise, sunset: safeSunset }
+    return { sunrise, sunset }
   } catch {
     return { sunrise: null, sunset: null }
   }
 }
 
 /**
- * Determines if a drive start time qualifies as a verified night drive.
- * Missing or invalid solar data -> treated as NOT verified night.
+ * Determines whether a specific timestamp falls during darkness.
+ * This is appropriate for a live status or drive-start indicator.
+ * Use computeDayNightSplit() to classify a complete drive.
  */
-export function isNightDrive(startTime: Date, solarWindow: SolarWindow): boolean {
-  if (!isValidDate(startTime)) return false
-  if (!solarWindow.sunrise || !solarWindow.sunset) return false
-  if (!isValidDate(solarWindow.sunrise) || !isValidDate(solarWindow.sunset)) return false
-  if (solarWindow.sunset <= solarWindow.sunrise) return false
+export function isNightDrive(
+  timestamp: Date,
+  solarWindow: SolarWindow
+): boolean {
+  if (!isValidDate(timestamp)) return false
 
-  return startTime < solarWindow.sunrise || startTime >= solarWindow.sunset
+  const { sunrise, sunset } = solarWindow
+
+  if (!isValidDate(sunrise) || !isValidDate(sunset)) return false
+  if (sunset.getTime() <= sunrise.getTime()) return false
+
+  return isBeforeSunriseOrAfterSunset(timestamp, sunrise, sunset)
 }
 
-/* -------------------------------------------------------
-   DAY / NIGHT SPLITTING ENGINE
-   Returns fractional hours for each segment.
-   Assumes solarWindow covers the SAME calendar day as the drive.
-   For multi-day drives, call once per calendar day and sum.
-------------------------------------------------------- */
+/**
+ * Gets the current day/night state from solar times only.
+ * "night" means before sunrise or at/after sunset.
+ */
+export function getCurrentSolarMode(
+  date: Date,
+  latitude: number,
+  longitude: number
+): SolarMode {
+  if (!isValidDate(date)) return "unverified"
 
+  const solarWindow = getSolarWindowForDate(latitude, longitude, date)
+  const { sunrise, sunset } = solarWindow
+
+  if (!sunrise || !sunset) return "unverified"
+
+  return isNightDrive(date, solarWindow) ? "night" : "day"
+}
+
+/**
+ * Splits one same-calendar-day drive into daylight and darkness hours.
+ *
+ * For a drive spanning midnight, split it into calendar-day segments,
+ * call this once per segment using that segment's solar window, then sum
+ * the returned dayHours and nightHours.
+ */
 export function computeDayNightSplit(
   startTime: Date,
   endTime: Date,
@@ -92,18 +141,14 @@ export function computeDayNightSplit(
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
-  const start = startTime.getTime()
-  const end = endTime.getTime()
+  const startMs = startTime.getTime()
+  const endMs = endTime.getTime()
 
-  if (end <= start) {
+  if (endMs <= startMs) {
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
   const { sunrise, sunset } = solarWindow
-
-  if (!sunrise || !sunset) {
-    return { dayHours: 0, nightHours: 0, mode: "unverified" }
-  }
 
   if (!isValidDate(sunrise) || !isValidDate(sunset)) {
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
@@ -112,42 +157,17 @@ export function computeDayNightSplit(
   const sunriseMs = sunrise.getTime()
   const sunsetMs = sunset.getTime()
 
-  if (!Number.isFinite(sunriseMs) || !Number.isFinite(sunsetMs) || sunsetMs <= sunriseMs) {
+  if (sunsetMs <= sunriseMs) {
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
-  const totalMs = end - start
-  const dayMs = getOverlapMs(start, end, sunriseMs, sunsetMs)
-  const nightMs = Math.max(totalMs - dayMs, 0)
+  const totalMs = endMs - startMs
+  const dayMs = getOverlapMs(startMs, endMs, sunriseMs, sunsetMs)
+  const nightMs = totalMs - dayMs
 
   return {
-    dayHours: Math.max(dayMs / (1000 * 60 * 60), 0),
-    nightHours: Math.max(nightMs / (1000 * 60 * 60), 0),
+    dayHours: dayMs / 3_600_000,
+    nightHours: nightMs / 3_600_000,
     mode: "solar",
   }
-}
-
-/* -------------------------------------------------------
-   DMV FIXED RULE — NJ MVC Supervised Driving Log
-   DAY:   6:00 AM → 5:00 PM
-   NIGHT: 5:01 PM → 5:59 AM
-   Used by activeDriveStore tick() and getCurrentMode().
-   Does NOT depend on location or sunrise/sunset.
-------------------------------------------------------- */
-
-export function isNightByDMV(date: Date): boolean {
-  const hour = date.getHours()
-  const minute = date.getMinutes()
-
-  // Night: 12:00 AM → 5:59 AM
-  if (hour < 6) return true
-
-  // Night: 5:01 PM → 5:59 PM
-  if (hour === 17 && minute >= 1) return true
-
-  // Night: 6:00 PM → 11:59 PM
-  if (hour > 17) return true
-
-  // Otherwise: 6:00 AM → 5:00 PM = day
-  return false
 }

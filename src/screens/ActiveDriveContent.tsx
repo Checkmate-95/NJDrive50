@@ -1038,21 +1038,21 @@ function ActiveDriveContent({
               </span>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
-  <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] p-3 text-center shadow-sm">
+            <div className="mt-4 flex flex-col gap-2">
+  <div className="flex items-center justify-between rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-4 py-2.5 shadow-sm">
     <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
       Duration
     </p>
-    <p className="mt-1 whitespace-nowrap text-[clamp(1rem,5.5vw,1.5rem)] font-black tabular-nums leading-tight">
+    <p className="whitespace-nowrap text-xl font-black tabular-nums leading-tight">
       {formattedElapsed}
     </p>
   </div>
 
-  <div className="rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] p-3 text-center shadow-sm">
+  <div className="flex items-center justify-between rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-4 py-2.5 shadow-sm">
     <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
       Distance
     </p>
-    <p className="mt-1 whitespace-nowrap text-[clamp(1rem,5.5vw,1.5rem)] font-black tabular-nums leading-tight">
+    <p className="whitespace-nowrap text-xl font-black tabular-nums leading-tight">
       {safeNumber(session.liveMiles).toFixed(1)}
       <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">
         mi

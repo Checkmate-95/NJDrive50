@@ -270,6 +270,7 @@ function ActiveDriveContent({
   const notificationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
     null
   )
+  const stopConfirmRef = useRef<HTMLDivElement | null>(null)
 
   const {
     session,
@@ -471,7 +472,7 @@ function ActiveDriveContent({
         routeCoords.push(currentEndCoord)
       }
 
-            const hasUnverifiedTime = fresh.unverifiedMs > 0
+      const hasUnverifiedTime = fresh.unverifiedMs > 0
 
       /*
        * This is intentionally based only on accumulated active solar intervals.
@@ -689,6 +690,17 @@ function ActiveDriveContent({
     }
   }, [clearRuntimeLoops])
 
+  // Scroll the stop-confirmation panel into view when it opens, so it isn't
+  // hidden below the fold on smaller Android screens.
+  useEffect(() => {
+    if (showStopConfirm) {
+      stopConfirmRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      })
+    }
+  }, [showStopConfirm])
+
   const isRunning = session.isRunning
   const hasActiveDrive = session.isActive
   const isNight = session.currentMode === "night"
@@ -892,7 +904,14 @@ function ActiveDriveContent({
       : "Solar verification pending"
 
   return (
-    <div className="flex w-full justify-center px-3 pb-8 pt-3 text-white sm:px-4">
+    <div
+      className="flex w-full justify-center px-3 pt-3 text-white sm:px-4"
+      style={{
+        paddingBottom: "max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))",
+        paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
+        paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
+      }}
+    >
       <div className="w-full max-w-[46rem]">
         <section className="mx-auto w-full max-w-[42rem] overflow-hidden rounded-[28px] border border-white/15 bg-white/10 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
@@ -900,8 +919,8 @@ function ActiveDriveContent({
           <div className="p-4 sm:p-5">
             <div className="rounded-[24px] border border-white/10 bg-[#08194A]/80 px-4 py-5 shadow-inner sm:px-5">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[clamp(1.6rem,5vw,2.5rem)] font-extrabold leading-none tracking-tight">
+                <div className="min-w-0">
+                  <p className="text-[clamp(1.5rem,5vw,2.5rem)] font-extrabold leading-none tracking-tight break-words">
                     Live Tracking
                   </p>
 
@@ -915,7 +934,7 @@ function ActiveDriveContent({
                 </div>
 
                 <div
-                  className={`rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
+                  className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
                     isSolarUnverified
                       ? "bg-amber-300 text-[#08194A]"
                       : isNight
@@ -930,11 +949,11 @@ function ActiveDriveContent({
               <div className="mt-5 rounded-xl border border-white/10 bg-[#06153E]/95 px-3 py-3 text-center">
                 <div className="flex items-center justify-center gap-2">
                   {isSolarUnverified ? (
-                    <QuestionMarkCircleIcon className="h-5 w-5 text-[#f9c80e]" />
+                    <QuestionMarkCircleIcon className="h-5 w-5 shrink-0 text-[#f9c80e]" />
                   ) : isNight ? (
-                    <MoonIcon className="h-5 w-5 text-[#f9c80e]" />
+                    <MoonIcon className="h-5 w-5 shrink-0 text-[#f9c80e]" />
                   ) : (
-                    <SunIcon className="h-5 w-5 text-[#f9c80e]" />
+                    <SunIcon className="h-5 w-5 shrink-0 text-[#f9c80e]" />
                   )}
 
                   <p className="text-sm font-bold">{lightingLabel}</p>
@@ -973,12 +992,12 @@ function ActiveDriveContent({
                     ? "Resume drive timer"
                     : "Start drive timer"
               }
-              className={`flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-500 ${
+              className={`flex h-16 w-16 shrink-0 touch-manipulation select-none items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-90 disabled:cursor-not-allowed disabled:bg-gray-500 ${
                 isRunning
-                  ? "bg-[#00A651]"
+                  ? "bg-[#00A651] active:bg-[#008a43]"
                   : hasActiveDrive
-                    ? "bg-green-600"
-                    : "bg-red-600"
+                    ? "bg-green-600 active:bg-green-700"
+                    : "bg-red-600 active:bg-red-700"
               }`}
             >
               {isRunning ? (
@@ -988,7 +1007,7 @@ function ActiveDriveContent({
               )}
             </button>
 
-            <p className="text-[clamp(2rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums">
+            <p className="text-[clamp(1.9rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums">
               {formattedElapsed}
             </p>
           </div>
@@ -1007,14 +1026,14 @@ function ActiveDriveContent({
 
           <div className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] uppercase tracking-[0.18em] text-[#0A1E5E]/50">
                   Active Drive
                 </p>
                 <h2 className="mt-0.5 text-lg font-extrabold">Drive Summary</h2>
               </div>
 
-              <span className="rounded-full bg-[#F4F6FA] px-3 py-1 text-[10px] font-bold tracking-[0.14em] text-[#08194A] ring-1 ring-[#0A1E5E]/10">
+              <span className="shrink-0 whitespace-nowrap rounded-full bg-[#F4F6FA] px-3 py-1 text-[10px] font-bold tracking-[0.14em] text-[#08194A] ring-1 ring-[#0A1E5E]/10">
                 {lightingLabel}
               </span>
             </div>
@@ -1024,7 +1043,7 @@ function ActiveDriveContent({
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
                   Duration
                 </p>
-                <p className="mt-1 text-2xl font-black tabular-nums">
+                <p className="mt-1 text-xl font-black tabular-nums sm:text-2xl">
                   {formattedElapsed}
                 </p>
               </div>
@@ -1033,7 +1052,7 @@ function ActiveDriveContent({
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
                   Distance
                 </p>
-                <p className="mt-1 text-2xl font-black tabular-nums">
+                <p className="mt-1 text-xl font-black tabular-nums sm:text-2xl">
                   {safeNumber(session.liveMiles).toFixed(1)}
                   <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">
                     mi
@@ -1087,7 +1106,7 @@ function ActiveDriveContent({
                 <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
                   Weather
                 </p>
-                <p className="mt-1 text-sm font-semibold">
+                <p className="mt-1 truncate text-sm font-semibold">
                   {session.weather ?? "Not selected"}
                 </p>
               </div>
@@ -1109,10 +1128,10 @@ function ActiveDriveContent({
                       onClick={() =>
                         setWeather(selected ? null : weather)
                       }
-                      className={`rounded-full border px-1 py-2 text-xs font-semibold transition ${
+                      className={`min-h-[44px] touch-manipulation select-none rounded-full border px-1 py-2 text-xs font-semibold transition active:scale-95 ${
                         selected
                           ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_10px_rgba(249,200,14,0.25)]"
-                          : "border-[#0A1E5E]/12 bg-white text-[#0A1E5E]/65 hover:bg-[#f9c80e]/10"
+                          : "border-[#0A1E5E]/12 bg-white text-[#0A1E5E]/65 active:bg-[#f9c80e]/10"
                       }`}
                     >
                       {weather}
@@ -1138,12 +1157,12 @@ function ActiveDriveContent({
                 type="button"
                 onClick={handlePrimaryAction}
                 disabled={isSaving || isPreparingStop || isPreviewing}
-                className={`rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 ${
+                className={`min-h-[48px] touch-manipulation select-none rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 ${
                   isRunning
-                    ? "bg-red-600 hover:bg-red-700"
+                    ? "bg-red-600 active:bg-red-700"
                     : hasActiveDrive
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "bg-[#08194A] hover:bg-[#0A1E5E]"
+                      ? "bg-green-600 active:bg-green-700"
+                      : "bg-[#08194A] active:bg-[#0A1E5E]"
                 }`}
               >
                 {isRunning
@@ -1157,14 +1176,17 @@ function ActiveDriveContent({
                 type="button"
                 onClick={handleStopRequest}
                 disabled={saveDisabled}
-                className="rounded-xl bg-[#08194A] py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                className="min-h-[48px] touch-manipulation select-none rounded-xl bg-[#08194A] py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] active:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
               >
                 {isPreparingStop ? "Preparing..." : "Stop Drive"}
               </button>
             </div>
 
             {showStopConfirm && (
-              <div className="mt-3 rounded-xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm">
+              <div
+                ref={stopConfirmRef}
+                className="mt-3 rounded-xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm"
+              >
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#0A1E5E]/55">
                   Confirm Stop
                 </p>
@@ -1189,7 +1211,7 @@ function ActiveDriveContent({
                     type="button"
                     onClick={handleCancelStop}
                     disabled={isSaving}
-                    className="rounded-xl border border-[#0A1E5E]/15 bg-white py-3 text-sm font-bold text-[#08194A] transition hover:bg-[#F7F9FC] disabled:cursor-not-allowed"
+                    className="min-h-[48px] touch-manipulation select-none rounded-xl border border-[#0A1E5E]/15 bg-white py-3 text-sm font-bold text-[#08194A] transition active:scale-[0.98] active:bg-[#F7F9FC] disabled:cursor-not-allowed"
                   >
                     Cancel
                   </button>
@@ -1198,7 +1220,7 @@ function ActiveDriveContent({
                     type="button"
                     onClick={handleSaveDrive}
                     disabled={isSaving || isPreparingStop}
-                    className="rounded-xl bg-[#08194A] py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                    className="min-h-[48px] touch-manipulation select-none rounded-xl bg-[#08194A] py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.98] active:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
                   >
                     {isSaving ? "Saving..." : "Save and End"}
                   </button>
@@ -1210,7 +1232,7 @@ function ActiveDriveContent({
               type="button"
               onClick={handlePreviewSummary}
               disabled={previewDisabled}
-              className="mt-3 w-full rounded-xl border-2 border-[#0A1E5E]/50 bg-white py-3.5 text-sm font-bold text-[#08194A] shadow-sm transition hover:-translate-y-px hover:shadow-[0_16px_rgba(249,200,14,0.18)] disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
+              className="mt-3 min-h-[48px] w-full touch-manipulation select-none rounded-xl border-2 border-[#0A1E5E]/50 bg-white py-3.5 text-sm font-bold text-[#08194A] shadow-sm transition active:scale-[0.98] active:bg-[#f9c80e]/10 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
             >
               {isPreviewing ? "Opening Preview..." : "Preview Summary — Not Saved"}
             </button>

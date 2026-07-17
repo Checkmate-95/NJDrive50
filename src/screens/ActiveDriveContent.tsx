@@ -840,13 +840,19 @@ return {
       const activeSession = useActiveDriveStore.getState().session
 
       if (activeSession.isRunning) {
-        tick(finalCoord ?? undefined, stopRequestedAt)
-        pauseDrive(stopRequestedAt)
+  clearRuntimeLoops();  // ⬅ FIX: stop UI timer immediately
 
-        void updateForegroundService(
-          "Drive paused — confirm Save and End to finish"
-        )
-      }
+  tick(finalCoord ?? undefined, stopRequestedAt);
+  pauseDrive(stopRequestedAt);
+
+  void updateForegroundService(
+    "Drive paused — confirm Save and End to finish"
+  );
+}
+
+
+
+
 
       createFrozenSnapshot({ isPreview: false }).finally(() => {
         if (mountedRef.current) {

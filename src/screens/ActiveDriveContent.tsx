@@ -620,10 +620,13 @@ return {
   }, [clearNotificationInterval, session.isRunning])
 
   useEffect(() => {
-  if (session.isRunning && session.lastCoord) {
+  const frameId = requestAnimationFrame(() => {
     setLayoutReady(true)
-  }
-}, [session.isRunning, session.lastCoord])
+  })
+
+  return () => cancelAnimationFrame(frameId)
+}, [])
+
 
   useEffect(() => {
     void clearGpsWatch()

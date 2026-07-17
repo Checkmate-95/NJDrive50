@@ -823,68 +823,40 @@ return {
     void startNewDrive()
   }
 
-  const handleStopRequest = async () => {
-    if (saveDisabled || isPreparingStop) return
+  const handleStopRequest = () => {
+  if (saveDisabled || isPreparingStop) return
 
-    wasRunningBeforeStopRef.current = session.isRunning
+  wasRunningBeforeStopRef.current = session.isRunning
 
-    setShowStopConfirm(true)
-    setIsPreparingStop(true)
+  setShowStopConfirm(true)
+  setIsPreparingStop(true)
 
-    try {
-      const finalCoord = await getCurrentLocation()
+  const stopRequestedAt = Date.now()
+  const activeSession = useActiveDriveStore.getState().session
 
-      if (!mountedRef.current) return
+  /*
+   * Freeze the active interval immediately. This stops the visible timer
+   * as soon as Stop Drive is pressed and excludes all confirmation time.
+   */
+  if (activeSession.isRunning) {
+    tick(undefined, stopRequestedAt)
+    pauseDrive(stopRequestedAt)
 
-      const stopRequestedAt = Date.now()
-      const activeSession = useActiveDriveStore.getState().session
-
-      if (activeSession.isRunning) {
-  clearRuntimeLoops();  // ⬅ FIX: stop UI timer immediately
-
-  tick(finalCoord ?? undefined, stopRequestedAt);
-  pauseDrive(stopRequestedAt);
-
-  void updateForegroundService(
-    "Drive paused — confirm Save and End to finish"
-  );
-}
-
-
-
-
-
-      createFrozenSnapshot({ isPreview: false }).finally(() => {
-        if (mountedRef.current) {
-          setIsPreparingStop(false)
-        }
-      })
-    } catch {
-      if (!mountedRef.current) return
-
-      const stopRequestedAt = Date.now()
-      const activeSession = useActiveDriveStore.getState().session
-
-      if (activeSession.isRunning) {
-        tick(undefined, stopRequestedAt)
-        pauseDrive(stopRequestedAt)
-
-        void updateForegroundService(
-          "Drive paused — confirm Save and End to finish"
-        )
-      }
-
-      setLocationError(
-        "Unable to get a final location. The most recent saved location will be used."
-      )
-
-      createFrozenSnapshot({ isPreview: false }).finally(() => {
-        if (mountedRef.current) {
-          setIsPreparingStop(false)
-        }
-      })
-    }
+    void updateForegroundService(
+      "Drive paused — confirm Save and End to finish"
+    )
   }
+
+  /*
+   * buildDriveSnapshot() obtains one final GPS point for the route endpoint
+   * and route mileage. Do not call getCurrentLocation() here too.
+   */
+  createFrozenSnapshot({ isPreview: false }).finally(() => {
+    if (mountedRef.current) {
+      setIsPreparingStop(false)
+    }
+  })
+}
 
   const handleCancelStop = () => {
     snapshotAbortRef.current?.abort()
@@ -1257,13 +1229,13 @@ return {
               </button>
 
               <button
-                type="button"
-                onClick={() => void handleStopRequest()}
-                disabled={saveDisabled}
-                className="min-h-[48px] touch-manipulation select-none rounded-xl bg-[#08194A] py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] active:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-              >
-                {isPreparingStop ? "Preparing..." : "Stop Drive"}
-              </button>
+  type="button"
+  onClick={handleStopRequest}
+  disabled={saveDisabled}
+  className="min-h-[48px] touch-manipulation select-none rounded-xl bg-[#08194A] py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] active:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+>
+  {isPreparingStop ? "Preparing..." : "Stop Drive"}
+</button>
             </div>
 
             {showStopConfirm && (

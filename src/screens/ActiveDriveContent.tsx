@@ -262,7 +262,7 @@ function ActiveDriveContent({
   const [showStopConfirm, setShowStopConfirm] = useState(false)
   const [isPreparingStop, setIsPreparingStop] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [layoutReady, setLayoutReady] = useState(false)
+  
 
   const [isPreviewing, setIsPreviewing] = useState(false)
 
@@ -619,13 +619,7 @@ return {
     }
   }, [clearNotificationInterval, session.isRunning])
 
-  useEffect(() => {
-  const frameId = requestAnimationFrame(() => {
-    setLayoutReady(true)
-  })
-
-  return () => cancelAnimationFrame(frameId)
-}, [])
+  
 
 
   useEffect(() => {
@@ -961,13 +955,7 @@ return {
       ? "Lighting calculated from local sunrise and sunset"
       : "Solar verification pending"
 
-   if (!layoutReady) {
-  return (
-    <div className="flex w-full justify-center items-center py-20 text-white">
-      <div className="animate-pulse text-lg font-bold">Loading…</div>
-    </div>
-  )
-}   
+   
 
   return (
     <div
@@ -1073,19 +1061,19 @@ return {
 
 
     {/* Timer + status light */}
-    <div className="flex items-center gap-3">
-      <p className="text-[clamp(1.9rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums">
-        {formattedElapsed}
-      </p>
+<div className="flex min-w-0 items-center gap-3">
+  <p className="text-[clamp(1.9rem,8vw,3.5rem)] sm:text-[4rem] font-black leading-none tracking-tight tabular-nums">
+    {formattedElapsed}
+  </p>
 
-      <div
-        className={`
-          h-4 w-4 rounded-full
-          ${isRunning ? "bg-[#35ff69]" : "bg-red-500"}
-          ${isRunning ? "animate-pulse" : ""}
-        `}
-      ></div>
-    </div>
+  <div
+    className={`
+      h-4 w-4 rounded-full
+      ${isRunning ? "bg-[#35ff69]" : "bg-red-500"}
+      ${isRunning ? "animate-pulse" : ""}
+    `}
+  ></div>
+  </div>
   </div>
 
   {hasActiveDrive && (

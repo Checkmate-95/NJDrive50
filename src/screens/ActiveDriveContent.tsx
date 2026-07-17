@@ -262,6 +262,8 @@ function ActiveDriveContent({
   const [showStopConfirm, setShowStopConfirm] = useState(false)
   const [isPreparingStop, setIsPreparingStop] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [layoutReady, setLayoutReady] = useState(false)
+
   const [isPreviewing, setIsPreviewing] = useState(false)
 
   const mountedRef = useRef(true)
@@ -583,6 +585,8 @@ return {
       return
     }
 
+
+
     const syncNotification = () => {
       const activeSession = useActiveDriveStore.getState().session
       const elapsed = formatTime(
@@ -614,6 +618,12 @@ return {
       clearNotificationInterval()
     }
   }, [clearNotificationInterval, session.isRunning])
+
+  useEffect(() => {
+  if (session.isRunning && session.lastCoord) {
+    setLayoutReady(true)
+  }
+}, [session.isRunning, session.lastCoord])
 
   useEffect(() => {
     void clearGpsWatch()
@@ -947,6 +957,14 @@ return {
     session.solarStatus === "verified"
       ? "Lighting calculated from local sunrise and sunset"
       : "Solar verification pending"
+
+   if (!layoutReady) {
+  return (
+    <div className="flex w-full justify-center items-center py-20 text-white">
+      <div className="animate-pulse text-lg font-bold">Loading…</div>
+    </div>
+  )
+}   
 
   return (
     <div

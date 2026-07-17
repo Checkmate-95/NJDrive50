@@ -59,7 +59,12 @@ type ActiveDriveStore = {
 
   pauseDrive: (now?: number) => void
   resumeDrive: (now?: number) => void
-  stopDrive: (now?: number) => void
+
+  // Updated: Stop can receive the newest GPS position from the screen.
+  stopDrive: (
+    now?: number,
+    finalCoord?: RouteCoord | null
+  ) => void
 
   tick: (coord?: RouteCoord | null, nowOverride?: number) => void
 
@@ -98,7 +103,10 @@ const EARTH_RADIUS_MILES = 3958.7613
 const GLOBAL_TICK_MS = 1_000
 const MIN_MOVEMENT_MILES = 0.01
 const MAX_SINGLE_POINT_JUMP_MILES = 2
-const MAX_COORD_AGE_MS = 15 * 60 * 1000 // 15 minutes
+const MAX_COORD_AGE_MS = 15 * 60 * 1000
+
+// Allows a brief normal GPS startup delay without downgrading a full drive.
+const UNVERIFIED_GRACE_MS = 15_000
 
 function isBrowser(): boolean {
   return typeof window !== "undefined"
@@ -173,7 +181,6 @@ function normalizeRouteCoord(value: unknown): RouteCoord | null {
   if (!value || typeof value !== "object") return null
 
   const raw = value as Partial<RouteCoord>
-
   const lat = raw.lat
   const lng = raw.lng
 
@@ -265,12 +272,6 @@ function getStartOfNextLocalDay(timestamp: number): number {
   return next.getTime()
 }
 
-/**
- * Classifies an active interval by splitting it at local midnight, then
- * calculating daylight overlap for each calendar-day section.
- * Accumulates unrounded milliseconds to avoid per-tick rounding drift;
- * rounding only happens when values are converted for display.
- */
 function splitIntervalBySolar(
   startMs: number,
   endMs: number,
@@ -344,12 +345,18 @@ function splitIntervalBySolar(
   }
 }
 
-/**
- * Flushes elapsed active time since lastTickAt into the permanent buckets.
- * It never runs while paused, so paused time cannot be credited.
- * A fallback coordinate older than MAX_COORD_AGE_MS is treated as absent,
- * so a stale GPS fix from far away can't silently classify new time.
- */
+function getSolarStatus(
+  dayMs: number,
+  nightMs: number,
+  unverifiedMs: number
+): "verified" | "unverified" {
+  const hasSolarClassification = dayMs + nightMs > 0
+
+  return hasSolarClassification && unverifiedMs <= UNVERIFIED_GRACE_MS
+    ? "verified"
+    : "unverified"
+}
+
 function flushSessionToNow(
   session: ActiveDriveSession,
   now: number,
@@ -373,19 +380,23 @@ function flushSessionToNow(
 
   const split = splitIntervalBySolar(baseline, now, solarCoord)
 
+  const totalDayMs = session.dayMs + split.dayMs
+  const totalNightMs = session.nightMs + split.nightMs
+  const totalUnverifiedMs = session.unverifiedMs + split.unverifiedMs
+
   return {
     ...session,
-    dayMs: session.dayMs + split.dayMs,
-    nightMs: session.nightMs + split.nightMs,
-    unverifiedMs: session.unverifiedMs + split.unverifiedMs,
+
+    dayMs: totalDayMs,
+    nightMs: totalNightMs,
+    unverifiedMs: totalUnverifiedMs,
 
     currentMode: split.mode,
-
-    solarStatus:
-      session.solarStatus === "unverified" ||
-      split.solarStatus === "unverified"
-        ? "unverified"
-        : "verified",
+    solarStatus: getSolarStatus(
+      totalDayMs,
+      totalNightMs,
+      totalUnverifiedMs
+    ),
 
     lastUpdated: now,
     lastTickAt: now,
@@ -513,6 +524,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           }
 
           const coord = session.lastCoord ?? session.startCoord
+
           const currentMode = coord
             ? getCurrentSolarMode(new Date(now), coord.lat, coord.lng)
             : "unverified"
@@ -527,10 +539,13 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               currentMode,
 
               solarStatus:
-                session.solarStatus === "unverified" ||
-                currentMode === "unverified"
-                  ? "unverified"
-                  : "verified",
+                currentMode !== "unverified"
+                  ? getSolarStatus(
+                      session.dayMs,
+                      session.nightMs,
+                      session.unverifiedMs
+                    )
+                  : "unverified",
 
               lastUpdated: now,
               lastTickAt: now,
@@ -541,19 +556,63 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         get().startGlobalTick()
       },
 
-      stopDrive: (nowArg) => {
+      // Updated: accepts a final coordinate from ActiveDriveContent.
+      stopDrive: (nowArg, finalCoordArg) => {
         const now = nowArg ?? Date.now()
 
         set((state) => {
-          const flushed = flushSessionToNow(state.session, now)
+          const finalCoord =
+            finalCoordArg && isValidCoord(finalCoordArg)
+              ? normalizeIncomingCoord(finalCoordArg, now)
+              : null
+
+          // The newest point is deliberately supplied to the final flush.
+          const flushed = flushSessionToNow(
+            state.session,
+            now,
+            finalCoord
+          )
+
+          let liveMiles = flushed.liveMiles
+          let routeTrail = flushed.routeTrail
+
+          // Include the supplied final position in the saved route/mileage
+          // when it differs from the prior point.
+          if (finalCoord) {
+            const priorCoord = flushed.lastCoord
+
+            if (priorCoord) {
+              const deltaMiles = haversineMiles(priorCoord, finalCoord)
+
+              if (shouldCountDistance(deltaMiles)) {
+                liveMiles += deltaMiles
+              }
+            }
+
+            const lastTrailPoint = routeTrail.at(-1)
+
+            const isDuplicate =
+              lastTrailPoint?.lat === finalCoord.lat &&
+              lastTrailPoint?.lng === finalCoord.lng
+
+            routeTrail = isDuplicate
+              ? routeTrail
+              : [...routeTrail, finalCoord].slice(-MAX_ROUTE_POINTS)
+          }
 
           return {
             session: {
               ...flushed,
+
               isActive: false,
               isRunning: false,
+
               stopTime: now,
               lastUpdated: now,
+
+              liveMiles,
+              lastCoord: finalCoord ?? flushed.lastCoord,
+              routeTrail,
             },
           }
         })
@@ -580,10 +639,6 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               ? normalizeIncomingCoord(coord, now)
               : null
 
-          /*
-           * If a new valid coordinate arrived, use it to classify the active
-           * interval ending now. Otherwise use the last valid coordinate.
-           */
           const next = flushSessionToNow(session, now, incomingCoord)
 
           let liveMiles = next.liveMiles
@@ -690,11 +745,6 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         }
       },
 
-      /**
-       * Returns the frozen last-known mode while inactive or paused.
-       * Only recomputes live when a drive is actively running, since a
-       * paused drive's mode must stay fixed at its last verified state.
-       */
       getCurrentMode: () => {
         const session = get().session
         const coord = session.lastCoord ?? session.startCoord
@@ -734,10 +784,6 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             get().tick(undefined, Date.now())
           }
         }).then((handle) => {
-          /*
-           * The asynchronous listener may resolve after the drive has been
-           * paused/stopped. Remove it immediately in that case.
-           */
           if (get()._tickInterval === null) {
             void handle.remove()
             return
@@ -775,7 +821,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
       storage: createJSONStorage(() =>
         isBrowser() ? localStorage : noopStorage
       ),
-      version: 7,
+      version: 9,
       partialize: (state) => ({
         session: state.session,
       }),
@@ -786,12 +832,6 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           session: normalizeSession(raw?.session),
         }
       },
-      /*
-       * If the app was killed while a drive was running, restart the
-       * global tick loop on load so the timer and solar classification
-       * resume immediately instead of sitting stale until some other
-       * action fires tick() manually.
-       */
       onRehydrateStorage: () => (state) => {
         if (state?.session.isActive && state.session.isRunning) {
           state.tick(undefined, Date.now())

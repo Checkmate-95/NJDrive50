@@ -31,6 +31,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, ""
 const ROUTE_TIMEOUT_MS = 8_000
 const FS_NOTIFICATION_ID = 1001
 const FS_CHANNEL_ID = "njdrive50_drive"
+const UNVERIFIED_GRACE_MS = 15_000
 
 let foregroundServiceStarted = false
 
@@ -308,90 +309,106 @@ function ActiveDriveContent({
   }, [clearGpsWatch, clearNotificationInterval])
 
   const getCurrentLocation = useCallback(async (): Promise<RouteCoord | null> => {
-    if (locationRequestRef.current) {
-      return locationRequestRef.current
-    }
+  if (locationRequestRef.current) {
+    return locationRequestRef.current
+  }
 
-    const locationPromise = (async () => {
-      try {
-        if (Capacitor.isNativePlatform()) {
-          const permission = await Geolocation.checkPermissions()
+  const locationPromise = (async () => {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const permission = await Geolocation.checkPermissions()
 
-          const needsPermission =
-            permission.location !== "granted" &&
-            permission.coarseLocation !== "granted"
+        const needsPermission =
+          permission.location !== "granted" &&
+          permission.coarseLocation !== "granted"
 
-          if (needsPermission) {
-            const requested = await Geolocation.requestPermissions()
+        if (needsPermission) {
+          const requested = await Geolocation.requestPermissions()
 
-            const granted =
-              requested.location === "granted" ||
-              requested.coarseLocation === "granted"
+          const granted =
+            requested.location === "granted" ||
+            requested.coarseLocation === "granted"
 
-            if (!granted) return null
-          }
+          if (!granted) return null
+        }
 
-          const position = await Geolocation.getCurrentPosition({
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 15_000,
+          maximumAge: 5_000,
+        })
+
+        const { latitude: lat, longitude: lng } = position.coords
+
+        if (
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lng) ||
+          lat < -90 ||
+          lat > 90 ||
+          lng < -180 ||
+          lng > 180
+        ) {
+          return null
+        }
+
+        return {
+          lat,
+          lng,
+          at:
+            typeof position.timestamp === "number" &&
+            Number.isFinite(position.timestamp)
+              ? position.timestamp
+              : Date.now(),
+        }
+      }
+
+      if (!navigator.geolocation) return null
+
+      return await new Promise<RouteCoord | null>((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { latitude: lat, longitude: lng } = position.coords
+
+            if (
+              !Number.isFinite(lat) ||
+              !Number.isFinite(lng) ||
+              lat < -90 ||
+              lat > 90 ||
+              lng < -180 ||
+              lng > 180
+            ) {
+              resolve(null)
+              return
+            }
+
+            resolve({
+              lat,
+              lng,
+              at:
+                typeof position.timestamp === "number" &&
+                Number.isFinite(position.timestamp)
+                  ? position.timestamp
+                  : Date.now(),
+            })
+          },
+          () => resolve(null),
+          {
             enableHighAccuracy: true,
             timeout: 15_000,
             maximumAge: 5_000,
-          })
-
-          const { latitude: lat, longitude: lng } = position.coords
-
-          if (
-            !Number.isFinite(lat) ||
-            !Number.isFinite(lng) ||
-            lat < -90 ||
-            lat > 90 ||
-            lng < -180 ||
-            lng > 180
-          ) {
-            return null
           }
+        )
+      })
+    } catch {
+      return null
+    } finally {
+      locationRequestRef.current = null
+    }
+  })()
 
-          return { lat, lng }
-        }
-
-        if (!navigator.geolocation) return null
-
-        return await new Promise<RouteCoord | null>((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const { latitude: lat, longitude: lng } = position.coords
-
-              if (
-                !Number.isFinite(lat) ||
-                !Number.isFinite(lng) ||
-                lat < -90 ||
-                lat > 90 ||
-                lng < -180 ||
-                lng > 180
-              ) {
-                resolve(null)
-                return
-              }
-
-              resolve({ lat, lng })
-            },
-            () => resolve(null),
-            {
-              enableHighAccuracy: true,
-              timeout: 15_000,
-              maximumAge: 5_000,
-            }
-          )
-        })
-      } catch {
-        return null
-      } finally {
-        locationRequestRef.current = null
-      }
-    })()
-
-    locationRequestRef.current = locationPromise
-    return locationPromise
-  }, [])
+  locationRequestRef.current = locationPromise
+  return locationPromise
+}, [])
 
   const getTotalActiveMs = useCallback(() => {
     const activeSession = useActiveDriveStore.getState().session
@@ -472,54 +489,53 @@ function ActiveDriveContent({
         routeCoords.push(currentEndCoord)
       }
 
-      const hasUnverifiedTime = fresh.unverifiedMs > 0
+      const effectiveUnverifiedMs =
+  fresh.unverifiedMs > UNVERIFIED_GRACE_MS
+    ? fresh.unverifiedMs
+    : 0
 
-      /*
-       * This is intentionally based only on accumulated active solar intervals.
-       * No wall-clock start-to-end recalculation occurs here, so pause time
-       * cannot be saved as daylight or darkness.
-       */
-      const nightCalcMode = (
-        hasUnverifiedTime ? "unverified" : "solar"
-      ) as NightCalcMode
+const hasUnverifiedTime = effectiveUnverifiedMs > 0
 
-      return {
-        id: makeDriveId(),
-        startTime: new Date(savedStartTime).toISOString(),
-        endTime: new Date(snapshotTime).toISOString(),
+const nightCalcMode = (
+  hasUnverifiedTime ? "unverified" : "solar"
+) as NightCalcMode
 
-        totalDurationHours: totalActiveMs / 3_600_000,
-        dayDurationHours: fresh.dayMs / 3_600_000,
-        nightDurationHours: fresh.nightMs / 3_600_000,
-        unverifiedDurationHours: fresh.unverifiedMs / 3_600_000,
+return {
+  id: makeDriveId(),
+  startTime: new Date(savedStartTime).toISOString(),
+  endTime: new Date(snapshotTime).toISOString(),
 
-        /*
-         * nightMs only ever accumulates solar-verified segments (see
-         * splitIntervalBySolar in activeDriveStore.ts) — unverified time is
-         * tracked separately in unverifiedMs. So nightMs is already pure
-         * verified-night time and should not be zeroed out just because some
-         * other, unrelated segment of the drive was unverified.
-         */
-        verifiedNightDurationHours: fresh.nightMs / 3_600_000,
+  totalDurationHours: totalActiveMs / 3_600_000,
+  dayDurationHours: fresh.dayMs / 3_600_000,
+  nightDurationHours: fresh.nightMs / 3_600_000,
+  unverifiedDurationHours: effectiveUnverifiedMs / 3_600_000,
 
-        nightCalcMode,
-        isVerifiedDay:
-          !hasUnverifiedTime &&
-          fresh.dayMs > 0 &&
-          fresh.nightMs === 0,
+  /*
+   * nightMs contains only solar-classified darkness. Keep its known,
+   * verified night portion even if a separate portion of the drive had
+   * a meaningful GPS/solar verification gap.
+   */
+  verifiedNightDurationHours: fresh.nightMs / 3_600_000,
 
-        source: "timer",
-        miles: safeNumber(miles),
-        milesSource,
-        weather: fresh.weather,
-        routeCoords,
-        startLatitude: fresh.startCoord?.lat ?? null,
-        startLongitude: fresh.startCoord?.lng ?? null,
-        isPreview: options?.isPreview ?? false,
-      }
-    },
-    [getCurrentLocation]
-  )
+  nightCalcMode,
+
+  isVerifiedDay:
+    !hasUnverifiedTime &&
+    fresh.dayMs > 0 &&
+    fresh.nightMs === 0,
+
+  source: "timer",
+  miles: safeNumber(miles),
+  milesSource,
+  weather: fresh.weather,
+  routeCoords,
+  startLatitude: fresh.startCoord?.lat ?? null,
+  startLongitude: fresh.startCoord?.lng ?? null,
+  isPreview: options?.isPreview ?? false,
+}
+},
+[getCurrentLocation]
+)
 
   const createFrozenSnapshot = useCallback(
     (options?: { isPreview?: boolean }) => {
@@ -659,7 +675,18 @@ function ActiveDriveContent({
             }
 
             setLocationError(null)
-            tick({ lat, lng }, Date.now())
+            tick(
+              {
+                lat,
+                lng,
+                at:
+                  typeof position.timestamp === "number" &&
+                  Number.isFinite(position.timestamp)
+                    ? position.timestamp
+                    : Date.now(),
+              },
+              Date.now()
+            )
           }
         )
 
@@ -794,23 +821,61 @@ function ActiveDriveContent({
     void startNewDrive()
   }
 
-  const handleStopRequest = () => {
-    if (saveDisabled) return
+  const handleStopRequest = async () => {
+    if (saveDisabled || isPreparingStop) return
 
     wasRunningBeforeStopRef.current = session.isRunning
-
-    if (session.isRunning) {
-      pauseCurrentDrive()
-    }
 
     setShowStopConfirm(true)
     setIsPreparingStop(true)
 
-    createFrozenSnapshot({ isPreview: false }).finally(() => {
-      if (mountedRef.current) {
-        setIsPreparingStop(false)
+    try {
+      const finalCoord = await getCurrentLocation()
+
+      if (!mountedRef.current) return
+
+      const stopRequestedAt = Date.now()
+      const activeSession = useActiveDriveStore.getState().session
+
+      if (activeSession.isRunning) {
+        tick(finalCoord ?? undefined, stopRequestedAt)
+        pauseDrive(stopRequestedAt)
+
+        void updateForegroundService(
+          "Drive paused — confirm Save and End to finish"
+        )
       }
-    })
+
+      createFrozenSnapshot({ isPreview: false }).finally(() => {
+        if (mountedRef.current) {
+          setIsPreparingStop(false)
+        }
+      })
+    } catch {
+      if (!mountedRef.current) return
+
+      const stopRequestedAt = Date.now()
+      const activeSession = useActiveDriveStore.getState().session
+
+      if (activeSession.isRunning) {
+        tick(undefined, stopRequestedAt)
+        pauseDrive(stopRequestedAt)
+
+        void updateForegroundService(
+          "Drive paused — confirm Save and End to finish"
+        )
+      }
+
+      setLocationError(
+        "Unable to get a final location. The most recent saved location will be used."
+      )
+
+      createFrozenSnapshot({ isPreview: false }).finally(() => {
+        if (mountedRef.current) {
+          setIsPreparingStop(false)
+        }
+      })
+    }
   }
 
   const handleCancelStop = () => {
@@ -829,50 +894,50 @@ function ActiveDriveContent({
   }
 
   const handleSaveDrive = async () => {
-    if (isSaving || isPreparingStop) return
+  if (isSaving || isPreparingStop) return
 
-    setIsSaving(true)
+  setIsSaving(true)
 
-    try {
-      clearRuntimeLoops()
+  try {
+    clearRuntimeLoops()
 
-      const finalizedDrive = frozenSnapshotRef.current
-        ? await frozenSnapshotRef.current
-        : await createFrozenSnapshot({ isPreview: false })
+    const finalizedDrive = frozenSnapshotRef.current
+      ? await frozenSnapshotRef.current
+      : await createFrozenSnapshot({ isPreview: false })
 
-      if (!finalizedDrive) {
-        setLocationError(
-          "This drive could not be saved because it has no recorded active time."
-        )
-        return
-      }
-
-      const { isPreview: _isPreview, ...driveToSave } = finalizedDrive
-
-      saveDrive(driveToSave)
-      setCurrentDrive(driveToSave)
-
-      void stopForegroundService()
-
-      hardReset()
-      setShowStopConfirm(false)
-      setScreen("todaysDrive")
-    } catch (error) {
-      console.error("[ActiveDrive] Save failed:", error)
+    if (!finalizedDrive) {
       setLocationError(
-        "Drive save failed. Please try again before closing the app."
+        "This drive could not be saved because it has no recorded active time."
       )
-    } finally {
-      if (mountedRef.current) {
-        setIsSaving(false)
-        setIsPreparingStop(false)
-      }
-
-      frozenSnapshotRef.current = null
-      snapshotAbortRef.current = null
-      wasRunningBeforeStopRef.current = false
+      return
     }
+
+    const { isPreview: _isPreview, ...driveToSave } = finalizedDrive
+
+    saveDrive(driveToSave)
+    setCurrentDrive(driveToSave)
+
+    void stopForegroundService()
+
+    hardReset()
+    setShowStopConfirm(false)
+    setScreen("todaysDrive")
+  } catch (error) {
+    console.error("[ActiveDrive] Save failed:", error)
+    setLocationError(
+      "Drive save failed. Please try again before closing the app."
+    )
+  } finally {
+    if (mountedRef.current) {
+      setIsSaving(false)
+      setIsPreparingStop(false)
+    }
+
+    frozenSnapshotRef.current = null
+    snapshotAbortRef.current = null
+    wasRunningBeforeStopRef.current = false
   }
+}
 
   const handlePreviewSummary = async () => {
     if (previewDisabled) return
@@ -1174,7 +1239,7 @@ function ActiveDriveContent({
 
               <button
                 type="button"
-                onClick={handleStopRequest}
+                onClick={() => void handleStopRequest()}
                 disabled={saveDisabled}
                 className="min-h-[48px] touch-manipulation select-none rounded-xl bg-[#08194A] py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] active:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
               >

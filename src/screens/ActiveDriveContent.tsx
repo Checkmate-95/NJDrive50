@@ -1,5 +1,7 @@
 // src/screens/ActiveDriveContent.tsx
 
+// src/screens/ActiveDriveContent.tsx
+
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import {
@@ -1033,58 +1035,69 @@ return {
         </section>
 
         <section className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
-          <p
-            className={`text-sm uppercase tracking-[0.18em] ${
-              isRunning ? "text-[#35ff69]" : "text-red-300"
-            }`}
-          >
-            {isRunning
-              ? "Drive Active"
-              : hasActiveDrive
-                ? "Drive Paused"
-                : "Ready to Start"}
-          </p>
+  <p
+    className={`text-sm uppercase tracking-[0.18em] ${
+      isRunning ? "text-[#35ff69]" : "text-red-300"
+    }`}
+  >
+    {isRunning
+      ? "Drive Active"
+      : hasActiveDrive
+        ? "Drive Paused"
+        : "Ready to Start"}
+  </p>
 
-          <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
-            <button
-              type="button"
-              onClick={handlePrimaryAction}
-              disabled={isSaving || isPreparingStop || isPreviewing}
-              aria-label={
-                isRunning
-                  ? "Pause drive timer"
-                  : hasActiveDrive
-                    ? "Resume drive timer"
-                    : "Start drive timer"
-              }
-              className={`flex h-16 w-16 shrink-0 touch-manipulation select-none items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-90 disabled:cursor-not-allowed disabled:bg-gray-500 ${
-                isRunning
-                  ? "bg-[#00A651] active:bg-[#008a43]"
-                  : hasActiveDrive
-                    ? "bg-green-600 active:bg-green-700"
-                    : "bg-red-600 active:bg-red-700"
-              }`}
-            >
-              {isRunning ? (
-                <span className="h-4 w-4 rounded-sm bg-white" />
-              ) : (
-                <span className="ml-1 h-0 w-0 border-b-[8px] border-l-[13px] border-t-[8px] border-b-transparent border-l-white border-t-transparent" />
-              )}
-            </button>
+  <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
+  <button
+    type="button"
+    onClick={handlePrimaryAction}
+    disabled={isSaving || isPreparingStop || isPreviewing}
+    aria-label={
+      isRunning
+        ? "Pause drive timer"
+        : hasActiveDrive
+          ? "Resume drive timer"
+          : "Start drive timer"
+    }
+    className={`flex h-16 w-16 shrink-0 touch-manipulation select-none items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-90 disabled:cursor-not-allowed disabled:bg-gray-500 ${
+      isRunning
+        ? "bg-[#00A651] active:bg-[#008a43]"   // running = green
+        : "bg-red-600 active:bg-red-700"       // paused OR not started = red
+    }`}
+  >
+    {isRunning ? (
+      <span className="h-4 w-4 rounded-sm bg-white" />
+    ) : (
+      <span className="ml-1 h-0 w-0 border-b-[8px] border-l-[13px] border-t-[8px] border-b-transparent border-l-white border-t-transparent" />
+    )}
+  </button>
 
-            <p className="text-[clamp(1.9rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums">
-              {formattedElapsed}
-            </p>
-          </div>
 
-          {hasActiveDrive && (
-            <div className="rounded-lg border border-yellow-300/40 bg-yellow-100/10 px-3 py-2 text-center">
-              <p className="text-[10px] font-semibold text-yellow-200">
-                Keep NJDrive50 open for the most accurate location and solar timing.
-              </p>
-            </div>
-          )}
-        </section>
+    {/* Timer + status light */}
+    <div className="flex items-center gap-3">
+      <p className="text-[clamp(1.9rem,9vw,4.25rem)] font-black leading-none tracking-tight tabular-nums">
+        {formattedElapsed}
+      </p>
+
+      <div
+        className={`
+          h-4 w-4 rounded-full
+          ${isRunning ? "bg-[#35ff69]" : "bg-red-500"}
+          ${isRunning ? "animate-pulse" : ""}
+        `}
+      ></div>
+    </div>
+  </div>
+
+  {hasActiveDrive && (
+    <div className="rounded-lg border border-yellow-300/40 bg-yellow-100/10 px-3 py-2 text-center">
+      <p className="text-[10px] font-semibold text-yellow-200">
+        Keep NJDrive50 open for the most accurate location and solar timing.
+      </p>
+    </div>
+  )}
+</section>
+
 
         <section className="mx-auto mt-5 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#08194A] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
           <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#0A1E5E]" />

@@ -972,33 +972,28 @@ return {
 
           <div className="p-4 sm:p-5">
             <div className="rounded-[24px] border border-white/10 bg-[#08194A]/80 px-4 py-5 shadow-inner sm:px-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[clamp(1.5rem,5vw,2.5rem)] font-extrabold leading-none tracking-tight break-words">
-                    Live Tracking
-                  </p>
+              <div className="flex flex-col items-start gap-2">
+  <p className="text-[clamp(1.5rem,4vw,2.3rem)] font-extrabold leading-none tracking-tight break-words">
+    Live Tracking
+  </p>
 
-                  <p className="mt-2 text-sm font-medium text-white/80 sm:text-base">
-                    {isRunning
-                      ? "Drive in progress"
-                      : hasActiveDrive
-                        ? "Drive paused"
-                        : "Ready to start"}
-                  </p>
-                </div>
+  <p className="text-sm font-medium text-white/80 sm:text-base">
+    {isRunning ? "Drive in progress" : hasActiveDrive ? "Drive paused" : "Ready to start"}
+  </p>
 
-                <div
-                  className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
-                    isSolarUnverified
-                      ? "bg-amber-300 text-[#08194A]"
-                      : isNight
-                        ? "bg-[#112869] text-white ring-1 ring-[#f9c80e]/40"
-                        : "bg-white text-[#08194A]"
-                  }`}
-                >
-                  {isSolarUnverified ? "VERIFYING" : isNight ? "NIGHT" : "DAY"}
-                </div>
-              </div>
+  <div
+    className={`mt-1 inline-block rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
+      isSolarUnverified
+        ? "bg-amber-300 text-[#08194A]"
+        : isNight
+          ? "bg-[#112869] text-white ring-1 ring-[#f9c80e]/40"
+          : "bg-white text-[#08194A]"
+    }`}
+  >
+    {isSolarUnverified ? "VERIFYING" : isNight ? "NIGHT" : "DAY"}
+  </div>
+</div>
+
 
               <div className="mt-5 rounded-xl border border-white/10 bg-[#06153E]/95 px-3 py-3 text-center">
                 <div className="flex items-center justify-center gap-2">

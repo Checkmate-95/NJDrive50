@@ -6,10 +6,12 @@ const USERNAME = process.env.BASIC_AUTH_USERNAME
 const PASSWORD = process.env.BASIC_AUTH_PASSWORD
 
 export function middleware(req: NextRequest) {
+  // If basic auth is disabled, skip everything
   if (!BASIC_AUTH_ENABLED) {
     return NextResponse.next()
   }
 
+  // Only check username/password if basic auth is enabled
   if (!USERNAME || !PASSWORD) {
     return new NextResponse("Basic auth is enabled but not configured", {
       status: 500,
@@ -31,8 +33,7 @@ export function middleware(req: NextRequest) {
         if (username === USERNAME && password === PASSWORD) {
           return NextResponse.next()
         }
-      } catch {
-      }
+      } catch {}
     }
   }
 
@@ -43,6 +44,7 @@ export function middleware(req: NextRequest) {
     },
   })
 }
+
 
 export const config = {
   matcher: [

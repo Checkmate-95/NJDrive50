@@ -23,7 +23,7 @@ export function middleware(req: NextRequest) {
 
     if (scheme === "Basic" && encoded) {
       try {
-        const decoded = atob(encoded)
+        const decoded = Buffer.from(encoded, "base64").toString("utf8")
         const separatorIndex = decoded.indexOf(":")
         const username = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : ""
         const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : ""

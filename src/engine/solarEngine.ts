@@ -44,10 +44,18 @@ function getOverlapMs(
 }
 
 /**
- * Single source of truth for the night-boundary rule: a timestamp counts as
- * night when it falls before sunrise or at/after sunset. Both
- * getCurrentSolarMode() and isNightDrive() delegate here so the rule can
- * never drift between the two call sites.
+ * Fix for sunrise-sunset-js UTC date-boundary bug:
+ * Always anchor the lookup date to LOCAL NOON so the library
+ * cannot accidentally resolve sunrise/sunset for the wrong day.
+ */
+function toSolarLookupDate(date: Date): Date {
+  const local = new Date(date)
+  local.setHours(12, 0, 0, 0)
+  return local
+}
+
+/**
+ * Single source of truth for the night-boundary rule.
  */
 function isBeforeSunriseOrAfterSunset(
   timestamp: Date,
@@ -71,8 +79,10 @@ export function getSolarWindowForDate(
   }
 
   try {
-    const rawSunrise = getSunrise(latitude, longitude, date)
-    const rawSunset = getSunset(latitude, longitude, date)
+    const lookupDate = toSolarLookupDate(date)
+
+    const rawSunrise = getSunrise(latitude, longitude, lookupDate)
+    const rawSunset = getSunset(latitude, longitude, lookupDate)
 
     const sunrise = isValidDate(rawSunrise) ? rawSunrise : null
     const sunset = isValidDate(rawSunset) ? rawSunset : null
@@ -89,8 +99,6 @@ export function getSolarWindowForDate(
 
 /**
  * Determines whether a specific timestamp falls during darkness.
- * This is appropriate for a live status or drive-start indicator.
- * Use computeDayNightSplit() to classify a complete drive.
  */
 export function isNightDrive(
   timestamp: Date,
@@ -108,7 +116,6 @@ export function isNightDrive(
 
 /**
  * Gets the current day/night state from solar times only.
- * "night" means before sunrise or at/after sunset.
  */
 export function getCurrentSolarMode(
   date: Date,
@@ -127,10 +134,6 @@ export function getCurrentSolarMode(
 
 /**
  * Splits one same-calendar-day drive into daylight and darkness hours.
- *
- * For a drive spanning midnight, split it into calendar-day segments,
- * call this once per segment using that segment's solar window, then sum
- * the returned dayHours and nightHours.
  */
 export function computeDayNightSplit(
   startTime: Date,

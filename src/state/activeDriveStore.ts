@@ -106,7 +106,8 @@ const MAX_SINGLE_POINT_JUMP_MILES = 2
 const MAX_COORD_AGE_MS = 15 * 60 * 1000
 
 // Allows a brief normal GPS startup delay without downgrading a full drive.
-const UNVERIFIED_GRACE_MS = 15_000
+export const UNVERIFIED_GRACE_MS = 45_000
+
 
 function isBrowser(): boolean {
   return typeof window !== "undefined"

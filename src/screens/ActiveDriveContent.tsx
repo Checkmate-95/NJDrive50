@@ -12,13 +12,17 @@ import {
 import { Capacitor } from "@capacitor/core"
 import { Geolocation } from "@capacitor/geolocation"
 
-import type { Screen } from "../App"
-import { saveDrive } from "../state/driveStore"
-import type { DriveEntry, NightCalcMode } from "../state/driveStore"
 import {
   useActiveDriveStore,
   type RouteCoord,
+  UNVERIFIED_GRACE_MS,
 } from "../state/activeDriveStore"
+
+
+import type { Screen } from "../App"
+import { saveDrive } from "../state/driveStore"
+import type { DriveEntry, NightCalcMode } from "../state/driveStore"
+
 
 type ActiveDriveContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
@@ -33,7 +37,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, ""
 const ROUTE_TIMEOUT_MS = 8_000
 const FS_NOTIFICATION_ID = 1001
 const FS_CHANNEL_ID = "njdrive50_drive"
-const UNVERIFIED_GRACE_MS = 15_000
+
 
 let foregroundServiceStarted = false
 

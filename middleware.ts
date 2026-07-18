@@ -20,22 +20,22 @@ export function middleware(req: NextRequest) {
 
   const authHeader = req.headers.get("authorization")
 
-  if (authHeader) {
-    const [scheme, encoded] = authHeader.split(" ")
+ if (authHeader) {
+  const [scheme, encoded] = authHeader.split(" ")
 
-    if (scheme === "Basic" && encoded) {
-      try {
-        const decoded = Buffer.from(encoded, "base64").toString("utf8")
-        const separatorIndex = decoded.indexOf(":")
-        const username = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : ""
-        const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : ""
+  if (scheme === "Basic" && encoded) {
+    try {
+      const decoded = atob(encoded)
+      const separatorIndex = decoded.indexOf(":")
+      const username = separatorIndex >= 0 ? decoded.slice(0, separatorIndex) : ""
+      const password = separatorIndex >= 0 ? decoded.slice(separatorIndex + 1) : ""
 
-        if (username === USERNAME && password === PASSWORD) {
-          return NextResponse.next()
-        }
-      } catch {}
-    }
+      if (username === USERNAME && password === PASSWORD) {
+        return NextResponse.next()
+      }
+    } catch {}
   }
+}
 
   return new NextResponse("Unauthorized", {
     status: 401,

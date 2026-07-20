@@ -42,3 +42,5 @@ android/local.properties
 # Vite cache
 .vite/
 .vercel
+
+.next/

@@ -4,13 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "ai-server": "node server/index.cjs",
-    "routes-proxy": "tsx routesProxy.ts"
-  },
+  "dev": "vite",
+  "build": "tsc -b && vite build",
+  "build:web": "next build",
+  "start:web": "next start",
+  "lint": "eslint .",
+  "preview": "vite preview",
+  "ai-server": "node server/index.cjs",
+  "routes-proxy": "tsx routesProxy.ts"
+},
   "dependencies": {
     "@capacitor-community/background-geolocation": "^1.2.26",
     "@capacitor-community/keep-awake": "^8.0.1",

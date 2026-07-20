@@ -74,6 +74,30 @@
         "x-next-revalidate-tag-token"
       ]
     },
+    "/login": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/login",
+      "dataRoute": "/login.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
     "/pricing": {
       "experimentalBypassFor": [
         {
@@ -102,8 +126,8 @@
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "424c318fdf0b32bbeffb9f95185e75ed",
-    "previewModeSigningKey": "4f695bf16953af94d537e4992975bdfe718b5d59acbb498b4808b951fa3390ee",
-    "previewModeEncryptionKey": "2ab9676ccb9559d54e0bbd6d30b8273808e7f211497529885d9995328f3a14d4"
+    "previewModeId": "096bdcc7a2a2ab1324259d118310b6f3",
+    "previewModeSigningKey": "c8f8a8794b8ebaed92154e8d25861b84ea39f42bece3931d7155b4ba6f59702a",
+    "previewModeEncryptionKey": "3c23faa2a4adae2134b812603f5789cf8226b72d18b081467f9a51af005db419"
   }
 }

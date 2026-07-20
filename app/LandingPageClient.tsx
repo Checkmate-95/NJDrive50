@@ -1,0 +1,662 @@
+import Link from "next/link"
+
+type Faq = {
+  question: string
+  answer: string
+}
+
+type LandingPageClientProps = {
+  faqs: Faq[]
+}
+
+export default function LandingPageClient({
+  faqs,
+}: LandingPageClientProps) {
+  const features = [
+    {
+      icon: "🕐",
+      title: "Track day and night driving hours",
+      description:
+        "Automatically separate daytime and night driving hours so you always know how many of the required 50 total hours and 10 night hours are left.",
+    },
+    {
+      icon: "📍",
+      title: "Log every NJ practice drive",
+      description:
+        "Save each supervised drive with GPS route data, start and end times, duration, and distance to keep your New Jersey driving log organized.",
+    },
+    {
+      icon: "📋",
+      title: "See permit and road test dates",
+      description:
+        "Track your permit issue date, road test eligibility date, and permit milestones so you can stay on top of New Jersey learner permit deadlines.",
+    },
+    {
+      icon: "🔔",
+      title: "Get reminders before you fall behind",
+      description:
+        "Receive reminders to log drives, alerts before important milestones, and nudges so your family stays on pace for the NJ road test.",
+    },
+    {
+      icon: "🏆",
+      title: "Keep teens motivated to finish 50 hours",
+      description:
+        "Celebrate progress at 10, 25, 40, and 50 hours with simple milestones that make the NJ supervised driving process easier to stick with.",
+    },
+    {
+      icon: "📄",
+      title: "Stay ready for NJMVC Form BA-CSD",
+      description:
+        "Keep a clean supervised driving record that makes the Certification of Supervised Driving faster and less stressful to complete.",
+    },
+  ]
+
+  const steps = [
+    {
+      step: "01",
+      title: "Create your teen driver's profile",
+      description:
+        "Enter the teen driver's name, birthday, permit issue date, and permit number. NJDrive50 instantly helps organize the 6-month waiting period, road test eligibility date, and key permit milestones.",
+    },
+    {
+      step: "02",
+      title: "Log each supervised drive",
+      description:
+        "After every practice session, record the drive with GPS tracking, duration, time of day, and supervising adult. Day and night driving hours are tracked separately.",
+    },
+    {
+      step: "03",
+      title: "Watch progress toward 50 hours",
+      description:
+        "See total supervised driving hours, night hours remaining, days until road test eligibility, and milestone progress in one clear dashboard.",
+    },
+    {
+      step: "04",
+      title: "Prepare for the NJ road test",
+      description:
+        "Once you reach 50 hours, including 10 hours at night, NJDrive50 helps you keep a clean record for NJMVC Form BA-CSD so you can move toward a probationary license with confidence.",
+    },
+  ]
+
+  const ctaLinkClass =
+    "inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9] active:scale-[0.99] sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
+
+  const secondaryLinkClass =
+    "flex min-h-[48px] w-full items-center justify-center rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white/85 transition hover:bg-white/5 active:scale-[0.99] sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
+
+  const navTextLinkClass =
+    "rounded-sm transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+
+  return (
+    <div className="min-h-screen bg-[#020617] pb-24 text-white md:pb-0">
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-black/70 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <img
+              src="/njdrive50Logo6.png"
+              alt="NJDrive50 Logo"
+              className="h-12 w-auto shrink-0 object-contain sm:h-16"
+            />
+
+            <div className="min-w-0 leading-tight">
+              <span className="block truncate text-xs font-semibold tracking-[0.16em] text-[#38BDF8] sm:text-sm">
+                NJDRIVE50
+              </span>
+              <span className="hidden text-[11px] font-medium text-white/60 sm:block">
+                New Jersey Teen Driving Log App
+              </span>
+            </div>
+          </div>
+
+          <nav className="hidden items-center gap-5 text-xs font-semibold text-white/60 md:flex">
+            <a href="#how-it-works" className="transition hover:text-white">
+              How it works
+            </a>
+            <a href="#features" className="transition hover:text-white">
+              Features
+            </a>
+            <a href="#nj-requirements" className="transition hover:text-white">
+              NJ requirements
+            </a>
+            <a href="#faq" className="transition hover:text-white">
+              FAQ
+            </a>
+
+            <Link href="/pricing" className={navTextLinkClass}>
+              Pricing
+            </Link>
+
+            <Link href="/login" className={navTextLinkClass}>
+              Log in
+            </Link>
+
+            <Link
+              href="/pricing"
+              className="rounded-lg bg-[#38BDF8] px-4 py-1.5 text-xs font-bold text-[#020617] transition hover:bg-[#0EA5E9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+            >
+              View plans
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section className="relative overflow-hidden border-b border-white/10">
+          <div className="pointer-events-none absolute inset-0 -top-32 flex justify-center">
+            <div className="h-[420px] w-[420px] rounded-full bg-[#38BDF8]/5 blur-[120px] sm:h-[500px] sm:w-[700px]" />
+          </div>
+
+          <div className="relative mx-auto flex max-w-5xl flex-col gap-8 px-4 py-12 sm:gap-10 sm:py-16 md:flex-row md:items-center md:justify-between md:gap-12 md:py-24">
+            <div className="max-w-xl">
+              <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#38BDF8]" />
+                <span className="text-[10px] font-bold tracking-[0.14em] text-[#38BDF8] sm:text-[11px] sm:tracking-[0.18em]">
+                  NEW NJ LAW — EFFECTIVE FEB 1, 2025
+                </span>
+              </div>
+
+              <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
+                How to track your teen&apos;s{" "}
+                <span className="text-[#38BDF8]">
+                  New Jersey 50-hour driving log
+                </span>
+              </h1>
+
+              <p className="mt-4 text-base leading-7 text-white/75 sm:mt-5">
+                NJDrive50 is the NJ driving log app built for New Jersey
+                families. Track NJ supervised driving hours, separate day and
+                night driving hours, monitor permit milestones, and stay ready
+                for NJMVC Form BA-CSD.
+              </p>
+
+              <p className="mt-4 text-base leading-7 text-white/70">
+                If you need a simple way to track driving hours in NJ,
+                NJDrive50 keeps everything in one place so parents and teens
+                can stay organized from permit day to the NJ road test.
+              </p>
+
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:gap-4">
+                {[
+                  { value: "50", label: "Hours required in NJ" },
+                  { value: "10", label: "Night hours required" },
+                  { value: "6 mo", label: "Wait before road test" },
+                ].map(({ value, label }) => (
+                  <div
+                    key={label}
+                    className="flex min-h-[72px] flex-col justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-center"
+                  >
+                    <span className="text-xl font-extrabold text-[#38BDF8]">
+                      {value}
+                    </span>
+                    <span className="text-[11px] text-white/55">{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-7 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
+                <Link id="view-plans" href="/pricing" className={ctaLinkClass}>
+                  View plans
+                </Link>
+
+                <a href="#how-it-works" className={secondaryLinkClass}>
+                  See how it works
+                </a>
+              </div>
+
+              <p className="mt-3 text-xs leading-6 text-white/45">
+                7-day free trial available in the app · $4.99 per month or
+                $39.99 per year.
+              </p>
+
+              <p className="mt-3 max-w-xl text-xs leading-6 text-white/45">
+                View subscription options on our pricing page. Free trials,
+                subscriptions, billing, and cancellations are started and
+                managed securely inside the NJDrive50 app through Google Play.
+                This website does not process payments.
+              </p>
+            </div>
+
+            <div className="flex w-full flex-1 justify-center md:justify-end">
+              <div className="w-full max-w-[220px] sm:max-w-[250px] md:max-w-[270px]">
+                <div className="relative overflow-hidden rounded-[32px] border border-white/15 bg-gradient-to-b from-[#0F172A] to-[#020617] shadow-[0_30px_70px_rgba(15,23,42,0.72)]">
+                  <div className="flex flex-col gap-2.5 p-3.5 sm:p-4">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-center">
+                      <p className="text-[9px] font-medium uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+                        Total Hours
+                      </p>
+                      <p className="mt-1 text-[22px] font-extrabold tabular-nums tracking-tight text-[#38BDF8] sm:text-[28px]">
+                        32.5
+                      </p>
+                      <p className="mt-1 text-[10px] text-white/50">
+                        17.5 hours left
+                      </p>
+
+                      <div className="mt-2.5">
+                        <div
+                          className="h-2 w-full overflow-hidden rounded-full bg-white/10"
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={50}
+                          aria-valuenow={32.5}
+                        >
+                          <div
+                            className="h-full rounded-full bg-[#38BDF8]"
+                            style={{ width: "65%" }}
+                          />
+                        </div>
+
+                        <div className="mt-1.5 flex items-center justify-between text-[9px] text-white/45 sm:text-[10px]">
+                          <span>65% complete</span>
+                          <span>Goal: 50 hrs</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
+                        <p className="text-sm font-extrabold tabular-nums text-yellow-400 sm:text-[15px]">
+                          26.5h
+                        </p>
+                        <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
+                          Day
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-2.5 py-2.5 text-center">
+                        <p className="text-sm font-extrabold tabular-nums text-[#38BDF8] sm:text-[15px]">
+                          6.0h
+                        </p>
+                        <p className="mt-1 text-[9px] uppercase tracking-[0.12em] text-white/45 sm:text-[10px]">
+                          Night
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center">
+                        <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+                          Road test
+                        </p>
+                        <p className="mt-1 text-sm font-bold leading-none text-white">
+                          47 days
+                        </p>
+                        <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#38BDF8]">
+                          Left
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center">
+                        <p className="text-[9px] uppercase tracking-[0.14em] text-white/45 sm:text-[10px]">
+                          Night hrs left
+                        </p>
+                        <p className="mt-1 text-sm font-bold tabular-nums text-yellow-400">
+                          4.0 hrs
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="how-it-works"
+          className="scroll-mt-24 border-b border-white/10 bg-white/[0.02]"
+        >
+          <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
+            <div className="mb-10 text-center">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+                How it works
+              </p>
+              <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+                Go from permit day to road test with less stress
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-white/65">
+                NJDrive50 helps families organize permit details, log
+                supervised drives, and stay on pace for the 50-hour
+                requirement.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {steps.map(({ step, title, description }) => (
+                <div
+                  key={step}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"
+                >
+                  <div className="text-xs font-extrabold tracking-[0.22em] text-[#38BDF8]">
+                    STEP {step}
+                  </div>
+                  <h3 className="mt-3 text-lg font-bold text-white">{title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-white/65">
+                    {description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="features" className="scroll-mt-24 border-b border-white/10">
+          <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
+            <div className="mb-10 text-center">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+                Features
+              </p>
+              <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+                Everything needed to track NJ supervised driving hours
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-base leading-7 text-white/65">
+                Built for New Jersey parents and teens who want a cleaner way
+                to manage driving practice, milestones, and road test
+                readiness.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {features.map(({ icon, title, description }) => (
+                <div
+                  key={title}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6"
+                >
+                  <div className="text-2xl" aria-hidden="true">
+                    {icon}
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold text-white">{title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-white/65">
+                    {description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="nj-requirements"
+          className="scroll-mt-24 border-b border-white/10 bg-[#38BDF8]/5"
+        >
+          <div className="mx-auto max-w-5xl px-4 py-12">
+            <div className="flex flex-col gap-5 rounded-2xl border border-[#38BDF8]/20 bg-[#38BDF8]/5 p-5 sm:flex-row sm:items-start sm:p-6">
+              <div
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#38BDF8]/15 text-xl"
+                aria-hidden="true"
+              >
+                📋
+              </div>
+
+              <div>
+                <h2 className="text-lg font-extrabold text-[#38BDF8]">
+                  What are the NJ teen driving requirements?
+                </h2>
+
+                <p className="mt-3 text-base leading-7 text-white/72">
+                  Starting February 1, 2025, New Jersey requires permit holders
+                  under 21 with permits issued on or after that date to complete{" "}
+                  <strong className="text-white">
+                    50 hours of supervised driving
+                  </strong>
+                  , including{" "}
+                  <strong className="text-white">10 hours at night</strong>,
+                  before they can receive a probationary license.
+                </p>
+
+                <p className="mt-3 text-base leading-7 text-white/72">
+                  Drivers must also wait at least{" "}
+                  <strong className="text-white">6 months</strong> from permit
+                  issuance before taking the NJ road test, and they must bring a
+                  signed{" "}
+                  <strong className="text-white">
+                    Certification of Supervised Driving (Form BA-CSD)
+                  </strong>{" "}
+                  when applying for licensure.
+                </p>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <h3 className="text-sm font-bold text-white">
+                      What NJDrive50 tracks
+                    </h3>
+                    <p className="mt-2 text-sm leading-7 text-white/65">
+                      Total supervised driving hours, night driving hours,
+                      permit issue date, road test eligibility timing, and
+                      BA-CSD preparation.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <h3 className="text-sm font-bold text-white">
+                      What you need for the NJ MVC
+                    </h3>
+                    <p className="mt-2 text-sm leading-7 text-white/65">
+                      A completed 50-hour practice period, 10 hours during
+                      darkness, a signed BA-CSD form, and completion of the
+                      waiting period before road testing.
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href="https://www.nj.gov/mvc/license/youngadult.htm"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-block text-sm font-semibold text-[#38BDF8] underline underline-offset-2 hover:text-white"
+                >
+                  Read the official NJ MVC requirements
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-white/10">
+          <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
+            <div className="mb-10 text-center">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+                Checklist
+              </p>
+              <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+                What do you need before the NJ road test?
+              </h2>
+              <p className="mx-auto mt-3 max-w-lg text-base leading-7 text-white/65">
+                Use this quick NJ teen driver checklist to stay on track with
+                learner permit rules and probationary license requirements.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {[
+                "Hold a valid New Jersey special learner's permit or examination permit.",
+                "Complete at least 50 hours of supervised driving practice.",
+                "Log at least 10 night driving hours in NJ.",
+                "Wait at least 6 months from the permit issue date before road testing.",
+                "Prepare your signed NJMVC Form BA-CSD.",
+                "Review NJ road test requirements before your appointment.",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-sm leading-7 text-white/72"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="faq" className="scroll-mt-24 border-b border-white/10">
+          <div className="mx-auto max-w-3xl px-4 py-14 sm:py-20">
+            <div className="mb-10 text-center">
+              <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+                FAQ
+              </p>
+              <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+                Common NJ permit and driving log questions
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-base leading-7 text-white/65">
+                Quick answers about NJ supervised driving hours, night driving,
+                BA-CSD, permit rules, road test readiness, and pricing.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {faqs.map(({ question, answer }) => (
+                <details
+                  key={question}
+                  className="group rounded-2xl border border-white/10 bg-white/[0.03] open:border-[#38BDF8]/20 open:bg-white/[0.05] [&>summary::-webkit-details-marker]:hidden"
+                >
+                  <summary className="flex min-h-[52px] cursor-pointer list-none items-start justify-between gap-4 px-5 py-4 text-left text-sm font-semibold text-white">
+                    <span>{question}</span>
+                    <span
+                      className="mt-0.5 shrink-0 text-[#38BDF8] transition group-open:rotate-45"
+                      aria-hidden="true"
+                    >
+                      +
+                    </span>
+                  </summary>
+
+                  <div className="px-5 pb-5 pt-0 text-sm leading-7 text-white/65">
+                    {answer}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-b border-white/10">
+          <div className="mx-auto max-w-5xl px-4 py-16 text-center sm:py-20">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#38BDF8]/70">
+              Get Started
+            </p>
+            <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl md:text-4xl">
+              Ready to track supervised driving hours in NJ?
+            </h2>
+            <p className="mx-auto mt-4 max-w-md text-base leading-7 text-white/65">
+              Explore subscription options, then download NJDrive50 to track
+              driving hours, monitor night driving progress, and stay ready for
+              the NJ road test.
+            </p>
+
+            <div className="mt-8 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:justify-center">
+              <Link href="/pricing" className={ctaLinkClass}>
+                View plans
+              </Link>
+
+              <a href="#faq" className={secondaryLinkClass}>
+                Check NJ permit FAQs
+              </a>
+            </div>
+
+            <p className="mx-auto mt-3 max-w-md text-xs leading-6 text-white/45">
+              Free trials, subscriptions, billing, and cancellations are
+              started and managed securely inside the NJDrive50 app through
+              Google Play.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-white/10 bg-black/40">
+        <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <img
+                src="/njdrive50Logo6.png"
+                alt="NJDrive50 Logo"
+                className="h-10 w-auto object-contain"
+              />
+              <span className="text-sm font-bold tracking-[0.16em] text-[#38BDF8]">
+                NJDRIVE50
+              </span>
+            </div>
+
+            <p className="mt-2 max-w-[32ch] text-xs leading-6 text-white/40">
+              The New Jersey 50-hour driving log app built for parents and
+              teens tracking NJ supervised driving hours, night driving hours,
+              and BA-CSD readiness.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-2 text-sm text-white/40">
+            <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">
+              Legal
+            </p>
+
+            <Link
+              href="/privacy"
+              className="min-h-[44px] py-1 text-left hover:text-white/70"
+            >
+              Privacy Policy
+            </Link>
+
+            <Link
+              href="/terms"
+              className="min-h-[44px] py-1 text-left hover:text-white/70"
+            >
+              Terms of Use
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-2 text-sm text-white/40">
+            <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">
+              Resources
+            </p>
+
+            <a
+              href="https://www.nj.gov/mvc/license/youngadult.htm"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[44px] py-1 hover:text-white/70"
+            >
+              NJ MVC First License Info
+            </a>
+
+            <a
+              href="https://www.nj.gov/mvc/license/roadtest.htm"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[44px] py-1 hover:text-white/70"
+            >
+              NJ MVC Road Test Info
+            </a>
+
+            <a
+              href="https://nj.gov/mvc/pdf/license/BA-CSD.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="min-h-[44px] py-1 hover:text-white/70"
+            >
+              NJMVC Form BA-CSD
+            </a>
+          </div>
+        </div>
+
+        <div className="border-t border-white/5 px-4 py-4 text-center text-[11px] text-white/25">
+          © {new Date().getFullYear()} NJDrive50. All rights reserved. Not
+          affiliated with the New Jersey Motor Vehicle Commission.
+        </div>
+      </footer>
+
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#020617]/95 p-3 backdrop-blur md:hidden">
+        <div className="flex items-center gap-2">
+          <Link
+            href="/pricing"
+            className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-xl bg-[#38BDF8] px-5 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
+          >
+            View plans
+          </Link>
+
+          <Link
+            href="/login"
+            className="inline-flex min-h-[52px] items-center justify-center rounded-xl border border-white/20 px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            Log in
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}

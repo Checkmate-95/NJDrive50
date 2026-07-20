@@ -40,7 +40,7 @@ import { Capacitor } from "@capacitor/core"
 
 
 // ─── Lazy Screens ─────────────────────────────────────────────────────────────
-const LandingPage = lazy(() => import("../website/LandingPage"))
+
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
 const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"))
 const MilestonesContent = lazy(() => import("./screens/MilestonesContent"))
@@ -58,7 +58,7 @@ const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
 const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPage"))
 const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
-const PricingPage = lazy(() => import("../website/PricingPage"))
+
 
 
 // ─── State ─────────────────────────────────────────────────────────────────────
@@ -182,9 +182,7 @@ useEffect(() => {
     case "landingApp":     
       return <LandingPageApp />
 
-    case "landing":        
-      return <LandingPage />
-
+    
     case "intro":          
       return <HomeIntro setScreen={setScreenCompat} />
 
@@ -197,8 +195,7 @@ useEffect(() => {
     case "forgotPassword": 
       return <ForgotPassword />
 
-    case "pricing":        
-      return <PricingPage />
+    
 
     case "onboarding":        
       return <Onboarding setScreen={setScreenCompat} />

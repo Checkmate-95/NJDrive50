@@ -109,7 +109,12 @@ export type Screen =
   | "forgotPassword"
 
 export default function App() {
- console.log("🔥 NJDrive50 app loaded")
+ if (import.meta.env.MODE !== "production") {
+  console.log("🔥 NJDrive50 app loaded");
+}
+
+
+
 
  
   const { screen, setScreen, stack } = useNav()

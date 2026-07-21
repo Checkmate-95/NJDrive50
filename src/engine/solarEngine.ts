@@ -84,16 +84,25 @@ export function getSolarWindowForDate(
     const rawSunrise = getSunrise(latitude, longitude, lookupDate)
     const rawSunset = getSunset(latitude, longitude, lookupDate)
 
-    console.log("SOLAR_LOOKUP", {
-  latitude,
-  longitude,
-  inputDate: date.toString(),
-  lookupDate: lookupDate.toString(),
-  inputTzOffset: date.getTimezoneOffset(),
-  lookupTzOffset: lookupDate.getTimezoneOffset(),
-  rawSunrise: rawSunrise?.toString(),
-  rawSunset: rawSunset?.toString(),
-})
+   console.log(
+  "[SOLAR_ENGINE]",
+  JSON.stringify(
+    {
+      latitude,
+      longitude,
+      inputDate: date.toString(),
+      lookupDate: lookupDate.toString(),
+      inputTzOffset: date.getTimezoneOffset(),
+      lookupTzOffset: lookupDate.getTimezoneOffset(),
+      rawSunrise: rawSunrise?.toString(),
+      rawSunset: rawSunset?.toString(),
+    },
+    null,
+    2
+  )
+)
+
+
 
 
     const sunrise = isValidDate(rawSunrise) ? rawSunrise : null

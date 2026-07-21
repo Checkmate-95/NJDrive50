@@ -197,31 +197,44 @@ const calculateSolarNightDuration = (
     nextDay.setDate(nextDay.getDate() + 1)
 
     const { sunset } = getSolarWindowForDate(
-      location.latitude,
-      location.longitude,
-      cursor
-    )
-    const { sunrise } = getSolarWindowForDate(
-      location.latitude,
-      location.longitude,
-      nextDay
-    )
+  location.latitude,
+  location.longitude,
+  cursor
+)
+const { sunrise } = getSolarWindowForDate(
+  location.latitude,
+  location.longitude,
+  nextDay
+)
 
-    const sunsetMs = sunset?.getTime() ?? NaN
-    const sunriseMs = sunrise?.getTime() ?? NaN
+// DEBUG: Solar window diagnostics
+console.log("SOLAR_NIGHT_WINDOW", {
+  cursor: cursor.toString(),
+  nextDay: nextDay.toString(),
+  cursorTzOffset: cursor.getTimezoneOffset(),
+  nextDayTzOffset: nextDay.getTimezoneOffset(),
+  sunset: sunset?.toString(),
+  sunrise: sunrise?.toString(),
+  start: new Date(start).toString(),
+  end: new Date(end).toString(),
+})
 
-    if (
-      Number.isFinite(sunsetMs) &&
-      Number.isFinite(sunriseMs) &&
-      sunriseMs > sunsetMs
-    ) {
-      total += getOverlapDuration(start, end, sunsetMs, sunriseMs)
-    }
+const sunsetMs = sunset?.getTime() ?? NaN
+const sunriseMs = sunrise?.getTime() ?? NaN
 
-    cursor.setDate(cursor.getDate() + 1)
-  }
+if (
+  Number.isFinite(sunsetMs) &&
+  Number.isFinite(sunriseMs) &&
+  sunriseMs > sunsetMs
+) {
+  total += getOverlapDuration(start, end, sunsetMs, sunriseMs)
+}
 
-  return total
+cursor.setDate(cursor.getDate() + 1)
+}
+
+return total
+
 }
 
 /* -------------------------------------------------------

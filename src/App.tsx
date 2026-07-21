@@ -109,6 +109,9 @@ export type Screen =
   | "forgotPassword"
 
 export default function App() {
+ console.log("🔥 NJDrive50 app loaded")
+
+ 
   const { screen, setScreen, stack } = useNav()
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)

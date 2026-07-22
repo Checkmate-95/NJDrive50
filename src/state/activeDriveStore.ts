@@ -539,17 +539,14 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
 
               currentMode,
 
-              solarStatus:
-                currentMode !== "unverified"
-                  ? getSolarStatus(
-                      session.dayMs,
-                      session.nightMs,
-                      session.unverifiedMs
-                    )
-                  : "unverified",
+              solarStatus: getSolarStatus(
+  session.dayMs,
+  session.nightMs,
+  session.unverifiedMs
+),
 
-              lastUpdated: now,
-              lastTickAt: now,
+lastUpdated: now,
+lastTickAt: now,
             },
           }
         })

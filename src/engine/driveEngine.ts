@@ -1,5 +1,5 @@
 // src/engine/driveEngine.ts
-import { getSolarWindowForDate } from "./solarEngine"
+import { getSolarWindowForDate, computeDayNightSplit } from "./solarEngine"
 
 /* -------------------------------------------------------
    TYPES
@@ -21,7 +21,7 @@ export type DriveEntry = {
   nightDuration: number
   dayDuration: number
   hasNightPortion: boolean
-  isVerifiedDay: boolean          // true when solar confirmed zero night overlap
+  isVerifiedDay: boolean
   notes?: string
   source: DriveSource
   location?: DriveLocation
@@ -94,6 +94,12 @@ const sanitizeLocation = (loc?: DriveLocation): DriveLocation | undefined =>
 const startOfLocalDay = (ts: number) => {
   const d = new Date(ts)
   d.setHours(0, 0, 0, 0)
+  return d
+}
+
+const getStartOfNextLocalDay = (ts: number): Date => {
+  const d = new Date(ts)
+  d.setHours(24, 0, 0, 0)
   return d
 }
 
@@ -171,70 +177,42 @@ const calculateEstimatedNightDuration = (start: number, end: number) => {
 }
 
 /* -------------------------------------------------------
-   SOLAR NIGHT
+   SOLAR NIGHT — MULTI-DAY WALK (Correct)
 ------------------------------------------------------- */
 
-/**
- * Delegates to solarEngine.ts's getSolarWindowForDate so this engine and
- * the live timer engine (activeDriveStore.ts) always agree on sunrise/
- * sunset, even if the underlying library or precision handling changes.
- */
 const calculateSolarNightDuration = (
   start: number,
   end: number,
   location: DriveLocation
-) => {
+): number => {
   if (end <= start) return 0
 
-  const cursor = startOfLocalDay(start)
-  cursor.setDate(cursor.getDate() - 1)
+  let cursor = start
+  let totalNightMs = 0
 
-  const lastDay = startOfLocalDay(end)
-  let total = 0
+  while (cursor < end) {
+    const nextMidnightMs = getStartOfNextLocalDay(cursor).getTime()
+    const segmentEndMs = Math.min(end, nextMidnightMs)
 
-  while (cursor.getTime() <= lastDay.getTime()) {
-    const nextDay = new Date(cursor)
-    nextDay.setDate(nextDay.getDate() + 1)
+    const segmentStart = new Date(cursor)
+    const segmentEnd = new Date(segmentEndMs)
 
-    const { sunset } = getSolarWindowForDate(
-  location.latitude,
-  location.longitude,
-  cursor
-)
-const { sunrise } = getSolarWindowForDate(
-  location.latitude,
-  location.longitude,
-  nextDay
-)
+    const solarWindow = getSolarWindowForDate(
+      location.latitude,
+      location.longitude,
+      segmentStart
+    )
 
-// DEBUG: Solar window diagnostics
-console.log("SOLAR_NIGHT_WINDOW", {
-  cursor: cursor.toString(),
-  nextDay: nextDay.toString(),
-  cursorTzOffset: cursor.getTimezoneOffset(),
-  nextDayTzOffset: nextDay.getTimezoneOffset(),
-  sunset: sunset?.toString(),
-  sunrise: sunrise?.toString(),
-  start: new Date(start).toString(),
-  end: new Date(end).toString(),
-})
+    const split = computeDayNightSplit(segmentStart, segmentEnd, solarWindow)
 
-const sunsetMs = sunset?.getTime() ?? NaN
-const sunriseMs = sunrise?.getTime() ?? NaN
+    if (split.mode === "solar") {
+      totalNightMs += split.nightHours * 3_600_000
+    }
 
-if (
-  Number.isFinite(sunsetMs) &&
-  Number.isFinite(sunriseMs) &&
-  sunriseMs > sunsetMs
-) {
-  total += getOverlapDuration(start, end, sunsetMs, sunriseMs)
-}
+    cursor = segmentEndMs
+  }
 
-cursor.setDate(cursor.getDate() + 1)
-}
-
-return total
-
+  return totalNightMs
 }
 
 /* -------------------------------------------------------
@@ -304,11 +282,12 @@ export const createDriveEntry = (params: {
   const duration = end - start
   const cleanLocation = sanitizeLocation(location)
 
-  const { nightDuration, dayDuration, mode, isVerifiedDay } = calculateNightBreakdown({
-    start,
-    end,
-    location: cleanLocation,
-  })
+  const { nightDuration, dayDuration, mode, isVerifiedDay } =
+    calculateNightBreakdown({
+      start,
+      end,
+      location: cleanLocation,
+    })
 
   return {
     id: generateId(),

@@ -36,6 +36,8 @@ export type ActiveDriveSession = {
 
   weather: string | null
 
+  location: { latitude: number; longitude: number } | null
+
   liveMiles: number
   startCoord: RouteCoord | null
   lastCoord: RouteCoord | null
@@ -138,6 +140,8 @@ function createInitialSession(): ActiveDriveSession {
     lastTickAt: null,
 
     weather: null,
+
+    location: null,
 
     liveMiles: 0,
     startCoord: null,
@@ -247,6 +251,16 @@ function normalizeSession(value: unknown): ActiveDriveSession {
     lastTickAt: normalizeNumber(raw.lastTickAt),
 
     weather: typeof raw.weather === "string" ? raw.weather : null,
+
+    location:
+      raw.location &&
+      typeof (raw.location as any).latitude === "number" &&
+      typeof (raw.location as any).longitude === "number"
+        ? {
+            latitude: (raw.location as any).latitude,
+            longitude: (raw.location as any).longitude,
+          }
+        : null,
 
     liveMiles: normalizeNonNegativeNumber(raw.liveMiles),
 
@@ -480,6 +494,10 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
 
             weather: options?.weather ?? null,
 
+            location: initialCoord
+              ? { latitude: initialCoord.lat, longitude: initialCoord.lng }
+              : null,
+
             startCoord: initialCoord,
             lastCoord: initialCoord,
             routeTrail: initialCoord ? [initialCoord] : [],
@@ -540,13 +558,13 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               currentMode,
 
               solarStatus: getSolarStatus(
-  session.dayMs,
-  session.nightMs,
-  session.unverifiedMs
-),
+                session.dayMs,
+                session.nightMs,
+                session.unverifiedMs
+              ),
 
-lastUpdated: now,
-lastTickAt: now,
+              lastUpdated: now,
+              lastTickAt: now,
             },
           }
         })
@@ -611,6 +629,10 @@ lastTickAt: now,
               liveMiles,
               lastCoord: finalCoord ?? flushed.lastCoord,
               routeTrail,
+
+              location: finalCoord
+                ? { latitude: finalCoord.lat, longitude: finalCoord.lng }
+                : flushed.location,
             },
           }
         })
@@ -643,6 +665,7 @@ lastTickAt: now,
           let lastCoord = next.lastCoord
           let routeTrail = next.routeTrail
           let startCoord = next.startCoord
+          let location = next.location
 
           if (incomingCoord) {
             if (lastCoord) {
@@ -665,6 +688,11 @@ lastTickAt: now,
             routeTrail = isDuplicate
               ? routeTrail
               : [...routeTrail, incomingCoord].slice(-MAX_ROUTE_POINTS)
+
+            location = {
+              latitude: incomingCoord.lat,
+              longitude: incomingCoord.lng,
+            }
           }
 
           return {
@@ -674,6 +702,7 @@ lastTickAt: now,
               startCoord,
               lastCoord,
               routeTrail,
+              location,
               lastUpdated: now,
             },
           }

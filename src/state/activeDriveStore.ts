@@ -583,11 +583,16 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               : null
 
           // The newest point is deliberately supplied to the final flush.
-          const flushed = flushSessionToNow(
-            state.session,
-            now,
-            finalCoord
-          )
+          const coordForSolar = finalCoord
+  ? { ...finalCoord, at: now }
+  : state.session.lastCoord
+  ? { ...state.session.lastCoord, at: now }
+  : state.session.startCoord
+  ? { ...state.session.startCoord, at: now }
+  : null
+
+const flushed = flushSessionToNow(state.session, now, coordForSolar)
+
 
           let liveMiles = flushed.liveMiles
           let routeTrail = flushed.routeTrail
@@ -627,7 +632,12 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               lastUpdated: now,
 
               liveMiles,
-              lastCoord: finalCoord ?? flushed.lastCoord,
+              lastCoord: finalCoord
+               ? { ...finalCoord, at: now }
+               : flushed.lastCoord
+               ? { ...flushed.lastCoord, at: now }
+               : null,
+
               routeTrail,
 
               location: finalCoord

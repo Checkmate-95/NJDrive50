@@ -310,5 +310,5 @@ export function classifyDriveType(
   if (hasNight) return "Night Only"
   if (hasDay) return "Day Only"
 
-  return "Night Only" // safe default
+  return "Day Only" // safe default — near-zero-duration drives shouldn't imply night
 }

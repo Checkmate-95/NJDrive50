@@ -8,12 +8,7 @@ import {
   isDriveVerified,
   type DriveEntry,
 } from "../state/driveStore"
-import {
-  computeDayNightSplit,
-  splitDriveBySolar,
-  classifyDriveType,
-  getSolarWindowForDate,
-} from "../engine/solarEngine"
+import { classifyDriveType } from "../engine/solarEngine"
 
 type Coord = {
   lat: number
@@ -35,14 +30,22 @@ function formatHours(hours: number): string {
   return `${hours.toFixed(2)} hrs`
 }
 
-function formatClockTime(isoOrMs: string | number): string {
-  const date =
-    typeof isoOrMs === "number" ? new Date(isoOrMs) : new Date(isoOrMs)
-  if (Number.isNaN(date.getTime())) return "Invalid time"
+function formatClockTime(ms: number | null): string {
+  if (ms === null || !Number.isFinite(ms)) return ""
+  const date = new Date(ms)
+  if (Number.isNaN(date.getTime())) return ""
   return date.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
   })
+}
+
+function formatRange(startMs: number | null, endMs: number | null): string {
+  if (startMs === null || endMs === null) return ""
+  const start = formatClockTime(startMs)
+  const end = formatClockTime(endMs)
+  if (!start || !end) return ""
+  return `${start} – ${end}`
 }
 
 function formatDateTime(iso: string): string {
@@ -69,118 +72,6 @@ function normalizeRoute(value: unknown): Coord[] {
 }
 
 /* -------------------------------------------------------
-   SOLAR HELPERS
-------------------------------------------------------- */
-
-const DEFAULT_COORD: Coord = {
-  lat: 39.9537,
-  lng: -74.1979,
-}
-
-function getSolarCoords(drive: DriveEntry): Coord | null {
-  const lat = drive.startLatitude
-  const lng = drive.startLongitude
-
-  if (
-    typeof lat === "number" &&
-    Number.isFinite(lat) &&
-    lat >= -90 &&
-    lat <= 90 &&
-    typeof lng === "number" &&
-    Number.isFinite(lng) &&
-    lng >= -180 &&
-    lng <= 180
-  ) {
-    return { lat, lng }
-  }
-
-  const route = drive.routeCoords
-  if (
-    route &&
-    route.length > 0 &&
-    Number.isFinite(route[0].lat) &&
-    Number.isFinite(route[0].lng)
-  ) {
-    const rLat = route[0].lat
-    const rLng = route[0].lng
-    if (rLat >= -90 && rLat <= 90 && rLng >= -180 && rLng <= 180) {
-      return { lat: rLat, lng: rLng }
-    }
-  }
-
-  return null
-}
-
-function getSolarSplitForDrive(drive: DriveEntry) {
-  const start = new Date(drive.startTime)
-  const end = new Date(drive.endTime)
-
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return {
-      dayHours: 0,
-      nightHours: 0,
-      mode: "unverified" as const,
-      dayRange: "",
-      nightRange: "",
-    }
-  }
-
-  const coord = getSolarCoords(drive) ?? DEFAULT_COORD
-
-  const solarWindow = getSolarWindowForDate(coord.lat, coord.lng, start)
-  const split = computeDayNightSplit(start, end, solarWindow)
-
-  if (split.mode === "unverified") {
-    const totalDurationHours = drive.totalDurationHours ?? 0
-    const verifiedNight = drive.verifiedNightDurationHours ?? 0
-    const estimatedNight = drive.nightDurationHours ?? 0
-    const nightHours = verifiedNight > 0 ? verifiedNight : estimatedNight
-    const dayHours = Math.max(totalDurationHours - nightHours, 0)
-
-    return {
-      dayHours,
-      nightHours,
-      mode: "unverified" as const,
-      dayRange: "",
-      nightRange: "",
-    }
-  }
-
-  const segments = splitDriveBySolar(start, end, solarWindow)
-
-  const dayHours = split.dayHours
-  const nightHours = split.nightHours
-
-  let dayRange = ""
-  let nightRange = ""
-
-  if (segments.type === "Day Only") {
-    if (segments.dayStartMs !== null && segments.dayEndMs !== null) {
-      dayRange = `${formatClockTime(segments.dayStartMs)} – ${formatClockTime(segments.dayEndMs)}`
-    }
-  } else if (segments.type === "Night Only") {
-    if (segments.nightStartMs !== null && segments.nightEndMs !== null) {
-      nightRange = `${formatClockTime(segments.nightStartMs)} – ${formatClockTime(segments.nightEndMs)}`
-    }
-  } else if (segments.type === "Mixed Drive") {
-    if (segments.dayStartMs !== null && segments.dayEndMs !== null) {
-      dayRange = `${formatClockTime(segments.dayStartMs)} – ${formatClockTime(segments.dayEndMs)}`
-    }
-    if (segments.nightStartMs !== null && segments.nightEndMs !== null) {
-      nightRange = `${formatClockTime(segments.nightStartMs)} – ${formatClockTime(segments.nightEndMs)}`
-    }
-  }
-
-  return {
-    dayHours,
-    nightHours,
-    mode: split.mode,
-    dayRange,
-    nightRange,
-  }
-}
-
-/* -------------------------------------------------------
    BADGES
 ------------------------------------------------------- */
 
@@ -193,6 +84,12 @@ const VerifiedBadge = () => (
 const EstimatedBadge = () => (
   <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
     Estimated
+  </span>
+)
+
+const LocationEstimatedBadge = () => (
+  <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-orange-700">
+    Location Estimated
   </span>
 )
 
@@ -218,13 +115,37 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
   const isPreview =
     (drive as DriveEntry & { isPreview?: boolean }).isPreview
 
-  const solarSplit = getSolarSplitForDrive(drive)
-  const dayHours = solarSplit.dayHours
-  const nightHours = solarSplit.nightHours
-  const { dayRange, nightRange } = solarSplit
+  /*
+   * FIX: dayHours/nightHours now come directly from the frozen values
+   * computed ONCE at save time in ActiveDriveContent.tsx. This screen no
+   * longer calls getSolarWindowForDate/computeDayNightSplit/
+   * splitDriveBySolar live — those calls previously caused this screen to
+   * disagree with DriveHistoryContent.tsx whenever the solar engine was
+   * updated, since History only ever reads stored values.
+   */
+  const dayHours = drive.dayDurationHours ?? 0
+  const nightHours = drive.nightDurationHours ?? 0
+
+  /*
+   * FIX: Ranges are now read from the stored fields written at save time.
+   * If a drive was saved before this schema existed, these will be null
+   * and the range simply won't render — no live recalculation fallback.
+   */
+  const dayRange = formatRange(
+    drive.dayRangeStartMs ?? null,
+    drive.dayRangeEndMs ?? null
+  )
+  const nightRange = formatRange(
+    drive.nightRangeStartMs ?? null,
+    drive.nightRangeEndMs ?? null
+  )
 
   const isVerified = isDriveVerified(drive)
 
+  /*
+   * classifyDriveType is a pure label function based on hour totals —
+   * it does not recalculate solar positions, so it's safe to keep here.
+   */
   const lightingLabel = classifyDriveType(dayHours, nightHours)
 
   const mapTimeOfDay =
@@ -238,6 +159,13 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
 
   const showDaySection = dayHours > EPSILON
   const showNightSection = nightHours > EPSILON
+
+  /*
+   * FIX: DEFAULT_COORD and getSolarCoords() have been removed entirely
+   * from this screen. Location fallback logic only ever happens once, at
+   * save time in ActiveDriveContent.tsx, which also sets locationEstimated.
+   */
+  const locationEstimated = drive.locationEstimated === true
 
   const safeRoute = normalizeRoute(
     (drive as DriveEntry & { routeCoords?: unknown }).routeCoords
@@ -284,6 +212,15 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
             {isVerified ? <VerifiedBadge /> : <EstimatedBadge />}
           </div>
         </div>
+
+        {locationEstimated && (
+          <div className="mb-4 flex items-center gap-2">
+            <LocationEstimatedBadge />
+            <p className="text-xs text-[#0A1E5E]/55">
+              No GPS location was captured — solar times may be approximate.
+            </p>
+          </div>
+        )}
 
         <p className="mb-5 text-sm text-[#1b2755]">
           {isPreview

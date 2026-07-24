@@ -8,7 +8,7 @@ import {
   type SetStateAction,
 } from "react"
 import type { Screen } from "../App"
-import { useDriveHistory } from "../state/driveStore"
+import { useDriveHistory, isDriveVerified } from "../state/driveStore"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { navigate } from "../navigation/navMap"
@@ -161,6 +161,16 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       const estimatedNight = safeNumber(d.nightDurationHours)
       const nightHours = verifiedNight > 0 ? verifiedNight : estimatedNight
 
+      /*
+       * FIX: Use the same isDriveVerified() logic that drives the
+       * Verified/Estimated badge everywhere else in the app (TodaysDrive,
+       * DriveHistoryContent). Previously this checked only
+       * verifiedNightDurationHours > 0, which incorrectly labeled fully
+       * verified all-daylight drives (isVerifiedDay === true, zero night
+       * hours) as "Estimated" in the exported PDF/CSV.
+       */
+      const verified = isDriveVerified(d)
+
       return {
         id: d.id,
         start: formatDateTime(d.startTime),
@@ -170,7 +180,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
         nightHours,
         miles: safeNumber(d.miles),
         lighting: getLightingLabel(dayHours, nightHours),
-        nightSource: verifiedNight > 0 ? "Verified" : "Estimated",
+        nightSource: verified ? "Verified" : "Estimated",
       }
     })
   }, [drives])

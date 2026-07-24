@@ -129,6 +129,17 @@ export type DriveEntry = {
   nightCalcMode?: NightCalcMode
   isVerifiedDay?: boolean
 
+  // Frozen at save time by ActiveDriveContent.tsx. These ranges are computed
+  // ONCE using splitDriveBySolar and must never be recalculated on display.
+  dayRangeStartMs?: number | null
+  dayRangeEndMs?: number | null
+  nightRangeStartMs?: number | null
+  nightRangeEndMs?: number | null
+
+  // True when no valid GPS coordinate was ever captured during the drive,
+  // meaning solar classification (if any) used a fallback location.
+  locationEstimated?: boolean
+
   source?: DriveSource
 
   miles: number
@@ -273,6 +284,10 @@ function normalizeRouteCoords(value: unknown): RouteCoord[] | undefined {
   return coords.length > 0 ? coords : undefined
 }
 
+function normalizeOptionalMs(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
 function normalizeDriveEntry(value: unknown): DriveEntry | null {
   if (!value || typeof value !== "object") return null
 
@@ -372,6 +387,20 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
       ? raw.startLongitude
       : null
 
+  // NEW: solar ranges, frozen at save time. Missing/invalid values fall
+  // back to null rather than throwing away the whole entry, since older
+  // saved drives will not have these fields at all.
+  const dayRangeStartMs = normalizeOptionalMs(raw.dayRangeStartMs)
+  const dayRangeEndMs = normalizeOptionalMs(raw.dayRangeEndMs)
+  const nightRangeStartMs = normalizeOptionalMs(raw.nightRangeStartMs)
+  const nightRangeEndMs = normalizeOptionalMs(raw.nightRangeEndMs)
+
+  // NEW: defaults to false for older entries saved before this field existed.
+  const locationEstimated =
+    typeof raw.locationEstimated === "boolean"
+      ? raw.locationEstimated
+      : false
+
   return {
     id: raw.id,
     startTime: raw.startTime,
@@ -385,6 +414,12 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
     verifiedNightDurationHours,
     nightCalcMode,
     isVerifiedDay,
+
+    dayRangeStartMs,
+    dayRangeEndMs,
+    nightRangeStartMs,
+    nightRangeEndMs,
+    locationEstimated,
 
     source,
 
@@ -421,6 +456,12 @@ function toPersistedDriveEntry(entry: DriveEntry): PersistedDriveEntry {
     nightCalcMode: entry.nightCalcMode,
     isVerifiedDay: entry.isVerifiedDay,
 
+    dayRangeStartMs: entry.dayRangeStartMs,
+    dayRangeEndMs: entry.dayRangeEndMs,
+    nightRangeStartMs: entry.nightRangeStartMs,
+    nightRangeEndMs: entry.nightRangeEndMs,
+    locationEstimated: entry.locationEstimated,
+
     source: entry.source,
 
     miles: entry.miles,
@@ -436,6 +477,7 @@ function toPersistedDriveEntry(entry: DriveEntry): PersistedDriveEntry {
     hasRouteCoords: !!entry.routeCoords?.length,
   }
 }
+
 async function hydrateBlobFields(
   entries: PersistedDriveEntry[]
 ): Promise<DriveEntry[]> {

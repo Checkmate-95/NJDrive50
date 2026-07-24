@@ -18,11 +18,24 @@ const formatHours = (hours: number) => {
   return `${safeNumber(hours).toFixed(2)} hrs`
 }
 
-const formatClockTime = (date: Date) => {
+const formatClockTime = (ms: number | null | undefined): string => {
+  if (ms === null || ms === undefined || !Number.isFinite(ms)) return ""
+  const date = new Date(ms)
+  if (Number.isNaN(date.getTime())) return ""
   return date.toLocaleTimeString([], {
     hour: "numeric",
     minute: "2-digit",
   })
+}
+
+const formatRange = (
+  startMs: number | null | undefined,
+  endMs: number | null | undefined
+): string => {
+  const start = formatClockTime(startMs)
+  const end = formatClockTime(endMs)
+  if (!start || !end) return ""
+  return `${start} – ${end}`
 }
 
 const getLightingLabel = (
@@ -34,6 +47,13 @@ const getLightingLabel = (
   return "Day Drive"
 }
 
+/*
+ * FIX: dayHours/nightHours now read the exact fields stored at save time
+ * in ActiveDriveContent.tsx (drive.dayDurationHours / drive.nightDurationHours)
+ * instead of deriving dayHours via subtraction. This guarantees History
+ * always agrees with TodaysDrive.tsx and ExportLog.tsx, since all three
+ * now read the identical frozen fields.
+ */
 const getNightData = (d: DriveEntry) => {
   const verifiedNight = safeNumber(d.verifiedNightDurationHours)
   const estimatedNight = safeNumber(d.nightDurationHours)
@@ -48,37 +68,25 @@ const getNightData = (d: DriveEntry) => {
   }
 }
 
+/*
+ * FIX: Ranges are now read from the stored dayRangeStartMs/dayRangeEndMs/
+ * nightRangeStartMs/nightRangeEndMs fields, computed ONCE at save time by
+ * ActiveDriveContent.tsx using splitDriveBySolar. This removes the
+ * previous bug where the day segment was always assumed to come before
+ * the night segment — which was wrong for drives that started at night
+ * and ended after sunrise.
+ *
+ * For older drives saved before this schema existed (all four range
+ * fields are null/undefined), no range text is shown at all. This is
+ * intentionally honest rather than guessing an order.
+ */
 const getDisplaySegments = (d: DriveEntry) => {
-  const start = new Date(d.startTime)
-  const end = new Date(d.endTime)
-
-  const startMs = start.getTime()
-  const endMs = end.getTime()
-  const totalMs = Math.max(endMs - startMs, 0)
-
-  const totalHours = safeNumber(d.totalDurationHours)
+  const dayHours = safeNumber(d.dayDurationHours)
   const { effectiveNight, isVerified } = getNightData(d)
-  const dayHours = Math.max(totalHours - effectiveNight, 0)
   const nightHours = effectiveNight
 
-  let dayRange = ""
-  let nightRange = ""
-
-  if (totalMs <= 0) {
-    return { dayHours, nightHours, dayRange, nightRange, isVerified }
-  }
-
-  if (nightHours <= 0) {
-    dayRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
-  } else if (dayHours <= 0) {
-    nightRange = `${formatClockTime(start)} – ${formatClockTime(end)}`
-  } else {
-    const dayMs = dayHours * 60 * 60 * 1000
-    const split = new Date(startMs + dayMs)
-
-    dayRange = `${formatClockTime(start)} – ${formatClockTime(split)}`
-    nightRange = `${formatClockTime(split)} – ${formatClockTime(end)}`
-  }
+  const dayRange = formatRange(d.dayRangeStartMs, d.dayRangeEndMs)
+  const nightRange = formatRange(d.nightRangeStartMs, d.nightRangeEndMs)
 
   return { dayHours, nightHours, dayRange, nightRange, isVerified }
 }
@@ -93,6 +101,12 @@ const VerifiedBadge = () => (
 const EstimatedBadge = () => (
   <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-700">
     Estimated
+  </span>
+)
+
+const LocationEstimatedBadge = () => (
+  <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-700">
+    Location Estimated
   </span>
 )
 
@@ -233,6 +247,7 @@ export default function DriveHistoryContent() {
             } = getDisplaySegments(drive)
 
             const lighting = getLightingLabel(dayHours, nightHours)
+            const locationEstimated = drive.locationEstimated === true
 
             return (
               <div
@@ -262,6 +277,8 @@ export default function DriveHistoryContent() {
                       </span>
 
                       {isVerified ? <VerifiedBadge /> : <EstimatedBadge />}
+
+                      {locationEstimated && <LocationEstimatedBadge />}
                     </div>
 
                     <p className="mt-2 break-words text-sm text-[#08194A]/68">

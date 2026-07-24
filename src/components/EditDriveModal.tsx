@@ -217,9 +217,10 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#08194A]/40 px-4 py-4 backdrop-blur-[2px] sm:items-center"
-      onClick={onClose}
-    >
+  className="fixed inset-0 z-50 flex items-center justify-center bg-[#08194A]/40 px-4 py-4 backdrop-blur-[2px]"
+  onClick={onClose}
+>
+
       <div
         ref={dialogRef}
         role="dialog"
@@ -227,7 +228,8 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
         aria-labelledby={titleId}
         aria-describedby={`${descriptionId}${errors.form ? ` ${formErrorId}` : ""}`}
         tabIndex={-1}
-        className="w-full max-w-lg rounded-3xl border border-[#08194A]/10 bg-white p-5 text-[#08194A] shadow-[0_12px_30px_rgba(0,0,0,0.06)] outline-none sm:p-6"
+        className="w-full max-w-lg rounded-3xl border border-[#08194A]/10 bg-white p-5 text-[#08194A] shadow-[0_12px_30px_rgba(0,0,0,0.06)] outline-none sm:p-6 max-h-[85vh] overflow-y-auto"
+
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -371,7 +373,6 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
   </p>
 </div>
 
-{/* ⭐ MOBILE-FRIENDLY WARNING ⭐ */}
 <div className="mt-4 rounded-xl bg-[#FFF7DB] border border-[#f9c80e]/40 p-3 text-sm text-[#8A6500]">
   <strong>Note:</strong> Editing the start or end time updates the drive details only.
 

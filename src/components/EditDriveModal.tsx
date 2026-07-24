@@ -371,10 +371,19 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
   </p>
 </div>
 
-{/* ⭐ WARNING INSERTED HERE ⭐ */}
+{/* ⭐ MOBILE-FRIENDLY WARNING ⭐ */}
 <div className="mt-4 rounded-xl bg-[#FFF7DB] border border-[#f9c80e]/40 p-3 text-sm text-[#8A6500]">
   <strong>Note:</strong> Editing the start or end time updates the drive details only.
-  The original day/night classification and solar data are preserved and are not recalculated.
+
+  <details className="mt-2">
+    <summary className="cursor-pointer text-[#8A6500]/80 underline">
+      More info
+    </summary>
+    <p className="mt-2 text-[#8A6500]">
+      The original day/night classification and solar data are preserved and are not recalculated.
+      This ensures the solar engine snapshot remains accurate to the original drive conditions.
+    </p>
+  </details>
 </div>
 
 <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
@@ -398,4 +407,5 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
 </div>
 )
 }
+
 

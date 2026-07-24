@@ -361,34 +361,41 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
         </div>
 
         <div className="mt-5 rounded-2xl border border-[#08194A]/8 bg-[#F7F9FC] px-4 py-3">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
-            Calculated Duration
-          </p>
-          <p className="mt-1 text-sm font-semibold text-[#08194A]">
-            {computedDuration !== null
-              ? `${computedDuration.toFixed(2)} hrs`
-              : "Invalid time range"}
-          </p>
-        </div>
+  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
+    Calculated Duration
+  </p>
+  <p className="mt-1 text-sm font-semibold text-[#08194A]">
+    {computedDuration !== null
+      ? `${computedDuration.toFixed(2)} hrs`
+      : "Invalid time range"}
+  </p>
+</div>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-[48px] rounded-xl border border-[#08194A]/10 bg-white px-5 py-3 text-sm font-semibold text-[#08194A]/75 transition hover:bg-[#F7F9FC] hover:text-[#08194A]"
-          >
-            Cancel
-          </button>
+{/* ⭐ WARNING INSERTED HERE ⭐ */}
+<div className="mt-4 rounded-xl bg-[#FFF7DB] border border-[#f9c80e]/40 p-3 text-sm text-[#8A6500]">
+  <strong>Note:</strong> Editing the start or end time updates the drive details only.
+  The original day/night classification and solar data are preserved and are not recalculated.
+</div>
 
-          <button
-            type="button"
-            onClick={handleSave}
-            className="min-h-[48px] rounded-xl bg-[#08194A] px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
-          >
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </div>
-  )
+<div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+  <button
+    type="button"
+    onClick={onClose}
+    className="min-h-[48px] rounded-xl border border-[#08194A]/10 bg-white px-5 py-3 text-sm font-semibold text-[#08194A]/75 transition hover:bg-[#F7F9FC] hover:text-[#08194A]"
+  >
+    Cancel
+  </button>
+
+  <button
+    type="button"
+    onClick={handleSave}
+    className="min-h-[48px] rounded-xl bg-[#08194A] px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
+  >
+    Save Changes
+  </button>
+</div>
+</div>
+</div>
+)
 }
+

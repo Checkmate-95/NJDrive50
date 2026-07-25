@@ -167,7 +167,7 @@ export function getCurrentSolarMode(
 export function computeDayNightSplit(
   startTime: Date,
   endTime: Date,
-  solarWindow: SolarWindow
+  solarWindowForDate: (d: Date) => SolarWindow
 ): DayNightSplit {
   if (!isValidDate(startTime) || !isValidDate(endTime)) {
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
@@ -175,43 +175,69 @@ export function computeDayNightSplit(
 
   const startMs = startTime.getTime()
   const endMs = endTime.getTime()
-
   if (endMs <= startMs) {
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
-  const { sunrise, sunset } = solarWindow
-  if (!isValidDate(sunrise) || !isValidDate(sunset)) {
-    return { dayHours: 0, nightHours: 0, mode: "unverified" }
+  let cursor = new Date(startTime)
+  let dayMs = 0
+  let nightMs = 0
+  let anyUnverified = false
+
+  while (cursor.getTime() < endMs) {
+    const segmentDate = new Date(cursor)
+    segmentDate.setHours(12, 0, 0, 0) // anchor to local noon
+
+    const solarWindow = solarWindowForDate(segmentDate)
+    const { sunrise, sunset } = solarWindow
+
+    const nextMidnight = new Date(segmentDate)
+    nextMidnight.setHours(24, 0, 0, 0)
+    const segmentEnd = Math.min(nextMidnight.getTime(), endMs)
+
+    const segStart = cursor.getTime()
+    const segEnd = segmentEnd
+
+    if (!isValidDate(sunrise) || !isValidDate(sunset) || sunset.getTime() <= sunrise.getTime()) {
+      // No reliable solar data: treat entire segment as night, but mark unverified
+      nightMs += segEnd - segStart
+      anyUnverified = true
+      cursor = new Date(segmentEnd)
+      continue
+    }
+
+    const sunriseMs = sunrise.getTime()
+    const sunsetMs = sunset.getTime()
+    const civilNightEndMs = getCivilNightEndMs(sunriseMs)
+    const civilNightStartMs = getCivilNightStartMs(sunsetMs)
+
+    const dayOverlap = getOverlapMs(segStart, segEnd, civilNightEndMs, civilNightStartMs)
+    const nightOverlap = (segEnd - segStart) - dayOverlap
+
+    dayMs += dayOverlap
+    nightMs += nightOverlap
+
+    cursor = new Date(segmentEnd)
   }
-
-  const sunriseMs = sunrise.getTime()
-  const sunsetMs = sunset.getTime()
-  if (sunsetMs <= sunriseMs) {
-    return { dayHours: 0, nightHours: 0, mode: "unverified" }
-  }
-
-  const civilNightEndMs = getCivilNightEndMs(sunriseMs)
-  const civilNightStartMs = getCivilNightStartMs(sunsetMs)
-  const totalMs = endMs - startMs
-
-  const dayMs = getOverlapMs(startMs, endMs, civilNightEndMs, civilNightStartMs)
-  const nightMs = totalMs - dayMs
 
   return {
     dayHours: dayMs / 3_600_000,
     nightHours: nightMs / 3_600_000,
-    mode: "solar",
+    mode: anyUnverified ? "unverified" : "solar",
   }
 }
 
+
+
 /**
  * Segment-level split for UI: returns actual timestamps for night/day portions.
+ * Walks day-by-day so multi-day drives get correct sunrise/sunset per date,
+ * instead of relying on one static solar window for the whole drive.
  */
 export function splitDriveBySolar(
   startTime: Date,
   endTime: Date,
-  solarWindow: SolarWindow
+  solarWindowForDate: (d: Date) => SolarWindow
 ): DriveSegments {
   const invalid: DriveSegments = {
     type: "Unknown",
@@ -227,71 +253,95 @@ export function splitDriveBySolar(
   const endMs = endTime.getTime()
   if (endMs <= startMs) return invalid
 
-  const { sunrise, sunset } = solarWindow
-  if (!isValidDate(sunrise) || !isValidDate(sunset)) return invalid
+  let cursor = new Date(startTime)
+  let nightStartMs: number | null = null
+  let nightEndMs: number | null = null
+  let dayStartMs: number | null = null
+  let dayEndMs: number | null = null
+  let hasDay = false
+  let hasNight = false
 
-  const sunriseMs = sunrise.getTime()
-  const sunsetMs = sunset.getTime()
-  if (sunsetMs <= sunriseMs) return invalid
+  while (cursor.getTime() < endMs) {
+    const segmentDate = new Date(cursor)
+    segmentDate.setHours(12, 0, 0, 0)
 
-  const civilNightEndMs = getCivilNightEndMs(sunriseMs)
-  const civilNightStartMs = getCivilNightStartMs(sunsetMs)
+    const solarWindow = solarWindowForDate(segmentDate)
+    const { sunrise, sunset } = solarWindow
 
-  // Night Only
-  if (endMs <= civilNightEndMs || startMs >= civilNightStartMs) {
+    const nextMidnight = new Date(segmentDate)
+    nextMidnight.setHours(24, 0, 0, 0)
+    const segmentEnd = Math.min(nextMidnight.getTime(), endMs)
+
+    const segStart = cursor.getTime()
+    const segEnd = segmentEnd
+
+    if (!isValidDate(sunrise) || !isValidDate(sunset) || sunset.getTime() <= sunrise.getTime()) {
+      hasNight = true
+      nightStartMs = nightStartMs === null ? segStart : nightStartMs
+      nightEndMs = segEnd
+      cursor = new Date(segmentEnd)
+      continue
+    }
+
+    const civilNightEndMs = getCivilNightEndMs(sunrise.getTime())
+    const civilNightStartMs = getCivilNightStartMs(sunset.getTime())
+
+    if (segStart < civilNightEndMs) {
+      const pieceEnd = Math.min(segEnd, civilNightEndMs)
+      hasNight = true
+      nightStartMs = nightStartMs === null ? segStart : nightStartMs
+      nightEndMs = pieceEnd
+    }
+
+    const dayPieceStart = Math.max(segStart, civilNightEndMs)
+    const dayPieceEnd = Math.min(segEnd, civilNightStartMs)
+    if (dayPieceEnd > dayPieceStart) {
+      hasDay = true
+      dayStartMs = dayStartMs === null ? dayPieceStart : dayStartMs
+      dayEndMs = dayPieceEnd
+    }
+
+    if (segEnd > civilNightStartMs) {
+      const pieceStart = Math.max(segStart, civilNightStartMs)
+      hasNight = true
+      nightStartMs = nightStartMs === null ? pieceStart : nightStartMs
+      nightEndMs = segEnd
+    }
+
+    cursor = new Date(segmentEnd)
+  }
+
+  if (hasNight && hasDay) {
+    return {
+      type: "Mixed Drive",
+      nightStartMs,
+      nightEndMs,
+      dayStartMs,
+      dayEndMs,
+    }
+  }
+
+  if (hasNight) {
     return {
       type: "Night Only",
-      nightStartMs: startMs,
-      nightEndMs: endMs,
+      nightStartMs,
+      nightEndMs,
       dayStartMs: null,
       dayEndMs: null,
     }
   }
 
-  // Day Only
-  if (startMs >= civilNightEndMs && endMs <= civilNightStartMs) {
+  if (hasDay) {
     return {
       type: "Day Only",
       nightStartMs: null,
       nightEndMs: null,
-      dayStartMs: startMs,
-      dayEndMs: endMs,
+      dayStartMs,
+      dayEndMs,
     }
   }
 
-  const crossesDawn = startMs < civilNightEndMs && endMs > civilNightEndMs
-  const crossesDusk = startMs < civilNightStartMs && endMs > civilNightStartMs
-
-  // Mixed: night → day
-  if (crossesDawn) {
-    return {
-      type: "Mixed Drive",
-      nightStartMs: startMs,
-      nightEndMs: civilNightEndMs,
-      dayStartMs: civilNightEndMs,
-      dayEndMs: endMs,
-    }
-  }
-
-  // Mixed: day → night
-  if (crossesDusk) {
-    return {
-      type: "Mixed Drive",
-      nightStartMs: civilNightStartMs,
-      nightEndMs: endMs,
-      dayStartMs: startMs,
-      dayEndMs: civilNightStartMs,
-    }
-  }
-
-  // Fallback
-  return {
-    type: "Day Only",
-    nightStartMs: null,
-    nightEndMs: null,
-    dayStartMs: startMs,
-    dayEndMs: endMs,
-  }
+  return invalid
 }
 
 /**

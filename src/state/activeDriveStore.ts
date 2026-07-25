@@ -327,17 +327,14 @@ function splitIntervalBySolar(
     const segmentStart = new Date(cursor)
     const segmentEnd = new Date(segmentEndMs)
 
-    const solarWindow = getSolarWindowForDate(
-      coord.lat,
-      coord.lng,
-      segmentStart
-    )
+    
 
     const split = computeDayNightSplit(
-      segmentStart,
-      segmentEnd,
-      solarWindow
-    )
+  segmentStart,
+  segmentEnd,
+  (d: Date) => getSolarWindowForDate(coord.lat, coord.lng, d)
+)
+
 
     if (split.mode === "solar") {
       dayMs += split.dayHours * 3_600_000

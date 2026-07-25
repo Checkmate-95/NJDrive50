@@ -1,36 +1,11 @@
 // src/state/driveStore.ts
 
 import { useSyncExternalStore } from "react"
-import {
-  getSolarWindowForDate,
-  isNightDrive,
-} from "../engine/solarEngine"
 
-import type { SolarWindow } from "../engine/solarEngine"
-
-export type SolarState = {
-  solarWindow: SolarWindow | null
-  isNightEligible: boolean | null
-}
-
-export type DriveState = {
-  latitude: number | null
-  longitude: number | null
-  currentDriveStart: Date | null
-  solar: SolarState
-}
-
-let driveState: DriveState = {
-  latitude: null,
-  longitude: null,
-  currentDriveStart: null,
-  solar: {
-    solarWindow: null,
-    isNightEligible: null,
-  },
-}
-
-const DRIVE_STATE_EVENT = "njdrive50-drive-state-change"
+const DRIVE_HISTORY_STORAGE_KEY = "njdrive50_history"
+const DRIVE_HISTORY_EVENT = "njdrive50-history-change"
+const DRIVE_BLOB_DB = "njdrive50-drive-blobs"
+const DRIVE_BLOB_STORE = "payloads"
 
 function isBrowser(): boolean {
   return (
@@ -39,61 +14,6 @@ function isBrowser(): boolean {
     typeof indexedDB !== "undefined"
   )
 }
-
-export function getDriveState(): DriveState {
-  return driveState
-}
-
-export function updateSolarForDrive(
-  latitude: number,
-  longitude: number,
-  startTime: Date
-): void {
-  const solarWindow = getSolarWindowForDate(latitude, longitude, startTime)
-  const isNightEligible = isNightDrive(startTime, solarWindow)
-
-  driveState = {
-    ...driveState,
-    latitude,
-    longitude,
-    currentDriveStart: startTime,
-    solar: {
-      solarWindow,
-      isNightEligible,
-    },
-  }
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(DRIVE_STATE_EVENT))
-  }
-}
-
-function subscribeDriveState(listener: () => void): () => void {
-  if (typeof window === "undefined") {
-    return () => {}
-  }
-
-  const onChange = () => listener()
-
-  window.addEventListener(DRIVE_STATE_EVENT, onChange)
-
-  return () => {
-    window.removeEventListener(DRIVE_STATE_EVENT, onChange)
-  }
-}
-
-export function useDriveState(): DriveState {
-  return useSyncExternalStore(
-    subscribeDriveState,
-    getDriveState,
-    getDriveState
-  )
-}
-
-const DRIVE_HISTORY_STORAGE_KEY = "njdrive50_history"
-const DRIVE_HISTORY_EVENT = "njdrive50-history-change"
-const DRIVE_BLOB_DB = "njdrive50-drive-blobs"
-const DRIVE_BLOB_STORE = "payloads"
 
 export type RouteCoord = {
   lat: number
@@ -121,23 +41,17 @@ export type DriveEntry = {
   dayDurationHours: number
   nightDurationHours: number
 
-  // Time that was actively tracked but could not be verified from a valid
-  // location and solar calculation. It never receives day/night credit.
   unverifiedDurationHours?: number
 
   verifiedNightDurationHours?: number
   nightCalcMode?: NightCalcMode
   isVerifiedDay?: boolean
 
-  // Frozen at save time by ActiveDriveContent.tsx. These ranges are computed
-  // ONCE using splitDriveBySolar and must never be recalculated on display.
   dayRangeStartMs?: number | null
   dayRangeEndMs?: number | null
   nightRangeStartMs?: number | null
   nightRangeEndMs?: number | null
 
-  // True when no valid GPS coordinate was ever captured during the drive,
-  // meaning solar classification (if any) used a fallback location.
   locationEstimated?: boolean
 
   source?: DriveSource
@@ -173,11 +87,6 @@ function safeNumber(value: unknown): number {
   return Number.isFinite(numberValue) ? numberValue : 0
 }
 
-/**
- * A drive is verified only when its solar classification supports verified
- * darkness, or when solar classification verified that all credited time was
- * daylight. Unverified time must never qualify a drive as verified.
- */
 export function isDriveVerified(drive: DriveEntry): boolean {
   return (
     (drive.nightCalcMode === "solar" &&
@@ -200,7 +109,6 @@ function openDriveBlobDb(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = () => {
       const db = request.result
-
       if (!db.objectStoreNames.contains(DRIVE_BLOB_STORE)) {
         db.createObjectStore(DRIVE_BLOB_STORE)
       }
@@ -219,9 +127,7 @@ async function saveDriveBlobPayload(
 
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(DRIVE_BLOB_STORE, "readwrite")
-
     tx.objectStore(DRIVE_BLOB_STORE).put(payload, id)
-
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })
@@ -237,10 +143,7 @@ async function loadDriveBlobPayload(
       const tx = db.transaction(DRIVE_BLOB_STORE, "readonly")
       const request = tx.objectStore(DRIVE_BLOB_STORE).get(id)
 
-      request.onsuccess = () => {
-        resolve(request.result as DriveBlobPayload | undefined)
-      }
-
+      request.onsuccess = () => resolve(request.result as DriveBlobPayload)
       request.onerror = () => reject(request.error)
     }
   )
@@ -251,9 +154,7 @@ async function deleteDriveBlobPayload(id: string): Promise<void> {
 
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(DRIVE_BLOB_STORE, "readwrite")
-
     tx.objectStore(DRIVE_BLOB_STORE).delete(id)
-
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })
@@ -276,10 +177,7 @@ function normalizeRouteCoords(value: unknown): RouteCoord[] | undefined {
         (item as RouteCoord).lng >= -180 &&
         (item as RouteCoord).lng <= 180
     )
-    .map((coord) => ({
-      lat: coord.lat,
-      lng: coord.lng,
-    }))
+    .map((coord) => ({ lat: coord.lat, lng: coord.lng }))
 
   return coords.length > 0 ? coords : undefined
 }
@@ -325,31 +223,23 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
       ? Math.max(0, raw.unverifiedDurationHours)
       : 0
 
-  /*
-   * Never allow the classified buckets to exceed total elapsed duration.
-   * Old records without unverifiedDurationHours remain valid with a zero
-   * unverified bucket.
-   */
   const bucketSum =
-    dayDurationHours +
-    nightDurationHours +
-    unverifiedDurationHours
+    dayDurationHours + nightDurationHours + unverifiedDurationHours
 
   if (bucketSum > totalDurationHours && bucketSum > 0) {
     const scale = totalDurationHours / bucketSum
-
     dayDurationHours *= scale
     nightDurationHours *= scale
     unverifiedDurationHours *= scale
   }
 
-  const milesSource: MilesSource | undefined =
+  const milesSource =
     raw.milesSource === "routes-api" ||
     raw.milesSource === "gps-accumulated"
       ? raw.milesSource
       : undefined
 
-  const nightCalcMode: NightCalcMode | undefined =
+  const nightCalcMode =
     raw.nightCalcMode === "estimated" ||
     raw.nightCalcMode === "solar" ||
     raw.nightCalcMode === "unverified" ||
@@ -359,7 +249,7 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
       ? raw.nightCalcMode
       : undefined
 
-  const source: DriveSource | undefined =
+  const source =
     raw.source === "timer" || raw.source === "manual"
       ? raw.source
       : undefined
@@ -387,15 +277,11 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
       ? raw.startLongitude
       : null
 
-  // NEW: solar ranges, frozen at save time. Missing/invalid values fall
-  // back to null rather than throwing away the whole entry, since older
-  // saved drives will not have these fields at all.
   const dayRangeStartMs = normalizeOptionalMs(raw.dayRangeStartMs)
   const dayRangeEndMs = normalizeOptionalMs(raw.dayRangeEndMs)
   const nightRangeStartMs = normalizeOptionalMs(raw.nightRangeStartMs)
   const nightRangeEndMs = normalizeOptionalMs(raw.nightRangeEndMs)
 
-  // NEW: defaults to false for older entries saved before this field existed.
   const locationEstimated =
     typeof raw.locationEstimated === "boolean"
       ? raw.locationEstimated
@@ -433,9 +319,7 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
     notes: typeof raw.notes === "string" ? raw.notes : undefined,
 
     teenPhoto:
-      typeof raw.teenPhoto === "string"
-        ? raw.teenPhoto
-        : undefined,
+      typeof raw.teenPhoto === "string" ? raw.teenPhoto : undefined,
 
     routeCoords: normalizeRouteCoords(raw.routeCoords),
   }
@@ -537,21 +421,19 @@ async function loadHistoryFromStorage(): Promise<void> {
   }
 }
 
-async function saveHistoryToStorage(): Promise<void> {
+async function saveHistoryToStorage(changedEntry?: DriveEntry): Promise<void> {
   if (!isBrowser()) {
     cachedSnapshot = [...driveHistory]
     return
   }
 
   try {
-    await Promise.all(
-      driveHistory.map(async (entry) => {
-        await saveDriveBlobPayload(entry.id, {
-          teenPhoto: entry.teenPhoto,
-          routeCoords: entry.routeCoords,
-        })
+    if (changedEntry) {
+      await saveDriveBlobPayload(changedEntry.id, {
+        teenPhoto: changedEntry.teenPhoto,
+        routeCoords: changedEntry.routeCoords,
       })
-    )
+    }
 
     const persisted = driveHistory.map(toPersistedDriveEntry)
 
@@ -574,11 +456,9 @@ if (isBrowser()) {
 
 export function addDriveToHistory(entry: DriveEntry): void {
   const normalized = normalizeDriveEntry(entry)
-
   if (!normalized) return
 
   const existingIds = new Set(driveHistory.map((drive) => drive.id))
-
   if (existingIds.has(normalized.id)) return
 
   driveHistory = [...driveHistory, normalized]
@@ -588,7 +468,7 @@ export function addDriveToHistory(entry: DriveEntry): void {
     window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
   }
 
-  void saveHistoryToStorage()
+  void saveHistoryToStorage(normalized)
 }
 
 export const saveDrive = addDriveToHistory
@@ -599,7 +479,6 @@ export function getDriveHistory(): DriveEntry[] {
 
 export function updateDriveInHistory(updated: DriveEntry): void {
   const normalized = normalizeDriveEntry(updated)
-
   if (!normalized) return
 
   driveHistory = driveHistory.map((entry) =>
@@ -612,7 +491,7 @@ export function updateDriveInHistory(updated: DriveEntry): void {
     window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
   }
 
-  void saveHistoryToStorage()
+  void saveHistoryToStorage(normalized)
 }
 
 export function replaceDriveHistory(next: DriveEntry[]): void {

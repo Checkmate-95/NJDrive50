@@ -511,7 +511,12 @@ function ActiveDriveContent({
        * drive to "unverified."
        */
       const hasSolarData = fresh.dayMs + fresh.nightMs > 0
-      const nightCalcMode: NightCalcMode = hasSolarData ? "solar" : "unverified"
+
+// Correct: only classify as "solar" if solar data exists AND
+// the unverified portion did NOT exceed the grace threshold.
+const nightCalcMode: NightCalcMode =
+  hasSolarData && !hasUnverifiedTime ? "solar" : "unverified"
+
 
       /*
        * FIX: Compute day/night clock-time ranges ONCE, here, at save
@@ -525,78 +530,71 @@ function ActiveDriveContent({
       let nightRangeStartMs: number | null = null
       let nightRangeEndMs: number | null = null
 
-      const rangeCoord = fresh.startCoord ?? currentEndCoord
+     const rangeCoord = fresh.startCoord ?? currentEndCoord
 
-      if (rangeCoord) {
-        const solarWindow = getSolarWindowForDate(
-          rangeCoord.lat,
-          rangeCoord.lng,
-          new Date(savedStartTime)
-        )
-
-        const segments = splitDriveBySolar(
-          new Date(savedStartTime),
-          new Date(snapshotTime),
-          solarWindow
-        )
-
-        dayRangeStartMs = segments.dayStartMs
-        dayRangeEndMs = segments.dayEndMs
-        nightRangeStartMs = segments.nightStartMs
-        nightRangeEndMs = segments.nightEndMs
-      }
-
-      /*
-       * FIX: Flag when no real GPS location was ever captured, so
-       * TodaysDrive.tsx can show a "Location Estimated" badge instead
-       * of silently substituting a default coordinate.
-       */
-      const locationEstimated = !fresh.startCoord
-
-      return {
-        id: makeDriveId(),
-        startTime: new Date(savedStartTime).toISOString(),
-        endTime: new Date(snapshotTime).toISOString(),
-
-        totalDurationHours: totalActiveMs / 3_600_000,
-        dayDurationHours: fresh.dayMs / 3_600_000,
-        nightDurationHours: fresh.nightMs / 3_600_000,
-        unverifiedDurationHours: effectiveUnverifiedMs / 3_600_000,
-
-        /*
-         * nightMs contains only solar-classified darkness. Keep its known,
-         * verified night portion even if a separate portion of the drive had
-         * a meaningful GPS/solar verification gap.
-         */
-        verifiedNightDurationHours: fresh.nightMs / 3_600_000,
-
-        nightCalcMode,
-
-        isVerifiedDay:
-          !hasUnverifiedTime &&
-          fresh.dayMs > 0 &&
-          fresh.nightMs === 0,
-
-        // NEW fields — require schema additions in driveStore.ts
-        dayRangeStartMs,
-        dayRangeEndMs,
-        nightRangeStartMs,
-        nightRangeEndMs,
-        locationEstimated,
-
-        source: "timer",
-        miles: safeNumber(miles),
-        milesSource,
-        weather: fresh.weather,
-        routeCoords,
-        startLatitude: fresh.startCoord?.lat ?? null,
-        startLongitude: fresh.startCoord?.lng ?? null,
-        isPreview: options?.isPreview ?? false,
-      }
-    },
-    [getCurrentLocation]
+if (rangeCoord) {
+  const segments = splitDriveBySolar(
+    new Date(savedStartTime),
+    new Date(snapshotTime),
+    (d: Date) => getSolarWindowForDate(rangeCoord.lat, rangeCoord.lng, d)
   )
 
+  dayRangeStartMs = segments.dayStartMs
+  dayRangeEndMs = segments.dayEndMs
+  nightRangeStartMs = segments.nightStartMs
+  nightRangeEndMs = segments.nightEndMs
+}
+
+/*
+ * FIX: Flag when no real GPS location was ever captured, so
+ * TodaysDrive.tsx can show a "Location Estimated" badge instead
+ * of silently substituting a default coordinate.
+ */
+const locationEstimated = !fresh.startCoord
+
+return {
+  id: makeDriveId(),
+  startTime: new Date(savedStartTime).toISOString(),
+  endTime: new Date(snapshotTime).toISOString(),
+
+  totalDurationHours: totalActiveMs / 3_600_000,
+  dayDurationHours: fresh.dayMs / 3_600_000,
+  nightDurationHours: fresh.nightMs / 3_600_000,
+  unverifiedDurationHours: effectiveUnverifiedMs / 3_600_000,
+
+  /*
+   * nightMs contains only solar-classified darkness. Keep its known,
+   * verified night portion even if a separate portion of the drive had
+   * a meaningful GPS/solar verification gap.
+   */
+  verifiedNightDurationHours: fresh.nightMs / 3_600_000,
+
+  nightCalcMode,
+
+  isVerifiedDay:
+    !hasUnverifiedTime &&
+    fresh.dayMs > 0 &&
+    fresh.nightMs === 0,
+
+  // NEW fields — require schema additions in driveStore.ts
+  dayRangeStartMs,
+  dayRangeEndMs,
+  nightRangeStartMs,
+  nightRangeEndMs,
+  locationEstimated,
+
+  source: "timer",
+  miles: safeNumber(miles),
+  milesSource,
+  weather: fresh.weather,
+  routeCoords,
+  startLatitude: fresh.startCoord?.lat ?? null,
+  startLongitude: fresh.startCoord?.lng ?? null,
+  isPreview: options?.isPreview ?? false,
+}
+},
+[getCurrentLocation]
+)
   const createFrozenSnapshot = useCallback(
     (options?: { isPreview?: boolean }) => {
       snapshotAbortRef.current?.abort()

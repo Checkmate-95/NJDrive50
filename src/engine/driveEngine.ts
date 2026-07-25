@@ -20,6 +20,7 @@ export type DriveEntry = {
   duration: number
   nightDuration: number
   dayDuration: number
+  unverifiedDuration: number
   hasNightPortion: boolean
   isVerifiedDay: boolean
   notes?: string
@@ -32,12 +33,14 @@ export type DriveSummary = {
   totalDuration: number
   nightDuration: number
   dayDuration: number
+  unverifiedDuration: number   // ← REQUIRED
   solarNightDuration: number
   estimatedNightDuration: number
   unverifiedNightDuration: number
   entriesWithEstimatedNight: number
   entriesWithUnverifiedNight: number
 }
+
 
 export type DriveCompliance = DriveSummary & {
   meetsTotal: boolean
@@ -177,18 +180,21 @@ const calculateEstimatedNightDuration = (start: number, end: number) => {
 }
 
 /* -------------------------------------------------------
-   SOLAR NIGHT — MULTI-DAY WALK (Correct)
+   SOLAR BREAKDOWN — MULTI-DAY WALK (Correct)
+   Returns both night hours AND unverified hours so no
+   GPS-dropout time is silently miscounted as day.
 ------------------------------------------------------- */
 
-const calculateSolarNightDuration = (
+const calculateSolarBreakdown = (
   start: number,
   end: number,
   location: DriveLocation
-): number => {
-  if (end <= start) return 0
+): { nightMs: number; unverifiedMs: number } => {
+  if (end <= start) return { nightMs: 0, unverifiedMs: 0 }
 
   let cursor = start
   let totalNightMs = 0
+  let totalUnverifiedMs = 0
 
   while (cursor < end) {
     const nextMidnightMs = getStartOfNextLocalDay(cursor).getTime()
@@ -197,22 +203,27 @@ const calculateSolarNightDuration = (
     const segmentStart = new Date(cursor)
     const segmentEnd = new Date(segmentEndMs)
 
-    const solarWindow = getSolarWindowForDate(
-      location.latitude,
-      location.longitude,
-      segmentStart
+    const split = computeDayNightSplit(
+      segmentStart,
+      segmentEnd,
+      (d: Date) =>
+        getSolarWindowForDate(
+          location.latitude,
+          location.longitude,
+          d
+        )
     )
-
-    const split = computeDayNightSplit(segmentStart, segmentEnd, solarWindow)
 
     if (split.mode === "solar") {
       totalNightMs += split.nightHours * 3_600_000
+    } else {
+      totalUnverifiedMs += segmentEndMs - cursor
     }
 
     cursor = segmentEndMs
   }
 
-  return totalNightMs
+  return { nightMs: totalNightMs, unverifiedMs: totalUnverifiedMs }
 }
 
 /* -------------------------------------------------------
@@ -231,6 +242,7 @@ export const calculateNightBreakdown = (params: {
     return {
       nightDuration: 0,
       dayDuration: 0,
+      unverifiedDuration: 0,
       mode: "estimated" as const,
       isVerifiedDay: false,
     }
@@ -239,12 +251,21 @@ export const calculateNightBreakdown = (params: {
   const validLocation = sanitizeLocation(location)
 
   if (validLocation) {
-    const nightDuration = calculateSolarNightDuration(start, end, validLocation)
-    const isVerifiedDay = nightDuration === 0
+    const { nightMs, unverifiedMs } = calculateSolarBreakdown(
+      start,
+      end,
+      validLocation
+    )
+    const nightDuration = nightMs
+    const dayDuration = Math.max(duration - nightDuration - unverifiedMs, 0)
+    const isVerifiedDay =
+      nightDuration === 0 && dayDuration > 0 && unverifiedMs === 0
+
     return {
       nightDuration,
-      dayDuration: Math.max(duration - nightDuration, 0),
-      mode: "solar" as const,
+      dayDuration,
+      unverifiedDuration: unverifiedMs,
+      mode: unverifiedMs > 0 ? ("unverified" as const) : ("solar" as const),
       isVerifiedDay,
     }
   }
@@ -253,6 +274,7 @@ export const calculateNightBreakdown = (params: {
   return {
     nightDuration,
     dayDuration: Math.max(duration - nightDuration, 0),
+    unverifiedDuration: 0,
     mode: "estimated" as const,
     isVerifiedDay: false,
   }
@@ -282,7 +304,7 @@ export const createDriveEntry = (params: {
   const duration = end - start
   const cleanLocation = sanitizeLocation(location)
 
-  const { nightDuration, dayDuration, mode, isVerifiedDay } =
+  const { nightDuration, dayDuration, unverifiedDuration, mode, isVerifiedDay } =
     calculateNightBreakdown({
       start,
       end,
@@ -296,6 +318,7 @@ export const createDriveEntry = (params: {
     duration,
     nightDuration,
     dayDuration,
+    unverifiedDuration,
     hasNightPortion: nightDuration > 0,
     isVerifiedDay,
     notes: notes?.trim() || undefined,
@@ -329,6 +352,7 @@ export const getSummary = (driveLog: DriveEntry[]): DriveSummary => {
       acc.totalDuration += entry.duration
       acc.nightDuration += entry.nightDuration
       acc.dayDuration += entry.dayDuration
+      acc.unverifiedDuration += entry.unverifiedDuration
 
       if (entry.nightCalcMode === "solar") {
         acc.solarNightDuration += entry.nightDuration
@@ -350,6 +374,7 @@ export const getSummary = (driveLog: DriveEntry[]): DriveSummary => {
       totalDuration: 0,
       nightDuration: 0,
       dayDuration: 0,
+      unverifiedDuration: 0,
       solarNightDuration: 0,
       estimatedNightDuration: 0,
       unverifiedNightDuration: 0,

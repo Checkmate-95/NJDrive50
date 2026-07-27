@@ -166,22 +166,22 @@ export default function PracticeTestPanel() {
   // ── Mode picker ──────────────────────────────────────────────────────────────
   if (mode === null) {
     return (
-      <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4">
+      <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4 lg:max-w-3xl">
         <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
           <div className="h-1.5 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#08194A]" />
 
-          <div className="p-5 sm:p-6">
+          <div className="p-5 sm:p-6 lg:p-8">
             <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
               Free NJ Practice Test
             </p>
-            <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
+            <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A] lg:text-3xl">
               Choose your practice round
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-[#08194A]/65">
               Split into two 25-question sessions or take all 50 at once. Answers are shuffled every attempt.
             </p>
 
-            <div className="mt-5 space-y-3">
+            <div className="mt-5 space-y-3 lg:grid lg:grid-cols-3 lg:gap-3 lg:space-y-0">
               {(["part1", "part2", "full"] as TestMode[]).map((m) => {
                 const cfg = MODE_CONFIG[m]
                 return (
@@ -189,7 +189,7 @@ export default function PracticeTestPanel() {
                     key={m}
                     type="button"
                     onClick={() => setMode(m)}
-                    className="flex w-full items-center justify-between rounded-2xl border-2 border-[#08194A]/10 bg-[#F7F9FC] px-4 py-4 text-left transition hover:border-[#f9c80e] hover:bg-[#fff8d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2 active:scale-[0.99]"
+                    className="flex w-full items-center justify-between rounded-2xl border-2 border-[#08194A]/10 bg-[#F7F9FC] px-4 py-4 text-left transition hover:border-[#f9c80e] hover:bg-[#fff8d8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2 active:scale-[0.99] lg:flex-col lg:items-start lg:gap-2"
                   >
                     <div>
                       <p className="text-base font-black text-[#08194A]">{cfg.label}</p>
@@ -216,17 +216,17 @@ export default function PracticeTestPanel() {
   if (isFinished) {
     const cfg = MODE_CONFIG[mode]
     return (
-      <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4">
+      <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4 lg:max-w-3xl">
         <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
           <div className="h-1.5 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#08194A]" />
 
-          <div className="p-5 sm:p-6">
+          <div className="p-5 sm:p-6 lg:p-8">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
                   {cfg.label} Complete
                 </p>
-                <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
+                <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A] lg:text-3xl">
                   {cfg.description} Results
                 </h2>
               </div>
@@ -318,17 +318,17 @@ export default function PracticeTestPanel() {
 
   // ── Question screen ──────────────────────────────────────────────────────────
   return (
-    <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4">
+    <div className="mx-auto w-full max-w-md px-4 pb-6 pt-4 lg:max-w-3xl">
       <div className="overflow-hidden rounded-[28px] border border-[#0A1E5E]/15 bg-white shadow-[0_12px_30px_rgba(0,0,0,0.08)]">
         <div className="h-1.5 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#08194A]" />
 
-        <div className="p-5 sm:p-6">
+        <div className="p-5 sm:p-6 lg:p-8">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-[#08194A]/55">
                 {cfg.label} · {cfg.description}
               </p>
-              <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A]">
+              <h2 className="mt-1 text-2xl font-black leading-tight text-[#08194A] lg:text-3xl">
                 New Jersey Permit Test Question
               </h2>
             </div>
@@ -395,7 +395,7 @@ export default function PracticeTestPanel() {
               </span>
             </legend>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-3 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
               {current.answers.map((answer, i) => {
                 const isSelected = selected === i
                 const isCorrect = i === current.correctIndex

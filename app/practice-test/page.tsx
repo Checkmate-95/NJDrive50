@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from "react"
 import PracticeTestPanel from "@/src/screens/PracticeTestPanel"
 
@@ -526,7 +528,8 @@ export default function PublicPracticeTestPage() {
               </a>
             </div>
 
-            <p className="mt-4 text-xs leading-relaxed text-[#08194A]/50">
+            <p className="mt-3 text-xs leading-relaxed text-[#08194A]/50">
+
               This page is a free New Jersey permit practice resource for study
               support only and does not replace the{" "}
               <a
@@ -577,7 +580,7 @@ export default function PublicPracticeTestPage() {
               ))}
             </div>
 
-            <p className="mt-5 text-xs leading-relaxed text-[#08194A]/50">
+            <p className="mt-4 text-xs leading-relaxed text-[#08194A]/50">
               Last reviewed: June 2026. Based on the New Jersey Driver Manual and
               NJ MVC knowledge test format. For the most current information,
               visit the{" "}

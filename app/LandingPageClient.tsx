@@ -122,8 +122,16 @@ export default function LandingPageClient({
               FAQ
             </a>
 
+            <Link href="/practice-test" className={navTextLinkClass}>
+              Practice Test
+            </Link>
+
             <Link href="/pricing" className={navTextLinkClass}>
               Pricing
+            </Link>
+
+            <Link href="/settings" className={navTextLinkClass}>
+              Settings
             </Link>
 
             <Link href="/login" className={navTextLinkClass}>
@@ -196,6 +204,10 @@ export default function LandingPageClient({
               <div className="mt-7 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
                 <Link id="view-plans" href="/pricing" className={ctaLinkClass}>
                   View plans
+                </Link>
+
+                <Link href="/practice-test" className={secondaryLinkClass}>
+                  Try the NJ Practice Test
                 </Link>
 
                 <a href="#how-it-works" className={secondaryLinkClass}>
@@ -335,6 +347,25 @@ export default function LandingPageClient({
                   </p>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-[#38BDF8]/20 bg-[#38BDF8]/5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  Free NJ Practice Test
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-white/65">
+                  Try our free NJ practice test to help teens prepare for the
+                  knowledge exam.
+                </p>
+              </div>
+
+              <Link
+                href="/practice-test"
+                className={`${ctaLinkClass} sm:shrink-0`}
+              >
+                Start Practice Test
+              </Link>
             </div>
           </div>
         </section>
@@ -545,6 +576,10 @@ export default function LandingPageClient({
                 View plans
               </Link>
 
+              <Link href="/practice-test" className={secondaryLinkClass}>
+                Try the NJ Practice Test
+              </Link>
+
               <a href="#faq" className={secondaryLinkClass}>
                 Check NJ permit FAQs
               </a>
@@ -560,8 +595,8 @@ export default function LandingPageClient({
       </main>
 
       <footer className="border-t border-white/10 bg-black/40">
-        <div className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-4 py-8 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="sm:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2">
               <img
                 src="/njdrive50Logo6.png"
@@ -598,6 +633,26 @@ export default function LandingPageClient({
             >
               Terms of Use
             </Link>
+
+            <Link
+              href="/data-deletion"
+              className="min-h-[44px] py-1 text-left hover:text-white/70"
+            >
+              Account &amp; Data Deletion
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-2 text-sm text-white/40">
+            <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">
+              Account
+            </p>
+
+            <Link
+              href="/settings"
+              className="min-h-[44px] py-1 text-left hover:text-white/70"
+            >
+              Settings
+            </Link>
           </div>
 
           <div className="flex flex-col gap-2 text-sm text-white/40">
@@ -630,6 +685,26 @@ export default function LandingPageClient({
               className="min-h-[44px] py-1 hover:text-white/70"
             >
               NJMVC Form BA-CSD
+            </a>
+
+            <Link
+              href="/practice-test"
+              className="min-h-[44px] py-1 hover:text-white/70"
+            >
+              NJ Practice Test
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-2 text-sm text-white/40">
+            <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">
+              Contact
+            </p>
+
+            <a
+              href="mailto:support@njdrive50.com"
+              className="min-h-[44px] py-1 hover:text-white/70"
+            >
+              support@njdrive50.com
             </a>
           </div>
         </div>

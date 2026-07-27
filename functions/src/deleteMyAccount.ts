@@ -2,6 +2,7 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import { deleteCollectionRecursive } from "./utils/deleteCollection";
+import { USER_STORAGE_ROOT } from "./config/storage";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -17,10 +18,6 @@ const FIRESTORE_COLLECTIONS = [
   "parentInfo",
   "activeDrive",
   "settings",
-] as const;
-
-const STORAGE_PREFIXES = [
-  "users",
 ] as const;
 
 export const deleteMyAccount = onCall(
@@ -55,23 +52,19 @@ export const deleteMyAccount = onCall(
         await deleteCollectionRecursive(collectionRef);
       }
 
-      // ✅ Explicitly reference your Firebase Storage bucket
-const bucket = admin.storage().bucket("njdrive50-app.firebasestorage.app");
+      const bucket = admin.storage().bucket("njdrive50-app.firebasestorage.app");
 
-for (const basePrefix of STORAGE_PREFIXES) {
-  const prefix = `${basePrefix}/${uid}`;
+      // Trailing slash is required: without it, "users/abc123" would also
+      // match "users/abc1234/..." since GCS prefix matching is a literal
+      // string match, not a path-segment match.
+      const prefix = `${USER_STORAGE_ROOT}/${uid}/`;
 
-  logger.info("Deleting Storage files.", {
-    uid,
-    prefix,
-  });
+      logger.info("Deleting Storage files.", { uid, prefix });
 
-  await bucket.deleteFiles({
-    prefix,
-    force: true,
-  });
-}
-
+      await bucket.deleteFiles({
+        prefix,
+        force: true,
+      });
 
       logger.info("Deleting Firebase Auth user.", { uid });
       await admin.auth().deleteUser(uid);
@@ -85,7 +78,9 @@ for (const basePrefix of STORAGE_PREFIXES) {
     } catch (error: unknown) {
       logger.error("deleteMyAccount failed.", {
         uid,
-        error: error instanceof Error ? error.message : String(error),
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack : undefined,
+        errorObject: error,
       });
 
       throw new HttpsError(

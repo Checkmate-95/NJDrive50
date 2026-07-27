@@ -701,10 +701,10 @@ export default function LandingPageClient({
             </p>
 
             <a
-              href="mailto:support@njdrive50.com"
+              href="mailto:admin@njdrive50.com"
               className="min-h-[44px] py-1 hover:text-white/70"
             >
-              support@njdrive50.com
+              admin@njdrive50.com
             </a>
           </div>
         </div>

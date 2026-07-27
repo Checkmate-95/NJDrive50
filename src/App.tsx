@@ -38,6 +38,9 @@ import DeleteData from "./screens/DeleteData"
 // ─── Capacitor ────────────────────────────────────────────────────────────────
 import { Capacitor } from "@capacitor/core"
 
+import PracticeTestPanel from "./screens/PracticeTestPanel"
+
+
 
 // ─── Lazy Screens ─────────────────────────────────────────────────────────────
 
@@ -55,7 +58,6 @@ const ShareLogView = lazy(() => import("./screens/ShareLogView"))
 const TodaysDrive = lazy(() => import("./screens/TodaysDrive"))
 const HelpFaq = lazy(() => import("./screens/HelpFAQ"))
 const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
-const PublicPracticeTestPage = lazy(() => import("./screens/PublicPracticeTestPage"))
 const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
 
@@ -259,6 +261,10 @@ useEffect(() => {
     case "milestones":       
       return <MilestonesContent />
 
+    case "practiceTest":
+      return <PracticeTestPanel />
+ 
+
     case "deleteAccount":
       return <DeleteAccount />
 
@@ -290,8 +296,7 @@ useEffect(() => {
     case "aiFaq":         
       return <AIHelperScreen />
 
-    case "practiceTest":  
-      return <PublicPracticeTestPage />
+  
 
     case "privacy":       
       return <PrivacyPolicy />

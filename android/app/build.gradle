@@ -1,5 +1,7 @@
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.kapt'
 }
 
 android {
@@ -44,10 +46,11 @@ dependencies {
     // Native GPS tracking
     implementation 'com.google.android.gms:play-services-location:21.3.0'
 
-    // Room local database (temporary Java-style annotation processor)
-    implementation "androidx.room:room-runtime:2.6.1"
-    implementation "androidx.room:room-ktx:2.6.1"
-    annotationProcessor "androidx.room:room-compiler:2.6.1"
+    // ⭐ Room database (KAPT — correct now that Kotlin plugin is installed)
+    implementation "androidx.room:room-runtime:2.8.4"
+    implementation "androidx.room:room-ktx:2.8.4"
+    kapt "androidx.room:room-compiler:2.8.4"
+
 
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

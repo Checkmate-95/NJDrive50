@@ -48,6 +48,12 @@
             android:foregroundServiceType="location"
             android:exported="false" />
 
+        <!-- ✅ Your custom DriveTrackingService -->
+        <service
+            android:name=".DriveTrackingService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

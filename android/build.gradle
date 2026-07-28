@@ -10,7 +10,8 @@ buildscript {
         classpath 'com.google.gms:google-services:4.4.4'
 
         // ⭐ Add Kotlin plugin here
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.23"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.0"
+
     }
 }
 

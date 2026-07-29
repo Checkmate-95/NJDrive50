@@ -2,36 +2,71 @@ package com.njdrive50.app.db
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 
 @Dao
 interface DriveDao {
 
-    // --- Sessions ---
+    // -----------------------------
+    // Drive Points (raw GPS evidence)
+    // -----------------------------
     @Insert
-    suspend fun insertSession(session: DriveSession): Long
+    suspend fun insertPoint(point: DrivePointEntity)
+
+    @Insert
+    suspend fun insertPoints(points: List<DrivePointEntity>)
+
+    @Query("""
+        SELECT * FROM drive_points
+        WHERE driveId = :driveId
+        ORDER BY timestampMs ASC
+    """)
+    suspend fun getPointsForDrive(driveId: String): List<DrivePointEntity>
+
+
+    // -----------------------------
+    // Drive Session (active/in-progress)
+    // -----------------------------
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSession(session: DriveSessionEntity)
+
+    @Query("""
+        SELECT * FROM drive_sessions
+        WHERE driveId = :driveId
+        LIMIT 1
+    """)
+    suspend fun getSession(driveId: String): DriveSessionEntity?
 
     @Update
-    suspend fun updateSession(session: DriveSession)
+    suspend fun updateSession(session: DriveSessionEntity)
 
-    @Query("SELECT * FROM drive_sessions ORDER BY startTime DESC")
-    suspend fun getAllSessions(): List<DriveSession>
+    @Query("""
+        SELECT * FROM drive_sessions
+        WHERE status = 'ACTIVE'
+        LIMIT 1
+    """)
+    suspend fun getActiveSession(): DriveSessionEntity?
 
-    @Query("SELECT * FROM drive_sessions WHERE id = :id LIMIT 1")
-    suspend fun getSessionById(id: Long): DriveSession?
 
+    // -----------------------------
+    // Finalized Drive (immutable truth)
+    // -----------------------------
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertFinalizedDrive(drive: FinalizedDriveEntity)
 
-    // --- Points ---
-    @Insert
-    suspend fun insertPoint(point: DrivePoint): Long
+    @Query("""
+        SELECT * FROM finalized_drives
+        WHERE driveId = :driveId
+        LIMIT 1
+    """)
+    suspend fun getFinalizedDrive(driveId: String): FinalizedDriveEntity?
 
-    @Insert
-    suspend fun insertPoints(points: List<DrivePoint>)
-
-    @Query("SELECT * FROM drive_points WHERE sessionId = :sessionId ORDER BY timestamp ASC")
-    suspend fun getPointsForSession(sessionId: Long): List<DrivePoint>
-
-    @Query("DELETE FROM drive_points WHERE sessionId = :sessionId")
-    suspend fun deletePointsForSession(sessionId: Long)
+    @Query("""
+        SELECT * FROM finalized_drives
+        WHERE startedAtMs BETWEEN :fromMs AND :toMs
+        ORDER BY startedAtMs DESC
+    """)
+    suspend fun getFinalizedDrivesInRange(fromMs: Long, toMs: Long): List<FinalizedDriveEntity>
 }

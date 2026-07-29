@@ -1,14 +1,11 @@
-package com.njdrive50.app.db
-
-import android.content.Context
-import androidx.room.Database
-import androidx.room.Room
-import androidx.room.RoomDatabase
-
 @Database(
-    entities = [DrivePoint::class, DriveSession::class],
-    version = 1,
-    exportSchema = true
+    entities = [
+        DrivePointEntity::class,
+        DriveSessionEntity::class,
+        FinalizedDriveEntity::class
+    ],
+    version = 2,
+    exportSchema = false
 )
 abstract class DriveDatabase : RoomDatabase() {
 
@@ -24,8 +21,12 @@ abstract class DriveDatabase : RoomDatabase() {
                     context.applicationContext,
                     DriveDatabase::class.java,
                     "njdrive50.db"
-                ).build().also { INSTANCE = it }
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
     }
 }
+

@@ -42,6 +42,11 @@ import PracticeTestPanel from "./screens/PracticeTestPanel"
 
 
 
+
+
+
+
+
 // ─── Lazy Screens ─────────────────────────────────────────────────────────────
 
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
@@ -109,6 +114,7 @@ export type Screen =
   | "login"
   | "register"
   | "forgotPassword"
+  
 
 export default function App() {
  if (import.meta.env.MODE !== "production") {
@@ -306,6 +312,9 @@ useEffect(() => {
 
     case "about":         
       return <Settings />
+
+    
+ 
 
     default:
       setScreen("landingApp")

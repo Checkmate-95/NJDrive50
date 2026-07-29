@@ -1,3 +1,10 @@
+package com.njdrive50.app.db
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+
 @Database(
     entities = [
         DrivePointEntity::class,
@@ -29,4 +36,3 @@ abstract class DriveDatabase : RoomDatabase() {
         }
     }
 }
-

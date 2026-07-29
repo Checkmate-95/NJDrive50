@@ -1,12 +1,14 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'org.jetbrains.kotlin.kapt'
+    id 'com.google.devtools.ksp'
 }
+
 
 android {
     namespace = "com.njdrive50.app"
     compileSdk = rootProject.ext.compileSdkVersion
+
 
     defaultConfig {
         applicationId "com.njdrive50.app"
@@ -16,10 +18,12 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
+
         aaptOptions {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
 
     buildTypes {
         release {
@@ -29,27 +33,34 @@ android {
     }
 }
 
+
 repositories {
     flatDir {
         dirs 'libs'
     }
 }
 
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
+
 
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
 
+
     // Native GPS tracking
     implementation 'com.google.android.gms:play-services-location:21.3.0'
 
-    // ⭐ Room database (KAPT — correct now that Kotlin plugin is installed)
+
+    // ⭐ Room database (KSP — required for Kotlin source, kapt has a known
+    // processingEnv NullPointerException bug with this Room version)
     implementation "androidx.room:room-runtime:2.8.4"
     implementation "androidx.room:room-ktx:2.8.4"
-    kapt "androidx.room:room-compiler:2.8.4"
+    ksp "androidx.room:room-compiler:2.8.4"
+
 
 
     testImplementation "junit:junit:$junitVersion"
@@ -57,7 +68,9 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
 }
 
+
 apply from: 'capacitor.build.gradle'
+
 
 try {
     def servicesJSON = file('google-services.json')

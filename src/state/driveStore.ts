@@ -46,6 +46,7 @@ export type DriveEntry = {
   verifiedNightDurationHours?: number
   nightCalcMode?: NightCalcMode
   isVerifiedDay?: boolean
+  needsReview?: boolean
 
   dayRangeStartMs?: number | null
   dayRangeEndMs?: number | null
@@ -88,6 +89,8 @@ function safeNumber(value: unknown): number {
 }
 
 export function isDriveVerified(drive: DriveEntry): boolean {
+  if (drive.needsReview === true) return false
+
   return (
     (drive.nightCalcMode === "solar" &&
       safeNumber(drive.verifiedNightDurationHours) > 0) ||
@@ -223,14 +226,28 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
       ? Math.max(0, raw.unverifiedDurationHours)
       : 0
 
+  // verifiedNightDurationHours MUST be let so we can scale it
+  let verifiedNightDurationHours =
+    typeof raw.verifiedNightDurationHours === "number" &&
+    Number.isFinite(raw.verifiedNightDurationHours)
+      ? Math.max(0, raw.verifiedNightDurationHours)
+      : undefined
+
   const bucketSum =
     dayDurationHours + nightDurationHours + unverifiedDurationHours
 
+  // SCALE DOWN if buckets exceed total
   if (bucketSum > totalDurationHours && bucketSum > 0) {
     const scale = totalDurationHours / bucketSum
+
     dayDurationHours *= scale
     nightDurationHours *= scale
     unverifiedDurationHours *= scale
+
+    // keep verified night hours consistent
+    if (verifiedNightDurationHours !== undefined) {
+      verifiedNightDurationHours *= scale
+    }
   }
 
   const milesSource =
@@ -254,16 +271,15 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
       ? raw.source
       : undefined
 
-  const verifiedNightDurationHours =
-    typeof raw.verifiedNightDurationHours === "number" &&
-    Number.isFinite(raw.verifiedNightDurationHours)
-      ? Math.max(0, raw.verifiedNightDurationHours)
-      : undefined
-
   const isVerifiedDay =
     typeof raw.isVerifiedDay === "boolean"
       ? raw.isVerifiedDay
       : undefined
+
+  // NEW: pass through the multi-day-drive review flag set by
+  // ActiveDriveContent.tsx when a session exceeds MAX_DRIVE_DURATION_MS.
+  const needsReview =
+    typeof raw.needsReview === "boolean" ? raw.needsReview : false
 
   const startLatitude =
     typeof raw.startLatitude === "number" &&
@@ -300,6 +316,7 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
     verifiedNightDurationHours,
     nightCalcMode,
     isVerifiedDay,
+    needsReview,
 
     dayRangeStartMs,
     dayRangeEndMs,
@@ -339,6 +356,7 @@ function toPersistedDriveEntry(entry: DriveEntry): PersistedDriveEntry {
     verifiedNightDurationHours: entry.verifiedNightDurationHours,
     nightCalcMode: entry.nightCalcMode,
     isVerifiedDay: entry.isVerifiedDay,
+    needsReview: entry.needsReview,
 
     dayRangeStartMs: entry.dayRangeStartMs,
     dayRangeEndMs: entry.dayRangeEndMs,

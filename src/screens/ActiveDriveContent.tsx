@@ -786,6 +786,34 @@ const createFrozenSnapshot = useCallback(
     }
   }, [clearGpsWatch, session.isRunning, tick])
 
+  // HEARTBEAT: periodic GPS refresh to prevent staleness cliff
+useEffect(() => {
+  if (!session.isRunning) return
+
+  const HEARTBEAT_MS = 60_000
+  const heartbeatId = setInterval(() => {
+    Geolocation.getCurrentPosition({
+      enableHighAccuracy: true,
+      timeout: 15_000,
+      maximumAge: 5_000,
+    })
+      .then((position) => {
+        const coord = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          at: typeof position.timestamp === "number" && Number.isFinite(position.timestamp)
+            ? position.timestamp
+            : Date.now(),
+        }
+        useActiveDriveStore.getState().tick(coord, Date.now())
+      })
+      .catch(() => {})
+  }, HEARTBEAT_MS)
+
+  return () => clearInterval(heartbeatId)
+}, [session.isRunning])
+
+
   useEffect(() => {
     return () => {
       clearRuntimeLoops()
@@ -805,29 +833,35 @@ const createFrozenSnapshot = useCallback(
   }, [showStopConfirm])
 
   const isRunning = session.isRunning
-  const hasActiveDrive = session.isActive
-  const isNight = session.currentMode === "night"
-  const isSolarUnverified = session.currentMode === "unverified"
-  const formattedElapsed = formatTime(displayedMs)
+const hasActiveDrive = session.isActive
+const isNight = session.currentMode === "night"
+const isSolarUnverified = session.currentMode === "unverified"
+const formattedElapsed = formatTime(displayedMs)
 
-  const lightingLabel = isSolarUnverified
-    ? "Lighting unverified"
-    : isNight
-      ? "Night driving"
-      : "Day driving"
+const lightingLabel = isSolarUnverified
+  ? "Lighting unverified"
+  : isNight
+    ? "Night driving"
+    : "Day driving"
 
-  const saveDisabled =
-    !hasActiveDrive ||
-    displayedMs < 10_000 ||
-    isSaving ||
-    isPreparingStop
+// NEW: correctly scoped resume-block condition
+const cappedAndUnresumable =
+  hasActiveDrive && !isRunning && session.exceededMaxDuration
 
-  const previewDisabled =
-    !hasActiveDrive ||
-    displayedMs < 10_000 ||
-    isSaving ||
-    isPreparingStop ||
-    isPreviewing
+const saveDisabled =
+  !hasActiveDrive ||
+  displayedMs < 10_000 ||
+  isSaving ||
+  isPreparingStop
+
+const previewDisabled =
+  !hasActiveDrive ||
+  displayedMs < 10_000 ||
+  isSaving ||
+  isPreparingStop ||
+  isPreviewing
+
+
 
   const startNewDrive = async () => {
     const now = Date.now()
@@ -1093,30 +1127,47 @@ const createFrozenSnapshot = useCallback(
                 : "Ready to Start"}
           </p>
 
+          {session.exceededMaxDuration && (
+  <div className="mt-2 rounded-lg border border-red-300/40 bg-red-100/10 px-3 py-2 text-center">
+    <p className="text-[10px] font-semibold text-red-200">
+      Drive exceeded maximum duration — please stop and save.
+    </p>
+  </div>
+)}
+
+
           <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
-            <button
-              type="button"
-              onClick={handlePrimaryAction}
-              disabled={isSaving || isPreparingStop || isPreviewing}
-              aria-label={
-                isRunning
-                  ? "Pause drive timer"
-                  : hasActiveDrive
-                    ? "Resume drive timer"
-                    : "Start drive timer"
-              }
-              className={`flex h-16 w-16 shrink-0 touch-manipulation select-none items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-90 disabled:cursor-not-allowed disabled:bg-gray-500 ${
-                isRunning
-                  ? "bg-[#00A651] active:bg-[#008a43]"
-                  : "bg-red-600 active:bg-red-700"
-              }`}
-            >
-              {isRunning ? (
-                <span className="h-4 w-4 rounded-sm bg-white" />
-              ) : (
-                <span className="ml-1 h-0 w-0 border-b-[8px] border-l-[13px] border-t-[8px] border-b-transparent border-l-white border-t-transparent" />
-              )}
-            </button>
+           <button
+  type="button"
+  onClick={handlePrimaryAction}
+  disabled={
+  isSaving ||
+  isPreparingStop ||
+  isPreviewing ||
+  cappedAndUnresumable
+}
+
+  aria-label={
+    isRunning
+      ? "Pause drive timer"
+      : hasActiveDrive
+        ? "Resume drive timer"
+        : "Start drive timer"
+  }
+  className={`flex h-16 w-16 shrink-0 touch-manipulation select-none items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-90 disabled:cursor-not-allowed disabled:bg-gray-500 ${
+    isRunning
+      ? "bg-[#00A651] active:bg-[#008a43]"
+      : "bg-red-600 active:bg-red-700"
+  }`}
+>
+  {isRunning ? (
+    <span className="h-4 w-4 rounded-sm bg-white" />
+  ) : (
+    <span className="ml-1 h-0 w-0 border-b-[8px] border-l-[13px] border-t-[8px] border-b-transparent border-l-white border-t-transparent" />
+  )}
+</button>
+
+
 
             <div className="flex min-w-0 items-center gap-3">
               <p className="text-[clamp(1.9rem,8vw,3.5rem)] sm:text-[4rem] font-black leading-none tracking-tight tabular-nums">
@@ -1275,23 +1326,29 @@ const createFrozenSnapshot = useCallback(
 
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button
-                type="button"
-                onClick={handlePrimaryAction}
-                disabled={isSaving || isPreparingStop || isPreviewing}
-                className={`min-h-[48px] touch-manipulation select-none rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 ${
-                  isRunning
-                    ? "bg-red-600 active:bg-red-700"
-                    : hasActiveDrive
-                      ? "bg-green-600 active:bg-green-700"
-                      : "bg-[#08194A] active:bg-[#0A1E5E]"
-                }`}
-              >
-                {isRunning
-                  ? "Pause Timer"
-                  : hasActiveDrive
-                    ? "Resume Timer"
-                    : "Start Timer"}
-              </button>
+  type="button"
+  onClick={handlePrimaryAction}
+  disabled={
+  isSaving ||
+  isPreparingStop ||
+  isPreviewing ||
+  cappedAndUnresumable
+}
+  className={`min-h-[48px] touch-manipulation select-none rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 ${
+    isRunning
+      ? "bg-red-600 active:bg-red-700"
+      : hasActiveDrive
+        ? "bg-green-600 active:bg-green-700"
+        : "bg-[#08194A] active:bg-[#0A1E5E]"
+  }`}
+>
+  {isRunning
+    ? "Pause Timer"
+    : hasActiveDrive
+      ? "Resume Timer"
+      : "Start Timer"}
+</button>
+
 
               <button
                 type="button"

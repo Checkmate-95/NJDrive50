@@ -26,6 +26,19 @@ export type DriveSegments = {
 
 const THIRTY_MIN_MS = 30 * 60 * 1000
 
+/**
+ * Guard against multi-day drives. splitDriveBySolar and computeDayNightSplit
+ * can only represent ONE contiguous night range and ONE contiguous day
+ * range per drive. A drive spanning more than 24 hours can cross multiple
+ * day/night boundaries, which would silently collapse distinct night
+ * periods into one incorrect range. Rather than support multi-range data
+ * (unnecessary complexity for real teen driving patterns), sessions that
+ * exceed this duration are treated as unverified/invalid so the app never
+ * displays corrupted solar data. See activeDriveStore.ts for the runtime
+ * auto-pause guard that prevents sessions from ever reaching this length.
+ */
+export const MAX_DRIVE_DURATION_MS = 24 * 60 * 60 * 1000
+
 function isValidDate(value: unknown): value is Date {
   return value instanceof Date && Number.isFinite(value.getTime())
 }
@@ -179,6 +192,13 @@ export function computeDayNightSplit(
     return { dayHours: 0, nightHours: 0, mode: "unverified" }
   }
 
+  // Guard: a drive exceeding 24 hours cannot be safely represented by this
+  // single-pass accumulator without risking misclassification across
+  // multiple day/night cycles. Treat as unverified rather than guess.
+  if (endMs - startMs > MAX_DRIVE_DURATION_MS) {
+    return { dayHours: 0, nightHours: 0, mode: "unverified" }
+  }
+
   let cursor = new Date(startTime)
   let dayMs = 0
   let nightMs = 0
@@ -227,12 +247,17 @@ export function computeDayNightSplit(
   }
 }
 
-
-
 /**
  * Segment-level split for UI: returns actual timestamps for night/day portions.
  * Walks day-by-day so multi-day drives get correct sunrise/sunset per date,
  * instead of relying on one static solar window for the whole drive.
+ *
+ * NOTE: this function's data model only supports ONE contiguous night range
+ * and ONE contiguous day range. It is only correct for drives that cross at
+ * most one day/night boundary. The MAX_DRIVE_DURATION_MS guard below
+ * prevents it from ever being called with a drive long enough to cross
+ * multiple boundaries, which would otherwise silently collapse distinct
+ * night periods into a single incorrect range.
  */
 export function splitDriveBySolar(
   startTime: Date,
@@ -252,6 +277,10 @@ export function splitDriveBySolar(
   const startMs = startTime.getTime()
   const endMs = endTime.getTime()
   if (endMs <= startMs) return invalid
+
+  // Guard: refuse to compute a single night/day range for a drive long
+  // enough to cross multiple solar boundaries. See note above.
+  if (endMs - startMs > MAX_DRIVE_DURATION_MS) return invalid
 
   let cursor = new Date(startTime)
   let nightStartMs: number | null = null

@@ -40,13 +40,6 @@ import { Capacitor } from "@capacitor/core"
 
 import PracticeTestPanel from "./screens/PracticeTestPanel"
 
-
-
-
-
-
-
-
 // ─── Lazy Screens ─────────────────────────────────────────────────────────────
 
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
@@ -65,8 +58,6 @@ const HelpFaq = lazy(() => import("./screens/HelpFAQ"))
 const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
 const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
-
-
 
 // ─── State ─────────────────────────────────────────────────────────────────────
 import { useNav } from "./state/navStore"
@@ -114,17 +105,12 @@ export type Screen =
   | "login"
   | "register"
   | "forgotPassword"
-  
 
 export default function App() {
- if (import.meta.env.MODE !== "production") {
-  console.log("🔥 NJDrive50 app loaded");
-}
+  if (import.meta.env.MODE !== "production") {
+    console.log("🔥 NJDrive50 app loaded")
+  }
 
-
-
-
- 
   const { screen, setScreen, stack } = useNav()
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)
@@ -134,28 +120,26 @@ export default function App() {
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
 
   // ─── Firebase Auth + Startup Controller ─────────────────────────────────────
-useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
-    setAuthUser(user)
-    setAuthReady(true)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setAuthUser(user)
+      setAuthReady(true)
 
-    // ⭐ Run startup AFTER authReady is true — prevents pricing redirect loop
-    requestAnimationFrame(() => {
-      startupController(user)
+      // ⭐ Run startup AFTER authReady is true — prevents pricing redirect loop
+      requestAnimationFrame(() => {
+        startupController(user)
+      })
     })
-  })
 
-  return () => unsubscribe()
-}, [])
+    return () => unsubscribe()
+  }, [])
 
-// ─── Location Permission ───────────────────────────────────────────────────
-useEffect(() => {
-  if (!Capacitor.isNativePlatform()) {
-    setLocationPermissionGranted(true)
-  }
-}, [])
-
-
+  // ─── Location Permission ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) {
+      setLocationPermissionGranted(true)
+    }
+  }, [])
 
   // ─── Safe Screen Fallback ───────────────────────────────────────────────────
   const safeScreen: Screen = screen ?? "landingApp"
@@ -194,134 +178,129 @@ useEffect(() => {
   }
 
   const renderScreen = () => {
-  switch (safeScreen) {
-    case "landingApp":     
-      return <LandingPageApp />
+    switch (safeScreen) {
+      case "landingApp":
+        return <LandingPageApp />
 
-    
-    case "intro":          
-      return <HomeIntro setScreen={setScreenCompat} />
+      case "pricing":
+        return (
+          <div className="flex min-h-dvh items-center justify-center bg-[#08194A] text-white">
+            <p>Pricing page placeholder</p>
+          </div>
+        )
 
-    case "login":          
-      return <Login />
+      case "intro":
+        return <HomeIntro setScreen={setScreenCompat} />
 
-    case "register":       
-      return <Register />
+      case "login":
+        return <Login />
 
-    case "forgotPassword": 
-      return <ForgotPassword />
+      case "register":
+        return <Register />
 
-    
+      case "forgotPassword":
+        return <ForgotPassword />
 
-    case "onboarding":        
-      return <Onboarding setScreen={setScreenCompat} />
+      case "onboarding":
+        return <Onboarding setScreen={setScreenCompat} />
 
-    case "restartOnboarding": 
-      return <RestartOnboarding />
+      case "restartOnboarding":
+        return <RestartOnboarding />
 
-    case "dataCleared":       
-      return <DataCleared />
+      case "dataCleared":
+        return <DataCleared />
 
-    case "home":
-      return (
-        <HomeDashboardContent
-          setScreen={setScreenCompat}
-          setLocationPermissionGranted={setLocationPermissionGranted}
-        />
-      )
+      case "home":
+        return (
+          <HomeDashboardContent
+            setScreen={setScreenCompat}
+            setLocationPermissionGranted={setLocationPermissionGranted}
+          />
+        )
 
-    case "active":
-    case "activeDrive":
-      return (
-        <ActiveDrive
-          setScreen={setScreenCompat}
-          setCurrentDrive={setCurrentDrive}
-        />
-      )
+      case "active":
+      case "activeDrive":
+        return (
+          <ActiveDrive
+            setScreen={setScreenCompat}
+            setCurrentDrive={setCurrentDrive}
+          />
+        )
 
-    case "todaysDrive":   
-      return <TodaysDrive drive={currentDrive} />
+      case "todaysDrive":
+        return <TodaysDrive drive={currentDrive} />
 
-    case "summary":       
-      return <DriveSummary setScreen={setScreenCompat} />
+      case "summary":
+        return <DriveSummary setScreen={setScreenCompat} />
 
-    case "driveHistory":  
-      return <DriveHistoryContent />
+      case "driveHistory":
+        return <DriveHistoryContent />
 
-    case "export":
-    case "exportLogs":    
-      return <ExportLog setScreen={setScreenCompat} />
+      case "export":
+      case "exportLogs":
+        return <ExportLog setScreen={setScreenCompat} />
 
-    case "settings":         
-      return <Settings />
+      case "settings":
+        return <Settings />
 
-    case "teenDriverRules":  
-      return <TeenDriverRules />
+      case "teenDriverRules":
+        return <TeenDriverRules />
 
-    case "reminderSettings": 
-      return <ReminderSettings />
+      case "reminderSettings":
+        return <ReminderSettings />
 
-    case "reminderLog":      
-      return <ReminderLog />
+      case "reminderLog":
+        return <ReminderLog />
 
-    case "milestones":       
-      return <MilestonesContent />
+      case "milestones":
+        return <MilestonesContent />
 
-    case "practiceTest":
-      return <PracticeTestPanel />
- 
+      case "practiceTest":
+        return <PracticeTestPanel />
 
-    case "deleteAccount":
-      return <DeleteAccount />
+      case "deleteAccount":
+        return <DeleteAccount />
 
-    case "deleteData":
-      return <DeleteData />
+      case "deleteData":
+        return <DeleteData />
 
+      case "teenInfo":
+      case "parentInfo":
+      case "manageProfile":
+        return <Onboarding setScreen={setScreenCompat} />
 
-    case "teenInfo":
-    case "parentInfo":
-    case "manageProfile": 
-      return <Onboarding setScreen={setScreenCompat} />
+      case "dmv":
+        return <DMVBundle />
 
-    case "dmv":           
-      return <DMVBundle />
+      case "dmvPrep":
+        return <DMVAppointmentPrep />
 
-    case "dmvPrep":       
-      return <DMVAppointmentPrep />
+      case "paperwork":
+        return <DMVBundle />
 
-    case "paperwork":     
-      return <DMVBundle />
+      case "share":
+        return <ShareLogView />
 
-    case "share":         
-      return <ShareLogView />
+      case "helpFaq":
+        return <HelpFaq />
 
-    case "helpFaq":       
-      return <HelpFaq />
+      case "aiHelper":
+      case "aiFaq":
+        return <AIHelperScreen />
 
-    case "aiHelper":
-    case "aiFaq":         
-      return <AIHelperScreen />
+      case "privacy":
+        return <PrivacyPolicy />
 
-  
+      case "terms":
+        return <TermsOfUse />
 
-    case "privacy":       
-      return <PrivacyPolicy />
+      case "about":
+        return <Settings />
 
-    case "terms":         
-      return <TermsOfUse />
-
-    case "about":         
-      return <Settings />
-
-    
- 
-
-    default:
-  return <LandingPageApp />
-
+      default:
+        return <LandingPageApp />
+    }
   }
-}
-
 
   // ─── Main Render ──────────────────────────────────────────────────────────
   return (

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useNav } from "../../src/state/navStore"
 
 type BillingCycle = "monthly" | "yearly"
 
@@ -252,6 +253,7 @@ export default function PricingPageClient({
   pricingFaqs: Faq[]
 }) {
   const [billing, setBilling] = useState<BillingCycle>("yearly")
+  const resetTo = useNav((s) => s.resetTo)
 
   const monthlyPrice = 4.99
   const yearlyPrice = 39.99
@@ -433,6 +435,31 @@ export default function PricingPageClient({
         </header>
 
         <main className="mt-6 space-y-6">
+          <section className="rounded-[28px] border border-[#08194A]/10 bg-white px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
+                  Tester access
+                </p>
+                <h2 className="mt-2 text-xl font-extrabold tracking-tight">
+                  Enter the app without billing
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-[#08194A]/65">
+                  Use this temporary button during development to bypass pricing
+                  and go straight into the app.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => resetTo("home")}
+                className="min-h-[48px] rounded-2xl bg-sky-400 px-6 py-3 text-sm font-extrabold text-slate-900 shadow-sm transition hover:bg-sky-300"
+              >
+                Continue (test mode)
+              </button>
+            </div>
+          </section>
+
           <section className="grid gap-6 lg:grid-cols-2">
             {plans.map((plan) => (
               <PlanCard

@@ -317,8 +317,8 @@ useEffect(() => {
  
 
     default:
-      setScreen("landingApp")
-      return null
+  return <LandingPageApp />
+
   }
 }
 

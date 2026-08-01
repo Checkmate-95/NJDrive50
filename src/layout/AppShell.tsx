@@ -87,7 +87,7 @@ const DRAWER_SECTIONS: DrawerSection[] = [
 
 export default function AppShell({
   children,
-  user,
+  user: _user,
   setScreen,
   active,
   locationPermissionGranted,
@@ -169,7 +169,7 @@ export default function AppShell({
         </div>
       )}
 
-      {user && showMore && locationPermissionGranted && (
+      {showMore && shouldShowFloatingUi && (
         <>
           <div
             className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
@@ -292,7 +292,7 @@ export default function AppShell({
                 <span className="block sm:hidden">Practice</span>
                 <span className="block sm:hidden">Test</span>
                 <span className="hidden sm:block">Practice Test</span>
-              </button>
+              </button>\
 
               <button
                 type="button"

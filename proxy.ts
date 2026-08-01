@@ -2,7 +2,7 @@ export const config = {
   matcher: "/(.*)",
 }
 
-export default function middleware(request: Request) {
+export default function proxy(request: Request) {
   const BASIC_AUTH_ENABLED = process.env.BASIC_AUTH_ENABLED === "true"
 
   if (!BASIC_AUTH_ENABLED) {

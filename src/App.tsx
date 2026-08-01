@@ -26,8 +26,9 @@ import Login from "./Login"
 import Register from "./Register"
 import ForgotPassword from "./ForgotPassword"
 
-// ─── App Landing Page (NEW) ───────────────────────────────────────────────────
+// ─── App Landing Page ─────────────────────────────────────────────────────────
 import LandingPageApp from "./LandingPageApp"
+import PricingPageClient from "../app/pricing/PricingPageClient"
 
 // ─── Legal ────────────────────────────────────────────────────────────────────
 import PrivacyPolicy from "./legal/PrivacyPolicy"
@@ -41,7 +42,6 @@ import { Capacitor } from "@capacitor/core"
 import PracticeTestPanel from "./screens/PracticeTestPanel"
 
 // ─── Lazy Screens ─────────────────────────────────────────────────────────────
-
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
 const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"))
 const MilestonesContent = lazy(() => import("./screens/MilestonesContent"))
@@ -59,7 +59,7 @@ const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
 const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
 
-// ─── State ─────────────────────────────────────────────────────────────────────
+// ─── State ────────────────────────────────────────────────────────────────────
 import { useNav } from "./state/navStore"
 import { MapProvider } from "./components/map/MapProvider"
 import type { DriveEntry } from "./state/driveStore"
@@ -106,6 +106,24 @@ export type Screen =
   | "register"
   | "forgotPassword"
 
+const pricingFaqs = [
+  {
+    question: "Can I test the app before purchasing?",
+    answer:
+      "Yes. This build is being used for tester flow verification before live billing is finalized.",
+  },
+  {
+    question: "Will my driving log still work during testing?",
+    answer:
+      "Yes. Core navigation and app screens can still be tested while pricing and billing are being finalized.",
+  },
+  {
+    question: "Is this the final subscription setup?",
+    answer:
+      "No. This is a temporary testing configuration so the app can be verified end-to-end.",
+  },
+]
+
 export default function App() {
   if (import.meta.env.MODE !== "production") {
     console.log("🔥 NJDrive50 app loaded")
@@ -116,7 +134,6 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false)
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const prevStackLengthRef = useRef(stack.length)
-
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
 
   // ─── Firebase Auth + Startup Controller ─────────────────────────────────────
@@ -125,7 +142,6 @@ export default function App() {
       setAuthUser(user)
       setAuthReady(true)
 
-      // ⭐ Run startup AFTER authReady is true — prevents pricing redirect loop
       requestAnimationFrame(() => {
         startupController(user)
       })
@@ -134,7 +150,7 @@ export default function App() {
     return () => unsubscribe()
   }, [])
 
-  // ─── Location Permission ───────────────────────────────────────────────────
+  // ─── Location Permission ────────────────────────────────────────────────────
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
       setLocationPermissionGranted(true)
@@ -154,7 +170,7 @@ export default function App() {
     [safeScreen, setScreen]
   )
 
-  // ─── Scroll Reset ─────────────────────────────────────────────────────────
+  // ─── Scroll Reset ───────────────────────────────────────────────────────────
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current
     prevStackLengthRef.current = stack.length
@@ -166,7 +182,7 @@ export default function App() {
     }
   }, [safeScreen, stack.length])
 
-  // ─── Loading Screen ────────────────────────────────────────────────────────
+  // ─── Loading Screen ─────────────────────────────────────────────────────────
   if (!authReady || safeScreen === "loading") {
     return (
       <div className="flex min-h-dvh w-full items-center justify-center bg-[#08194A]">
@@ -183,11 +199,7 @@ export default function App() {
         return <LandingPageApp />
 
       case "pricing":
-        return (
-          <div className="flex min-h-dvh items-center justify-center bg-[#08194A] text-white">
-            <p>Pricing page placeholder</p>
-          </div>
-        )
+        return <PricingPageClient pricingFaqs={pricingFaqs} />
 
       case "intro":
         return <HomeIntro setScreen={setScreenCompat} />
@@ -302,7 +314,7 @@ export default function App() {
     }
   }
 
-  // ─── Main Render ──────────────────────────────────────────────────────────
+  // ─── Main Render ────────────────────────────────────────────────────────────
   return (
     <AppShell
       user={authUser}

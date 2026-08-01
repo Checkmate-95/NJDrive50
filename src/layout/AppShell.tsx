@@ -119,7 +119,7 @@ export default function AppShell({
 
   const itemClasses = (screen: Screen | "more") =>
     [
-      "flex min-w-0 min-h-11 flex-col items-center justify-center rounded-xl px-1 py-2",
+      "flex min-w-0 min-h-11 flex-col items-center justify-center self-stretch rounded-xl px-1 py-2",
       "text-center text-[11px] font-semibold leading-tight transition-colors duration-200",
       "sm:px-2 sm:py-3 sm:text-sm",
       (screen === "more" ? moreIsActive || showMore : active === screen)

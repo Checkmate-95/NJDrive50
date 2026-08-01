@@ -4,7 +4,6 @@ plugins {
     id 'com.google.devtools.ksp'
 }
 
-
 android {
     namespace = "com.njdrive50.app"
     compileSdk = rootProject.ext.compileSdkVersion

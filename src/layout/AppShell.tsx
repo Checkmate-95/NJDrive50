@@ -98,6 +98,7 @@ export default function AppShell({
   const chromeHidden = CHROMELESS_SCREENS.includes(active)
   const isLegal = active === "privacy" || active === "terms"
   const moreIsActive = MORE_SCREENS.includes(active)
+  const shouldShowFloatingUi = locationPermissionGranted && !chromeHidden
 
   const go = (screen: Screen) => {
     setScreen(screen)
@@ -160,7 +161,7 @@ export default function AppShell({
         </section>
       </main>
 
-      {user && locationPermissionGranted && (
+      {shouldShowFloatingUi && (
         <div className="pointer-events-none fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-40">
           <div className="pointer-events-auto">
             <FloatingAIButton />
@@ -251,7 +252,7 @@ export default function AppShell({
         </>
       )}
 
-      {user && locationPermissionGranted && (
+      {shouldShowFloatingUi && (
         <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#08194A]/95 backdrop-blur supports-[backdrop-filter]:bg-[#08194A]/88">
           <div className="mx-auto w-full max-w-[42rem] px-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 sm:px-3 sm:pt-3">
             <div className="grid grid-cols-5 gap-1 sm:gap-2">

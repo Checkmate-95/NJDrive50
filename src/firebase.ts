@@ -1,7 +1,8 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { initializeAuth, getAuth, indexedDBLocalPersistence } from "firebase/auth";
 import { getFunctions } from "firebase/functions";
-import { getFirestore } from "firebase/firestore"
+import { getFirestore } from "firebase/firestore";
+import { Capacitor } from "@capacitor/core";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,6 +15,15 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = getAuth(app);
+function createAuth() {
+  if (Capacitor.isNativePlatform()) {
+    return initializeAuth(app, {
+      persistence: indexedDBLocalPersistence,
+    });
+  }
+  return getAuth(app);
+}
+
+export const auth = createAuth();
 export const functions = getFunctions(app, "us-central1");
-export const db = getFirestore(app)
+export const db = getFirestore(app);

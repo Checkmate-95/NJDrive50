@@ -199,7 +199,9 @@ export default function App() {
         return <LandingPageApp />
 
       case "pricing":
-        return <PricingPageClient pricingFaqs={pricingFaqs} />
+  return <PricingPageClient pricingFaqs={pricingFaqs} />
+
+
 
       case "intro":
         return <HomeIntro setScreen={setScreenCompat} />

@@ -1074,11 +1074,20 @@ const previewDisabled =
   <>
     {isMaximized ? (
       <DriveDashboard
-        currentSpeed={currentSpeed}
-        formattedTimer={formattedElapsed}
-        isNightMode={isNight}
-        onMinimize={onMinimize}
-      />
+  currentSpeed={currentSpeed}
+  formattedTimer={formattedElapsed}
+  isNightMode={isNight}
+  onMinimize={onMinimize}
+  isRunning={isRunning}
+  hasActiveDrive={hasActiveDrive}
+  onStart={handlePrimaryAction}
+  onPause={handlePrimaryAction}
+  onResume={handlePrimaryAction}
+  onEnd={() => {
+    handleStopRequest()
+    onMinimize()
+  }}
+/>
     ) : (
       <div
         className="flex w-full justify-center px-3 pt-3 text-white sm:px-4"

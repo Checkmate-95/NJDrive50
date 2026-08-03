@@ -22,7 +22,6 @@ export type ActiveDriveSession = {
   isActive: boolean
   isRunning: boolean
 
-  // true when the drive exceeded MAX_DRIVE_DURATION_MS and was auto-capped
   exceededMaxDuration: boolean
 
   startTime: number | null
@@ -32,8 +31,6 @@ export type ActiveDriveSession = {
   nightMs: number
   unverifiedMs: number
 
-  // cumulative paused duration, used to keep the drift invariant honest
-  // across pause/resume cycles.
   pausedMs: number
 
   currentMode: DriveMode
@@ -47,6 +44,7 @@ export type ActiveDriveSession = {
   location: { latitude: number; longitude: number } | null
 
   liveMiles: number
+  currentSpeed: number
   startCoord: RouteCoord | null
   lastCoord: RouteCoord | null
   routeTrail: RouteCoord[]
@@ -143,6 +141,7 @@ function createInitialSession(): ActiveDriveSession {
     location: null,
 
     liveMiles: 0,
+    currentSpeed: 0,
     startCoord: null,
     lastCoord: null,
     routeTrail: [],
@@ -257,6 +256,7 @@ function normalizeSession(value: unknown): ActiveDriveSession {
         : null,
 
     liveMiles: normalizeNonNegativeNumber(raw.liveMiles),
+    currentSpeed: normalizeNonNegativeNumber(raw.currentSpeed),
 
     startCoord: normalizeRouteCoord(raw.startCoord),
     lastCoord: normalizeRouteCoord(raw.lastCoord),
@@ -403,6 +403,30 @@ function haversineMiles(a: RouteCoord, b: RouteCoord): number {
     Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng
 
   return 2 * EARTH_RADIUS_MILES * Math.asin(Math.sqrt(h))
+}
+
+// ADD THE NEW FUNCTION HERE
+function calculateSpeedMph(
+  from: RouteCoord,
+  to: RouteCoord,
+  deltaMiles: number
+): number {
+  const fromAt = from.at
+  const toAt = to.at
+
+  if (
+    typeof fromAt !== "number" ||
+    typeof toAt !== "number" ||
+    toAt <= fromAt
+  ) {
+    return 0
+  }
+
+  const deltaHours = (toAt - fromAt) / 3_600_000
+  if (deltaHours <= 0) return 0
+
+  const speed = deltaMiles / deltaHours
+  return Number.isFinite(speed) ? speed : 0
 }
 
 function shouldCountDistance(deltaMiles: number): boolean {
@@ -666,9 +690,10 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               ? normalizeIncomingCoord(coord, now)
               : null
 
-          const next = flushSessionToNow(session, now, incomingCoord)
+                    const next = flushSessionToNow(session, now, incomingCoord)
 
           let liveMiles = next.liveMiles
+          let currentSpeed = next.currentSpeed
           let lastCoord = next.lastCoord
           let routeTrail = next.routeTrail
           let startCoord = next.startCoord
@@ -679,6 +704,13 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               const deltaMiles = haversineMiles(lastCoord, incomingCoord)
               if (shouldCountDistance(deltaMiles)) {
                 liveMiles += deltaMiles
+                currentSpeed = calculateSpeedMph(
+                  lastCoord,
+                  incomingCoord,
+                  deltaMiles
+                )
+              } else {
+                currentSpeed = 0
               }
             }
 
@@ -698,12 +730,15 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               latitude: incomingCoord.lat,
               longitude: incomingCoord.lng,
             }
+          } else {
+            currentSpeed = 0
           }
 
           return {
             session: {
               ...next,
               liveMiles,
+              currentSpeed,
               startCoord,
               lastCoord,
               routeTrail,
@@ -734,6 +769,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             ...state.session,
             routeTrail: [],
             liveMiles: 0,
+            currentSpeed: 0,
             startCoord: null,
             lastCoord: null,
             currentMode: "unverified",
@@ -853,7 +889,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
       storage: createJSONStorage(() =>
         isBrowser() ? localStorage : noopStorage
       ),
-      version: 11,
+      version: 12,
       partialize: (state) => ({
         session: state.session,
       }),

@@ -27,6 +27,9 @@ import type { Screen } from "../App"
 import { saveDrive } from "../state/driveStore"
 import type { DriveEntry, NightCalcMode } from "../state/driveStore"
 
+import DriveDashboard from "./DriveDashboard"
+
+
 type ActiveDriveContentProps = {
   setScreen: Dispatch<SetStateAction<Screen>>
   setCurrentDrive: Dispatch<SetStateAction<DriveEntry | null>>
@@ -832,17 +835,28 @@ useEffect(() => {
     }
   }, [showStopConfirm])
 
-  const isRunning = session.isRunning
-const hasActiveDrive = session.isActive
-const isNight = session.currentMode === "night"
-const isSolarUnverified = session.currentMode === "unverified"
-const formattedElapsed = formatTime(displayedMs)
+  // --- STATE ---
+const [isMaximized, setIsMaximized] = useState(false);
 
+// --- DERIVED VALUES ---
+const isRunning = session.isRunning;
+const hasActiveDrive = session.isActive;
+const isNight = session.currentMode === "night";
+const isSolarUnverified = session.currentMode === "unverified";
+const formattedElapsed = formatTime(displayedMs);
+
+const currentSpeed = session.currentSpeed ?? 0
+
+// --- HANDLERS ---
+const onMaximize = () => setIsMaximized(true);
+const onMinimize = () => setIsMaximized(false);
+
+// --- LABELS ---
 const lightingLabel = isSolarUnverified
   ? "Lighting unverified"
   : isNight
     ? "Night driving"
-    : "Day driving"
+    : "Day driving";
 
 // NEW: correctly scoped resume-block condition
 const cappedAndUnresumable =
@@ -1057,368 +1071,401 @@ const previewDisabled =
       : "Solar verification pending"
 
   return (
-    <div
-      className="flex w-full justify-center px-3 pt-3 text-white sm:px-4"
-      style={{
-        paddingBottom: "max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))",
-        paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
-        paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
-      }}
-    >
-      <div className="w-full max-w-[46rem]">
-        <section className="mx-auto w-full max-w-[42rem] overflow-hidden rounded-[28px] border border-white/15 bg-white/10 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
-          <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
+  <>
+    {isMaximized ? (
+      <DriveDashboard
+        currentSpeed={currentSpeed}
+        formattedTimer={formattedElapsed}
+        isNightMode={isNight}
+        onMinimize={onMinimize}
+      />
+    ) : (
+      <div
+        className="flex w-full justify-center px-3 pt-3 text-white sm:px-4"
+        style={{
+          paddingBottom: "max(2rem, calc(env(safe-area-inset-bottom, 0px) + 1.5rem))",
+          paddingLeft: "max(0.75rem, env(safe-area-inset-left, 0px))",
+          paddingRight: "max(0.75rem, env(safe-area-inset-right, 0px))",
+        }}
+      >
+        <div className="w-full max-w-[46rem]">
+          <section className="mx-auto w-full max-w-[42rem] overflow-hidden rounded-[28px] border border-white/15 bg-white/10 shadow-[0_14px_40px_rgba(0,0,0,0.22)] backdrop-blur-sm">
+            <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-white/70 to-[#0A1E5E]" />
 
-          <div className="p-4 sm:p-5">
-            <div className="rounded-[24px] border border-white/10 bg-[#08194A]/80 px-4 py-5 shadow-inner sm:px-5">
-              <div className="flex flex-col items-start gap-2">
-                <p className="text-[clamp(1.5rem,4vw,2.3rem)] font-extrabold leading-none tracking-tight break-words">
-                  Live Tracking
-                </p>
+            <div className="p-4 sm:p-5">
+              <div className="rounded-[24px] border border-white/10 bg-[#08194A]/80 px-4 py-5 shadow-inner sm:px-5">
+                <div className="flex flex-col items-start gap-2">
 
-                <p className="text-sm font-medium text-white/80 sm:text-base">
-                  {isRunning ? "Drive in progress" : hasActiveDrive ? "Drive paused" : "Ready to start"}
-                </p>
+                  {/* LIVE TRACKING TITLE */}
+                  <p className="text-[clamp(1.5rem,4vw,2.3rem)] font-extrabold leading-none tracking-tight break-words">
+                    Live Tracking
+                  </p>
 
-                <div
-                  className={`mt-1 inline-block rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
-                    isSolarUnverified
-                      ? "bg-amber-300 text-[#08194A]"
-                      : isNight
-                        ? "bg-[#112869] text-white ring-1 ring-[#f9c80e]/40"
-                        : "bg-white text-[#08194A]"
-                  }`}
-                >
-                  {isSolarUnverified ? "VERIFYING" : isNight ? "NIGHT" : "DAY"}
+                  {/* STATUS + BLINKING DOT */}
+                  <div className="flex items-center gap-2">
+                    {isRunning ? (
+                      <span className="relative flex h-3 w-3">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#35ff69] opacity-75" />
+                        <span className="relative inline-flex h-3 w-3 rounded-full bg-[#35ff69]" />
+                      </span>
+                    ) : hasActiveDrive ? (
+                      <span className="relative flex h-3 w-3">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                        <span className="relative inline-flex h-3 w-3 rounded-full bg-red-500" />
+                      </span>
+                    ) : null}
+
+                    <p className="text-sm font-medium text-white/80 sm:text-base">
+                      {isRunning
+                        ? "Drive in progress"
+                        : hasActiveDrive
+                          ? "Drive paused"
+                          : "Ready to start"}
+                    </p>
+                  </div>
+
+                  {/* DAY / NIGHT / VERIFYING BADGE */}
+                  <div
+                    className={`mt-1 inline-block rounded-full px-3 py-1 text-[10px] font-bold tracking-[0.16em] ${
+                      isSolarUnverified
+                        ? "bg-amber-300 text-[#08194A]"
+                        : isNight
+                          ? "bg-[#112869] text-white ring-1 ring-[#f9c80e]/40"
+                          : "bg-white text-[#08194A]"
+                    }`}
+                  >
+                    {isSolarUnverified ? "VERIFYING" : isNight ? "NIGHT" : "DAY"}
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-xl border border-white/10 bg-[#06153E]/95 px-3 py-3 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    {isSolarUnverified ? (
+                      <QuestionMarkCircleIcon className="h-5 w-5 shrink-0 text-[#f9c80e]" />
+                    ) : isNight ? (
+                      <MoonIcon className="h-5 w-5 shrink-0 text-[#f9c80e]" />
+                    ) : (
+                      <SunIcon className="h-5 w-5 shrink-0 text-[#f9c80e]" />
+                    )}
+
+                    <p className="text-sm font-bold">{lightingLabel}</p>
+                  </div>
+
+                  <p className="mt-1 text-xs text-white/70">
+                    {solarVerificationText}
+                  </p>
                 </div>
               </div>
+            </div>
+          </section>
 
-              <div className="mt-5 rounded-xl border border-white/10 bg-[#06153E]/95 px-3 py-3 text-center">
-                <div className="flex items-center justify-center gap-2">
-                  {isSolarUnverified ? (
-                    <QuestionMarkCircleIcon className="h-5 w-5 shrink-0 text-[#f9c80e]" />
-                  ) : isNight ? (
-                    <MoonIcon className="h-5 w-5 shrink-0 text-[#f9c80e]" />
-                  ) : (
-                    <SunIcon className="h-5 w-5 shrink-0 text-[#f9c80e]" />
-                  )}
+          <section className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
+            <p
+              className={`text-sm uppercase tracking-[0.18em] ${
+                isRunning ? "text-[#35ff69]" : "text-red-300"
+              }`}
+            >
+              {isRunning
+                ? "Drive Active"
+                : hasActiveDrive
+                  ? "Drive Paused"
+                  : "Ready to Start"}
+            </p>
 
-                  <p className="text-sm font-bold">{lightingLabel}</p>
-                </div>
-
-                <p className="mt-1 text-xs text-white/70">
-                  {solarVerificationText}
+            {session.exceededMaxDuration && (
+              <div className="mt-2 rounded-lg border border-red-300/40 bg-red-100/10 px-3 py-2 text-center">
+                <p className="text-[10px] font-semibold text-red-200">
+                  Drive exceeded maximum duration — please stop and save.
                 </p>
               </div>
-            </div>
-          </div>
-        </section>
+            )}
 
-        <section className="mx-auto mt-6 flex max-w-[42rem] flex-col items-center space-y-3">
-          <p
-            className={`text-sm uppercase tracking-[0.18em] ${
-              isRunning ? "text-[#35ff69]" : "text-red-300"
-            }`}
-          >
-            {isRunning
-              ? "Drive Active"
-              : hasActiveDrive
-                ? "Drive Paused"
-                : "Ready to Start"}
-          </p>
+            <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
 
-          {session.exceededMaxDuration && (
-  <div className="mt-2 rounded-lg border border-red-300/40 bg-red-100/10 px-3 py-2 text-center">
-    <p className="text-[10px] font-semibold text-red-200">
-      Drive exceeded maximum duration — please stop and save.
-    </p>
-  </div>
-)}
+              {/* START / PAUSE / RESUME BUTTON */}
+              <button
+                type="button"
+                onClick={handlePrimaryAction}
+                disabled={
+                  isSaving ||
+                  isPreparingStop ||
+                  isPreviewing ||
+                  cappedAndUnresumable
+                }
+                aria-label={
+                  isRunning
+                    ? "Pause drive timer"
+                    : hasActiveDrive
+                      ? "Resume drive timer"
+                      : "Start drive timer"
+                }
+                className={`flex h-16 w-16 shrink-0 touch-manipulation select-none items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-90 disabled:cursor-not-allowed disabled:bg-gray-500 ${
+                  isRunning
+                    ? "bg-[#00A651] active:bg-[#008a43]"
+                    : "bg-red-600 active:bg-red-700"
+                }`}
+              >
+                {isRunning ? (
+                  <span className="h-4 w-4 rounded-sm bg-white" />
+                ) : (
+                  <span className="ml-1 h-0 w-0 border-b-[8px] border-l-[13px] border-t-[8px] border-b-transparent border-l-white border-t-transparent" />
+                )}
+              </button>
 
-
-          <div className="flex w-full items-center justify-center gap-4 sm:gap-5">
-           <button
-  type="button"
-  onClick={handlePrimaryAction}
-  disabled={
-  isSaving ||
-  isPreparingStop ||
-  isPreviewing ||
-  cappedAndUnresumable
-}
-
-  aria-label={
-    isRunning
-      ? "Pause drive timer"
-      : hasActiveDrive
-        ? "Resume drive timer"
-        : "Start drive timer"
-  }
-  className={`flex h-16 w-16 shrink-0 touch-manipulation select-none items-center justify-center rounded-full border-4 border-white shadow-xl transition active:scale-90 disabled:cursor-not-allowed disabled:bg-gray-500 ${
-    isRunning
-      ? "bg-[#00A651] active:bg-[#008a43]"
-      : "bg-red-600 active:bg-red-700"
-  }`}
->
-  {isRunning ? (
-    <span className="h-4 w-4 rounded-sm bg-white" />
-  ) : (
-    <span className="ml-1 h-0 w-0 border-b-[8px] border-l-[13px] border-t-[8px] border-b-transparent border-l-white border-t-transparent" />
-  )}
-</button>
-
-
-
-            <div className="flex min-w-0 items-center gap-3">
-              <p className="text-[clamp(1.9rem,8vw,3.5rem)] sm:text-[4rem] font-black leading-none tracking-tight tabular-nums">
-                {formattedElapsed}
-              </p>
-
-              <div
-                className={`
-                  h-4 w-4 rounded-full
-                  ${isRunning ? "bg-[#35ff69]" : "bg-red-500"}
-                  ${isRunning ? "animate-pulse" : ""}
-                `}
-              ></div>
-            </div>
-          </div>
-
-          {hasActiveDrive && (
-            <div className="rounded-lg border border-yellow-300/40 bg-yellow-100/10 px-3 py-2 text-center">
-              <p className="text-[10px] font-semibold text-yellow-200">
-                Keep NJDrive50 open for the most accurate location and solar timing.
-              </p>
-            </div>
-          )}
-        </section>
-
-        <section className="mx-auto mt-5 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#08194A] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
-          <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#0A1E5E]" />
-
-          <div className="p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-[#0A1E5E]/50">
-                  Active Drive
-                </p>
-                <h2 className="mt-0.5 text-lg font-extrabold">Drive Summary</h2>
-              </div>
-
-              <span className="shrink-0 whitespace-nowrap rounded-full bg-[#F4F6FA] px-3 py-1 text-[10px] font-bold tracking-[0.14em] text-[#08194A] ring-1 ring-[#0A1E5E]/10">
-                {lightingLabel}
-              </span>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-2">
-              <div className="flex items-center justify-between rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-4 py-2.5 shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                  Duration
-                </p>
-                <p className="whitespace-nowrap text-xl font-black tabular-nums leading-tight">
+              {/* TIMER (NO DOT) */}
+              <div className="flex min-w-0 items-center">
+                <p className="text-[clamp(1.9rem,8vw,3.5rem)] sm:text-[4rem] font-black leading-none tracking-tight tabular-nums">
                   {formattedElapsed}
                 </p>
               </div>
-
-              <div className="flex items-center justify-between rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-4 py-2.5 shadow-sm">
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                  Distance
-                </p>
-                <p className="whitespace-nowrap text-xl font-black tabular-nums leading-tight">
-                  {safeNumber(session.liveMiles).toFixed(1)}
-                  <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">
-                    mi
-                  </span>
-                </p>
-              </div>
             </div>
 
-            <div className="mt-2 grid grid-cols-3 gap-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] p-3 text-center">
-              <div>
-                <p className="text-[9px] uppercase tracking-[0.12em] text-[#0A1E5E]/50">
-                  Day
-                </p>
-                <p className="mt-1 text-sm font-bold">
-                  {formatHours(session.dayMs / 3_600_000)}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-[9px] uppercase tracking-[0.12em] text-[#0A1E5E]/50">
-                  Darkness
-                </p>
-                <p className="mt-1 text-sm font-bold">
-                  {formatHours(session.nightMs / 3_600_000)}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-[9px] uppercase tracking-[0.12em] text-[#0A1E5E]/50">
-                  Unverified
-                </p>
-                <p className="mt-1 text-sm font-bold">
-                  {formatHours(session.unverifiedMs / 3_600_000)}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] p-3 text-center">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                  Start Time
-                </p>
-                <p className="mt-1 text-sm font-semibold">
-                  {session.startTime
-                    ? new Date(session.startTime).toLocaleTimeString()
-                    : "--"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                  Weather
-                </p>
-                <p className="mt-1 truncate text-sm font-semibold">
-                  {session.weather ?? "Not selected"}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-3">
-              <p className="mb-2 text-center text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
-                Weather Conditions
-              </p>
-
-              <div className="grid grid-cols-4 gap-1.5">
-                {["Clear", "Rain", "Snow", "Fog"].map((weather) => {
-                  const selected = session.weather === weather
-
-                  return (
-                    <button
-                      key={weather}
-                      type="button"
-                      onClick={() =>
-                        setWeather(selected ? null : weather)
-                      }
-                      className={`min-h-[44px] touch-manipulation select-none rounded-full border px-1 py-2 text-xs font-semibold transition active:scale-95 ${
-                        selected
-                          ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_10px_rgba(249,200,14,0.25)]"
-                          : "border-[#0A1E5E]/12 bg-white text-[#0A1E5E]/65 active:bg-[#f9c80e]/10"
-                      }`}
-                    >
-                      {weather}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {locationError && (
-              <div className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 px-3 py-2.5 text-left">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-red-600">
-                  Location Issue
-                </p>
-                <p className="mt-0.5 text-xs font-medium text-red-700">
-                  {locationError}
-                </p>
-              </div>
-            )}
-
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            {/* FULL DASHBOARD TEASER */}
+            {hasActiveDrive && (
               <button
-  type="button"
-  onClick={handlePrimaryAction}
-  disabled={
-  isSaving ||
-  isPreparingStop ||
-  isPreviewing ||
-  cappedAndUnresumable
-}
-  className={`min-h-[48px] touch-manipulation select-none rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 ${
-    isRunning
-      ? "bg-red-600 active:bg-red-700"
-      : hasActiveDrive
-        ? "bg-green-600 active:bg-green-700"
-        : "bg-[#08194A] active:bg-[#0A1E5E]"
-  }`}
->
-  {isRunning
-    ? "Pause Timer"
-    : hasActiveDrive
-      ? "Resume Timer"
-      : "Start Timer"}
-</button>
+                type="button"
+                onClick={onMaximize}
+                className="mt-1 flex items-center gap-2 rounded-full border border-[#f9c80e]/40 bg-[#f9c80e]/10 px-3 py-1.5 transition active:scale-95"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#f9c80e] opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f9c80e]" />
+                </span>
+                <span className="text-[11px] font-semibold tracking-wide text-[#f9c80e]">
+                  View full dashboard
+                </span>
+                <span className="text-[11px] text-[#f9c80e]">→</span>
+              </button>
+            )}
+          </section>
 
+          <section className="mx-auto mt-5 w-full max-w-[42rem] overflow-hidden rounded-[28px] border-2 border-[#0A1E5E]/50 bg-white text-[#08194A] shadow-[0_18px_40px_rgba(0,0,0,0.18)]">
+            <div className="h-1 w-full bg-gradient-to-r from-[#f9c80e] via-[#ffe27a] to-[#0A1E5E]" />
+
+            <div className="p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-[#0A1E5E]/50">
+                    Active Drive
+                  </p>
+                  <h2 className="mt-0.5 text-lg font-extrabold">Drive Summary</h2>
+                </div>
+
+                <span className="shrink-0 whitespace-nowrap rounded-full bg-[#F4F6FA] px-3 py-1 text-[10px] font-bold tracking-[0.14em] text-[#08194A] ring-1 ring-[#0A1E5E]/10">
+                  {lightingLabel}
+                </span>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-2">
+                <div className="flex items-center justify-between rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-4 py-2.5 shadow-sm">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                    Duration
+                  </p>
+                  <p className="whitespace-nowrap text-xl font-black tabular-nums leading-tight">
+                    {formattedElapsed}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl border border-[#0A1E5E]/12 bg-[#F7F9FC] px-4 py-2.5 shadow-sm">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                    Distance
+                  </p>
+                  <p className="whitespace-nowrap text-xl font-black tabular-nums leading-tight">
+                    {safeNumber(session.liveMiles).toFixed(1)}
+                    <span className="ml-1 text-xs font-bold text-[#0A1E5E]/55">
+                      mi
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-3 gap-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] p-3 text-center">
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-[#0A1E5E]/50">
+                    Day
+                  </p>
+                  <p className="mt-1 text-sm font-bold">
+                    {formatHours(session.dayMs / 3_600_000)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-[#0A1E5E]/50">
+                    Darkness
+                  </p>
+                  <p className="mt-1 text-sm font-bold">
+                    {formatHours(session.nightMs / 3_600_000)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.12em] text-[#0A1E5E]/50">
+                    Unverified
+                  </p>
+                  <p className="mt-1 text-sm font-bold">
+                    {formatHours(session.unverifiedMs / 3_600_000)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2 rounded-xl border border-[#0A1E5E]/12 bg-[#F4F6FA] p-3 text-center">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                    Start Time
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {session.startTime
+                      ? new Date(session.startTime).toLocaleTimeString()
+                      : "--"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                    Weather
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold">
+                    {session.weather ?? "Not selected"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <p className="mb-2 text-center text-[10px] uppercase tracking-[0.16em] text-[#0A1E5E]/50">
+                  Weather Conditions
+                </p>
+
+                <div className="grid grid-cols-4 gap-1.5">
+                  {["Clear", "Rain", "Snow", "Fog"].map((weather) => {
+                    const selected = session.weather === weather
+
+                    return (
+                      <button
+                        key={weather}
+                        type="button"
+                        onClick={() =>
+                          setWeather(selected ? null : weather)
+                        }
+                        className={`min-h-[44px] touch-manipulation select-none rounded-full border px-1 py-2 text-xs font-semibold transition active:scale-95 ${
+                          selected
+                            ? "border-transparent bg-[#f9c80e] text-[#08194A] shadow-[0_0_10px_rgba(249,200,14,0.25)]"
+                            : "border-[#0A1E5E]/12 bg-white text-[#0A1E5E]/65 active:bg-[#f9c80e]/10"
+                        }`}
+                      >
+                        {weather}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {locationError && (
+                <div className="mt-3 rounded-xl border-2 border-red-300 bg-red-50 px-3 py-2.5 text-left">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-red-600">
+                    Location Issue
+                  </p>
+                  <p className="mt-0.5 text-xs font-medium text-red-700">
+                    {locationError}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handlePrimaryAction}
+                  disabled={
+                    isSaving ||
+                    isPreparingStop ||
+                    isPreviewing ||
+                    cappedAndUnresumable
+                  }
+                  className={`min-h-[48px] touch-manipulation select-none rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 ${
+                    isRunning
+                      ? "bg-red-600 active:bg-red-700"
+                      : hasActiveDrive
+                        ? "bg-green-600 active:bg-green-700"
+                        : "bg-[#08194A] active:bg-[#0A1E5E]"
+                  }`}
+                >
+                  {isRunning
+                    ? "Pause Timer"
+                    : hasActiveDrive
+                      ? "Resume Timer"
+                      : "Start Timer"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleStopRequest}
+                  disabled={saveDisabled}
+                  className="min-h-[48px] touch-manipulation select-none rounded-xl bg-[#08194A] py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] active:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                >
+                  {isPreparingStop ? "Preparing..." : "Stop Drive"}
+                </button>
+              </div>
+
+              {showStopConfirm && (
+                <div
+                  ref={stopConfirmRef}
+                  className="mt-3 rounded-xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm"
+                >
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#0A1E5E]/55">
+                    Confirm Stop
+                  </p>
+
+                  <h3 className="mt-1 text-base font-extrabold">
+                    End and save this drive?
+                  </h3>
+
+                  <p className="mt-1 text-xs text-[#0A1E5E]/70">
+                    Active time is split using local sunrise and sunset. Paused time
+                    is excluded.
+                  </p>
+
+                  {isPreparingStop && (
+                    <p className="mt-2 text-xs font-semibold text-[#0A1E5E]">
+                      Preparing final snapshot...
+                    </p>
+                  )}
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCancelStop}
+                      disabled={isSaving}
+                      className="min-h-[48px] touch-manipulation select-none rounded-xl border border-[#0A1E5E]/15 bg-white py-3 text-sm font-bold text-[#08194A] transition active:scale-[0.98] active:bg-[#F7F9FC] disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSaveDrive}
+                      disabled={isSaving || isPreparingStop}
+                      className="min-h-[48px] touch-manipulation select-none rounded-xl bg-[#08194A] py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.98] active:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                    >
+                      {isSaving ? "Saving..." : "Save and End"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"
-                onClick={handleStopRequest}
-                disabled={saveDisabled}
-                className="min-h-[48px] touch-manipulation select-none rounded-xl bg-[#08194A] py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] active:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
+                onClick={handlePreviewSummary}
+                disabled={previewDisabled}
+                className="mt-3 min-h-[48px] w-full touch-manipulation select-none rounded-xl border-2 border-[#0A1E5E]/50 bg-white py-3.5 text-sm font-bold text-[#08194A] shadow-sm transition active:scale-[0.98] active:bg-[#f9c80e]/10 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
               >
-                {isPreparingStop ? "Preparing..." : "Stop Drive"}
+                {isPreviewing ? "Opening Preview..." : "Preview Summary — Not Saved"}
               </button>
             </div>
-
-            {showStopConfirm && (
-              <div
-                ref={stopConfirmRef}
-                className="mt-3 rounded-xl border-2 border-[#f9c80e]/45 bg-[#FFF9E8] p-4 shadow-sm"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#0A1E5E]/55">
-                  Confirm Stop
-                </p>
-
-                <h3 className="mt-1 text-base font-extrabold">
-                  End and save this drive?
-                </h3>
-
-                <p className="mt-1 text-xs text-[#0A1E5E]/70">
-                  Active time is split using local sunrise and sunset. Paused time
-                  is excluded.
-                </p>
-
-                {isPreparingStop && (
-                  <p className="mt-2 text-xs font-semibold text-[#0A1E5E]">
-                    Preparing final snapshot...
-                  </p>
-                )}
-
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCancelStop}
-                    disabled={isSaving}
-                    className="min-h-[48px] touch-manipulation select-none rounded-xl border border-[#0A1E5E]/15 bg-white py-3 text-sm font-bold text-[#08194A] transition active:scale-[0.98] active:bg-[#F7F9FC] disabled:cursor-not-allowed"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSaveDrive}
-                    disabled={isSaving || isPreparingStop}
-                    className="min-h-[48px] touch-manipulation select-none rounded-xl bg-[#08194A] py-3 text-sm font-bold text-white shadow-md transition active:scale-[0.98] active:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500"
-                  >
-                    {isSaving ? "Saving..." : "Save and End"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handlePreviewSummary}
-              disabled={previewDisabled}
-              className="mt-3 min-h-[48px] w-full touch-manipulation select-none rounded-xl border-2 border-[#0A1E5E]/50 bg-white py-3.5 text-sm font-bold text-[#08194A] shadow-sm transition active:scale-[0.98] active:bg-[#f9c80e]/10 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
-            >
-              {isPreviewing ? "Opening Preview..." : "Preview Summary — Not Saved"}
-            </button>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
-    </div>
-  )
+    )}
+  </>
+)
 }
 
 export default ActiveDriveContent

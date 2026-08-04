@@ -1044,39 +1044,38 @@ const previewDisabled =
   }
 
   const handleStopRequest = () => {
-    if (saveDisabled || isPreparingStop) return
+  if (saveDisabled || isPreparingStop) return
 
-    wasRunningBeforeStopRef.current = session.isRunning
+  wasRunningBeforeStopRef.current = session.isRunning
+  setShowStopConfirm(true)
+  setIsPreparingStop(true)
 
-    setShowStopConfirm(true)
-    setIsPreparingStop(true)
+  const stopRequestedAt = Date.now()
+  const activeSession = useActiveDriveStore.getState().session
 
-    const stopRequestedAt = Date.now()
-    const activeSession = useActiveDriveStore.getState().session
+  /*
+   * Freeze the active interval immediately. This stops the visible timer
+   * as soon as Stop Drive is pressed and excludes all confirmation time.
+   */
+  if (activeSession.isRunning) {
+    tick(undefined, stopRequestedAt)
+    pauseDrive(stopRequestedAt)
 
-    /*
-     * Freeze the active interval immediately. This stops the visible timer
-     * as soon as Stop Drive is pressed and excludes all confirmation time.
-     */
-    if (activeSession.isRunning) {
-      tick(undefined, stopRequestedAt)
-      pauseDrive(stopRequestedAt)
-
-      void updateForegroundService(
-        "Drive paused — confirm Save and End to finish"
-      )
-    }
-
-    /*
-     * buildDriveSnapshot() obtains one final GPS point for the route endpoint
-     * and route mileage. Do not call getCurrentLocation() here too.
-     */
-    createFrozenSnapshot({ isPreview: false }).finally(() => {
-      if (mountedRef.current) {
-        setIsPreparingStop(false)
-      }
-    })
+    void updateForegroundService(
+      "Drive paused — confirm Save and End to finish"
+    )
   }
+
+  /*
+   * Build one final snapshot in the background. It obtains the endpoint GPS
+   * point and, when the route API is available, more accurate route mileage.
+   */
+  void createFrozenSnapshot({ isPreview: false }).finally(() => {
+    if (mountedRef.current) {
+      setIsPreparingStop(false)
+    }
+  })
+}
 
   const handleCancelStop = () => {
     snapshotAbortRef.current?.abort()

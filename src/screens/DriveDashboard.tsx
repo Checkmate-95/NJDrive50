@@ -34,6 +34,7 @@ function getCardinalDirection(degrees: number): string {
 function useCompassHeading() {
   const [heading, setHeading] = useState<number | null>(null)
   const [needsPermission, setNeedsPermission] = useState(false)
+  const [permissionGranted, setPermissionGranted] = useState(false)
 
   useEffect(() => {
     if (typeof window === "undefined" || !("DeviceOrientationEvent" in window)) {
@@ -63,7 +64,7 @@ function useCompassHeading() {
       }
     ).requestPermission
 
-    if (typeof requestFn === "function") {
+    if (typeof requestFn === "function" && !permissionGranted) {
       setNeedsPermission(true)
       return
     }
@@ -75,7 +76,7 @@ function useCompassHeading() {
       window.removeEventListener("deviceorientationabsolute", onOrientation, true)
       window.removeEventListener("deviceorientation", onOrientation, true)
     }
-  }, [])
+  }, [permissionGranted])
 
   const requestPermission = async () => {
     const requestFn = (
@@ -88,10 +89,11 @@ function useCompassHeading() {
 
     try {
       const result = await requestFn()
-      if (result !== "granted") return
 
-      setNeedsPermission(false)
-      window.dispatchEvent(new Event("resize"))
+      if (result === "granted") {
+        setNeedsPermission(false)
+        setPermissionGranted(true)
+      }
     } catch {
       setNeedsPermission(false)
     }
@@ -282,16 +284,17 @@ export default function DriveDashboard({
       </div>
     </div>
 
-    <div className="row-start-2 flex min-w-0 flex-col justify-center border-r border-white/15 pr-[clamp(0.25rem,0.75vw,0.75rem)]">
+    {/* Left panel — compass */}
+    <div className="row-start-2 flex min-w-0 flex-col items-center justify-center border-r border-white/15 pr-[clamp(0.25rem,0.75vw,0.75rem)] text-center">
       <p className="text-[clamp(0.5rem,1.6dvh,0.7rem)] font-bold uppercase tracking-[0.12em] text-white/60">
         Direction
       </p>
 
-      <p className="mt-0.5 text-[clamp(1.4rem,7dvh,3rem)] font-black leading-none">
+      <p className="mt-0.5 text-[clamp(1.6rem,8dvh,3.5rem)] font-black leading-none">
         {directionLetter}
       </p>
 
-      <p className="mt-1 text-[clamp(0.55rem,1.7dvh,0.75rem)] font-semibold leading-tight text-white/80">
+      <p className="mt-1 text-[clamp(0.6rem,1.8dvh,0.85rem)] font-semibold leading-tight text-white/80">
         {roundedHeading === null
           ? "Compass unavailable"
           : `${roundedHeading}° heading`}
@@ -301,41 +304,43 @@ export default function DriveDashboard({
         <button
           type="button"
           onClick={requestPermission}
-          className="mt-1.5 min-h-7 touch-manipulation rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur transition active:scale-95"
+          className="mt-2 min-h-7 touch-manipulation rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur transition active:scale-95"
         >
           Enable Compass
         </button>
       )}
     </div>
 
-    <div className="row-start-2 flex min-w-0 flex-col items-center justify-center">
-      <p className="whitespace-nowrap text-[clamp(2rem,8dvh,4rem)] font-black leading-none tracking-tight tabular-nums drop-shadow-lg">
+    {/* Center panel — speed and timer */}
+    <div className="row-start-2 flex min-w-0 flex-col items-center justify-center text-center">
+      <p className="whitespace-nowrap text-[clamp(2.4rem,9dvh,4.8rem)] font-black leading-none tracking-tight tabular-nums drop-shadow-lg">
         {speed}
-        <span className="ml-1 text-[clamp(0.6rem,2dvh,1rem)] font-bold align-super opacity-70">
+        <span className="ml-1 text-[clamp(0.75rem,2.4dvh,1.2rem)] font-bold align-super opacity-70">
           MPH
         </span>
       </p>
 
-      <p className="mt-1 whitespace-nowrap text-[clamp(0.9rem,4dvh,2rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
+      <p className="mt-1 whitespace-nowrap text-[clamp(1.1rem,5dvh,2.4rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
         {formattedTimer}
       </p>
 
-      <div className="mt-1 flex items-center gap-1 text-center text-[clamp(0.6rem,1.8dvh,0.9rem)] font-semibold text-white/90">
+      <div className="mt-1 flex items-center gap-1 text-center text-[clamp(0.75rem,2.2dvh,1.1rem)] font-semibold text-white/90">
         <span aria-hidden="true">{isNightMode ? "🌙" : "☀️"}</span>
         <span>{modeLabel}</span>
       </div>
     </div>
 
-    <div className="row-start-2 flex min-w-0 flex-col justify-center border-l border-white/15 pl-[clamp(0.25rem,0.75vw,0.75rem)]">
+    {/* Right panel — temperature */}
+    <div className="row-start-2 flex min-w-0 flex-col items-center justify-center border-l border-white/15 pl-[clamp(0.25rem,0.75vw,0.75rem)] text-center">
       <p className="text-[clamp(0.5rem,1.6dvh,0.7rem)] font-bold uppercase tracking-[0.12em] text-white/60">
         Outside Temp
       </p>
 
-      <p className="mt-0.5 whitespace-nowrap text-[clamp(1.4rem,7dvh,3rem)] font-black leading-none text-[#f9c80e]">
+      <p className="mt-0.5 whitespace-nowrap text-[clamp(1.6rem,8dvh,3.5rem)] font-black leading-none text-[#f9c80e]">
         {temperatureLabel}
       </p>
 
-      <p className="mt-1 text-[clamp(0.55rem,1.7dvh,0.75rem)] font-semibold leading-tight text-white/80">
+      <p className="mt-1 text-[clamp(0.6rem,1.8dvh,0.85rem)] font-semibold leading-tight text-white/80">
         Local conditions
       </p>
     </div>
@@ -345,107 +350,107 @@ export default function DriveDashboard({
     </div>
   </div>
 ) : (
-    <div className="flex h-full min-h-0 w-full flex-col items-center justify-between text-white">
-      {topBar}
+  <div className="flex h-full min-h-0 w-full flex-col items-center justify-between text-white">
+    {topBar}
 
-      <div className="h-px w-full shrink-0 bg-white/15" />
+    <div className="h-px w-full shrink-0 bg-white/15" />
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1">
-        <p className="text-[clamp(3.5rem,16vw,7rem)] font-black leading-none tracking-tight tabular-nums drop-shadow-lg">
-          {speed}
-          <span className="ml-1 text-base font-bold align-super opacity-70 sm:ml-2 sm:text-lg">
-            MPH
-          </span>
-        </p>
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1">
+      <p className="text-[clamp(3.5rem,16vw,7rem)] font-black leading-none tracking-tight tabular-nums drop-shadow-lg">
+        {speed}
+        <span className="ml-1 text-base font-bold align-super opacity-70 sm:ml-2 sm:text-lg">
+          MPH
+        </span>
+      </p>
 
-        <p className="mt-1 text-[clamp(1.25rem,5vw,2.25rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
-          {formattedTimer}
-        </p>
+      <p className="mt-1 text-[clamp(1.25rem,5vw,2.25rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
+        {formattedTimer}
+      </p>
 
-        <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-white/90 sm:text-base">
-          <span aria-hidden="true">{isNightMode ? "🌙" : "☀️"}</span>
-          <span>{modeLabel}</span>
-        </div>
+      <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-white/90 sm:text-base">
+        <span aria-hidden="true">{isNightMode ? "🌙" : "☀️"}</span>
+        <span>{modeLabel}</span>
       </div>
-
-      <div className="h-px w-full shrink-0 bg-white/15" />
-
-      <div className="w-full pt-2">{portraitActionButtons}</div>
     </div>
-  )
 
-  return (
-    <div
-      className={`fixed inset-0 z-[100] flex h-[100dvh] w-screen items-center justify-center overflow-hidden ${
-        isLandscape ? "p-0" : "px-3 py-3"
-      }`}
-      style={{
-        background: pageBg,
-        paddingTop: isLandscape
-          ? 0
-          : "max(0.75rem, env(safe-area-inset-top))",
-        paddingRight: isLandscape
-          ? 0
-          : "max(0.75rem, env(safe-area-inset-right))",
-        paddingBottom: isLandscape
-          ? 0
-          : "max(0.75rem, env(safe-area-inset-bottom))",
-        paddingLeft: isLandscape
-          ? 0
-          : "max(0.75rem, env(safe-area-inset-left))",
-      }}
+    <div className="h-px w-full shrink-0 bg-white/15" />
+
+    <div className="w-full pt-2">{portraitActionButtons}</div>
+  </div>
+)
+
+return (
+  <div
+    className={`fixed inset-0 z-[100] flex h-[100dvh] w-screen items-center justify-center overflow-hidden ${
+      isLandscape ? "p-0" : "px-3 py-3"
+    }`}
+    style={{
+      background: pageBg,
+      paddingTop: isLandscape
+        ? 0
+        : "max(0.75rem, env(safe-area-inset-top))",
+      paddingRight: isLandscape
+        ? 0
+        : "max(0.75rem, env(safe-area-inset-right))",
+      paddingBottom: isLandscape
+        ? 0
+        : "max(0.75rem, env(safe-area-inset-bottom))",
+      paddingLeft: isLandscape
+        ? 0
+        : "max(0.75rem, env(safe-area-inset-left))",
+    }}
+  >
+    <button
+      type="button"
+      onClick={onMinimize}
+      className="absolute right-[max(0.5rem,env(safe-area-inset-right))] top-[max(0.25rem,env(safe-area-inset-top))] z-[110] min-h-8 touch-manipulation rounded-full bg-black/30 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md transition active:scale-95 sm:min-h-10 sm:px-4 sm:py-1.5 sm:text-sm"
     >
+      Minimize
+    </button>
+
+    {!isLandscape && needsPermission && (
       <button
         type="button"
-        onClick={onMinimize}
-        className="absolute right-[max(0.5rem,env(safe-area-inset-right))] top-[max(0.25rem,env(safe-area-inset-top))] z-[110] min-h-8 touch-manipulation rounded-full bg-black/30 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-md transition active:scale-95 sm:min-h-10 sm:px-4 sm:py-1.5 sm:text-sm"
+        onClick={requestPermission}
+        className="absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-[110] min-h-10 touch-manipulation rounded-full bg-black/30 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md transition active:scale-95"
       >
-        Minimize
+        Enable Compass
       </button>
+    )}
 
-      {!isLandscape && needsPermission && (
-        <button
-          type="button"
-          onClick={requestPermission}
-          className="absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-[110] min-h-10 touch-manipulation rounded-full bg-black/30 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md transition active:scale-95"
-        >
-          Enable Compass
-        </button>
-      )}
+    {isNightMode && (
+      <div className="pointer-events-none absolute inset-0 opacity-70">
+        {STAR_POSITIONS.map((star) => (
+          <span
+            key={star.id}
+            className="absolute rounded-full bg-white"
+            style={{
+              top: star.top,
+              left: star.left,
+              width: star.size,
+              height: star.size,
+              opacity: star.opacity,
+            }}
+          />
+        ))}
+      </div>
+    )}
 
-      {isNightMode && (
-        <div className="pointer-events-none absolute inset-0 opacity-70">
-          {STAR_POSITIONS.map((star) => (
-            <span
-              key={star.id}
-              className="absolute rounded-full bg-white"
-              style={{
-                top: star.top,
-                left: star.left,
-                width: star.size,
-                height: star.size,
-                opacity: star.opacity,
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {isLandscape ? (
-        <div
-          className="relative z-10 h-full w-full overflow-hidden"
-          style={{ background: screenBg }}
-        >
-          {dashboardContent}
-        </div>
-      ) : (
-        <div
-          className="relative z-10 flex h-[min(88dvh,44rem)] w-full max-w-sm overflow-hidden rounded-[2rem] border-[6px] border-[#12131a] px-6 py-7 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
-          style={{ background: screenBg }}
-        >
-          {dashboardContent}
-        </div>
-      )}
-    </div>
-  )
+    {isLandscape ? (
+      <div
+        className="relative z-10 h-full w-full overflow-hidden"
+        style={{ background: screenBg }}
+      >
+        {dashboardContent}
+      </div>
+    ) : (
+      <div
+        className="relative z-10 flex h-[min(88dvh,44rem)] w-full max-w-sm overflow-hidden rounded-[2rem] border-[6px] border-[#12131a] px-6 py-7 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+        style={{ background: screenBg }}
+      >
+        {dashboardContent}
+      </div>
+    )}
+  </div>
+)
 }

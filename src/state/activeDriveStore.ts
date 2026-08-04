@@ -16,12 +16,14 @@ export type RouteCoord = {
   lat: number
   lng: number
   at?: number
+  accuracy?: number | null
+  heading?: number | null
+  gpsSpeedMps?: number | null
 }
 
 export type ActiveDriveSession = {
   isActive: boolean
   isRunning: boolean
-
   exceededMaxDuration: boolean
 
   startTime: number | null
@@ -30,7 +32,6 @@ export type ActiveDriveSession = {
   dayMs: number
   nightMs: number
   unverifiedMs: number
-
   pausedMs: number
 
   currentMode: DriveMode
@@ -40,6 +41,8 @@ export type ActiveDriveSession = {
   lastTickAt: number | null
 
   weather: string | null
+  outsideTempF: number | null
+  outsideTempUpdatedAt: number | null
 
   location: { latitude: number; longitude: number } | null
 
@@ -76,6 +79,7 @@ type ActiveDriveStore = {
   tick: (coord?: RouteCoord | null, nowOverride?: number) => void
 
   setWeather: (weather: string | null) => void
+  setOutsideTemp: (temperatureF: number | null, updatedAt?: number) => void
   appendRoutePoint: (coord: RouteCoord) => void
   clearRoute: () => void
 
@@ -103,6 +107,13 @@ const GLOBAL_TICK_MS = 1_000
 const MIN_MOVEMENT_MILES = 0.01
 const MAX_SINGLE_POINT_JUMP_MILES = 2
 
+const MAX_GPS_ACCURACY_METERS = 65
+const MIN_SPEED_SAMPLE_MS = 1_000
+const MAX_SPEED_SAMPLE_MS = 15_000
+const MAX_REASONABLE_SPEED_MPH = 120
+const SPEED_STALE_AFTER_MS = 8_000
+const SPEED_SMOOTHING = 0.35
+
 export const UNVERIFIED_GRACE_MS = 45_000
 
 function isBrowser(): boolean {
@@ -119,7 +130,6 @@ function createInitialSession(): ActiveDriveSession {
   return {
     isActive: false,
     isRunning: false,
-
     exceededMaxDuration: false,
 
     startTime: null,
@@ -137,6 +147,8 @@ function createInitialSession(): ActiveDriveSession {
     lastTickAt: null,
 
     weather: null,
+    outsideTempF: null,
+    outsideTempUpdatedAt: null,
 
     location: null,
 
@@ -158,6 +170,10 @@ function normalizeNonNegativeNumber(value: unknown, fallback = 0): number {
     : fallback
 }
 
+function normalizeHeading(value: number): number {
+  return ((value % 360) + 360) % 360
+}
+
 function isValidCoord(
   coord: RouteCoord | null | undefined
 ): coord is RouteCoord {
@@ -176,29 +192,39 @@ function normalizeRouteCoord(value: unknown): RouteCoord | null {
   if (!value || typeof value !== "object") return null
 
   const raw = value as Partial<RouteCoord>
-  const lat = raw.lat
-  const lng = raw.lng
 
   if (
-    typeof lat !== "number" ||
-    !Number.isFinite(lat) ||
-    lat < -90 ||
-    lat > 90 ||
-    typeof lng !== "number" ||
-    !Number.isFinite(lng) ||
-    lng < -180 ||
-    lng > 180
+    typeof raw.lat !== "number" ||
+    !Number.isFinite(raw.lat) ||
+    raw.lat < -90 ||
+    raw.lat > 90 ||
+    typeof raw.lng !== "number" ||
+    !Number.isFinite(raw.lng) ||
+    raw.lng < -180 ||
+    raw.lng > 180
   ) {
     return null
   }
 
   return {
-    lat,
-    lng,
+    lat: raw.lat,
+    lng: raw.lng,
     at:
       typeof raw.at === "number" && Number.isFinite(raw.at)
         ? raw.at
         : undefined,
+    accuracy:
+      typeof raw.accuracy === "number" && Number.isFinite(raw.accuracy)
+        ? Math.max(0, raw.accuracy)
+        : null,
+    heading:
+      typeof raw.heading === "number" && Number.isFinite(raw.heading)
+        ? normalizeHeading(raw.heading)
+        : null,
+    gpsSpeedMps:
+      typeof raw.gpsSpeedMps === "number" && Number.isFinite(raw.gpsSpeedMps)
+        ? Math.max(0, raw.gpsSpeedMps)
+        : null,
   }
 }
 
@@ -226,7 +252,6 @@ function normalizeSession(value: unknown): ActiveDriveSession {
   return {
     isActive: raw.isActive === true,
     isRunning: raw.isRunning === true,
-
     exceededMaxDuration: raw.exceededMaxDuration === true,
 
     startTime: normalizeNumber(raw.startTime),
@@ -244,14 +269,20 @@ function normalizeSession(value: unknown): ActiveDriveSession {
     lastTickAt: normalizeNumber(raw.lastTickAt),
 
     weather: typeof raw.weather === "string" ? raw.weather : null,
+    outsideTempF:
+      typeof raw.outsideTempF === "number" &&
+      Number.isFinite(raw.outsideTempF)
+        ? raw.outsideTempF
+        : null,
+    outsideTempUpdatedAt: normalizeNumber(raw.outsideTempUpdatedAt),
 
     location:
       raw.location &&
-      typeof (raw.location as any).latitude === "number" &&
-      typeof (raw.location as any).longitude === "number"
+      typeof (raw.location as { latitude?: unknown }).latitude === "number" &&
+      typeof (raw.location as { longitude?: unknown }).longitude === "number"
         ? {
-            latitude: (raw.location as any).latitude,
-            longitude: (raw.location as any).longitude,
+            latitude: (raw.location as { latitude: number }).latitude,
+            longitude: (raw.location as { longitude: number }).longitude,
           }
         : null,
 
@@ -272,6 +303,19 @@ function normalizeIncomingCoord(coord: RouteCoord, now: number): RouteCoord {
       typeof coord.at === "number" && Number.isFinite(coord.at)
         ? coord.at
         : now,
+    accuracy:
+      typeof coord.accuracy === "number" && Number.isFinite(coord.accuracy)
+        ? Math.max(0, coord.accuracy)
+        : null,
+    heading:
+      typeof coord.heading === "number" && Number.isFinite(coord.heading)
+        ? normalizeHeading(coord.heading)
+        : null,
+    gpsSpeedMps:
+      typeof coord.gpsSpeedMps === "number" &&
+      Number.isFinite(coord.gpsSpeedMps)
+        ? Math.max(0, coord.gpsSpeedMps)
+        : null,
   }
 }
 
@@ -296,16 +340,8 @@ function flushSessionToNow(
     return session
   }
 
-  // Guard: auto-cap accounted time so a stuck/forgotten session can never
-  // silently accumulate multi-day totals. This only pauses the timer
-  // (isRunning: false) and flags exceededMaxDuration: true — it
-  // deliberately does NOT set isActive: false. Setting isActive false here
-  // would make ActiveDriveContent.tsx treat the drive as nonexistent
-  // (hasActiveDrive becomes false), which disables the Save button and
-  // routes the primary action button to startNewDrive(), permanently
-  // wiping the accumulated dayMs/nightMs/liveMiles/routeTrail instead of
-  // letting the user save and flag the drive for review.
   const totalElapsedMs = now - session.startTime - session.pausedMs
+
   if (totalElapsedMs > MAX_DRIVE_DURATION_MS) {
     return {
       ...session,
@@ -315,17 +351,18 @@ function flushSessionToNow(
       stopTime: now,
       lastUpdated: now,
       lastTickAt: now,
+      currentSpeed: 0,
     }
   }
 
   const baseline = session.lastTickAt ?? session.startTime
+
   if (!Number.isFinite(baseline) || now <= baseline) {
     return { ...session, lastUpdated: now }
   }
 
   const gapMs = now - baseline
-  const SMALL_GAP_MS = 60_000
-
+  const smallGapMs = 60_000
   const effectiveCoord = coord ?? session.lastCoord ?? session.startCoord
   const validCoord = isValidCoord(effectiveCoord) ? effectiveCoord : null
 
@@ -333,7 +370,7 @@ function flushSessionToNow(
   let addNight = 0
   let addUnverified = 0
 
-  if (gapMs <= SMALL_GAP_MS || !validCoord) {
+  if (gapMs <= smallGapMs || !validCoord) {
     const mode = validCoord
       ? getCurrentSolarMode(new Date(baseline), validCoord.lat, validCoord.lng)
       : "unverified"
@@ -345,7 +382,8 @@ function flushSessionToNow(
     const split = computeDayNightSplit(
       new Date(baseline),
       new Date(now),
-      (d: Date) => getSolarWindowForDate(validCoord!.lat, validCoord!.lng, d)
+      (date: Date) =>
+        getSolarWindowForDate(validCoord!.lat, validCoord!.lng, date)
     )
 
     if (split.mode === "solar") {
@@ -360,73 +398,36 @@ function flushSessionToNow(
   const nightMs = session.nightMs + addNight
   const unverifiedMs = session.unverifiedMs + addUnverified
 
-  const currentMode = validCoord
-    ? getCurrentSolarMode(new Date(now), validCoord.lat, validCoord.lng)
-    : "unverified"
-
-  const solarStatus = getSolarStatus(dayMs, nightMs, unverifiedMs)
-
-  // Subtract cumulative paused time so the invariant reflects only active
-  // driving time, not wall-clock time since startTime.
-  const accounted = dayMs + nightMs + unverifiedMs
-  const elapsed = now - session.startTime - session.pausedMs
-  const drift = Math.abs(accounted - elapsed)
-  if (drift > 5000) {
-    console.warn("Drive accumulator drift", { accounted, elapsed, drift })
-  }
-
   return {
     ...session,
     dayMs,
     nightMs,
     unverifiedMs,
-    currentMode,
-    solarStatus,
+    currentMode: validCoord
+      ? getCurrentSolarMode(new Date(now), validCoord.lat, validCoord.lng)
+      : "unverified",
+    solarStatus: getSolarStatus(dayMs, nightMs, unverifiedMs),
     lastUpdated: now,
     lastTickAt: now,
   }
 }
 
 function haversineMiles(a: RouteCoord, b: RouteCoord): number {
-  const toRadians = (degrees: number) => (degrees * Math.PI) / 180
+  const radians = (degrees: number) => (degrees * Math.PI) / 180
 
-  const dLat = toRadians(b.lat - a.lat)
-  const dLng = toRadians(b.lng - a.lng)
-  const lat1 = toRadians(a.lat)
-  const lat2 = toRadians(b.lat)
+  const dLat = radians(b.lat - a.lat)
+  const dLng = radians(b.lng - a.lng)
+  const lat1 = radians(a.lat)
+  const lat2 = radians(b.lat)
 
-  const sinDLat = Math.sin(dLat / 2)
-  const sinDLng = Math.sin(dLng / 2)
+  const sinLat = Math.sin(dLat / 2)
+  const sinLng = Math.sin(dLng / 2)
 
   const h =
-    sinDLat * sinDLat +
-    Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng
+    sinLat * sinLat +
+    Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng
 
   return 2 * EARTH_RADIUS_MILES * Math.asin(Math.sqrt(h))
-}
-
-// ADD THE NEW FUNCTION HERE
-function calculateSpeedMph(
-  from: RouteCoord,
-  to: RouteCoord,
-  deltaMiles: number
-): number {
-  const fromAt = from.at
-  const toAt = to.at
-
-  if (
-    typeof fromAt !== "number" ||
-    typeof toAt !== "number" ||
-    toAt <= fromAt
-  ) {
-    return 0
-  }
-
-  const deltaHours = (toAt - fromAt) / 3_600_000
-  if (deltaHours <= 0) return 0
-
-  const speed = deltaMiles / deltaHours
-  return Number.isFinite(speed) ? speed : 0
 }
 
 function shouldCountDistance(deltaMiles: number): boolean {
@@ -435,6 +436,55 @@ function shouldCountDistance(deltaMiles: number): boolean {
     deltaMiles >= MIN_MOVEMENT_MILES &&
     deltaMiles <= MAX_SINGLE_POINT_JUMP_MILES
   )
+}
+
+function isUsableSpeedCoord(coord: RouteCoord): boolean {
+  return (
+    coord.accuracy === null ||
+    coord.accuracy === undefined ||
+    coord.accuracy <= MAX_GPS_ACCURACY_METERS
+  )
+}
+
+function calculateManualSpeedMph(
+  from: RouteCoord,
+  to: RouteCoord
+): number | null {
+  if (!isUsableSpeedCoord(from) || !isUsableSpeedCoord(to)) return null
+
+  if (
+    typeof from.at !== "number" ||
+    typeof to.at !== "number" ||
+    to.at <= from.at
+  ) {
+    return null
+  }
+
+  const elapsedMs = to.at - from.at
+
+  if (elapsedMs < MIN_SPEED_SAMPLE_MS || elapsedMs > MAX_SPEED_SAMPLE_MS) {
+    return null
+  }
+
+  const deltaMiles = haversineMiles(from, to)
+  const speedMph = deltaMiles / (elapsedMs / 3_600_000)
+
+  if (
+    !Number.isFinite(speedMph) ||
+    speedMph < 0 ||
+    speedMph > MAX_REASONABLE_SPEED_MPH
+  ) {
+    return null
+  }
+
+  return speedMph
+}
+
+function smoothSpeedMph(previous: number, next: number): number {
+  const safePrevious = Number.isFinite(previous) ? Math.max(0, previous) : 0
+  const safeNext = Number.isFinite(next) ? Math.max(0, next) : 0
+
+  return safePrevious + (safeNext - safePrevious) * SPEED_SMOOTHING
 }
 
 export const useActiveDriveStore = create<ActiveDriveStore>()(
@@ -468,34 +518,27 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         set({
           session: {
             ...createInitialSession(),
-
             isActive: true,
             isRunning: true,
-
-            // Reset explicitly: a fresh drive never inherits a stale
-            // capped state, but this makes the intent unambiguous at the
-            // start of every drive.
             exceededMaxDuration: false,
-
             startTime: now,
             stopTime: null,
-
             lastTickAt: now,
             lastUpdated: now,
-
             currentMode,
-
             solarStatus:
               initialCoord && currentMode !== "unverified"
                 ? "verified"
                 : "unverified",
-
             weather: options?.weather ?? null,
-
+            outsideTempF: null,
+            outsideTempUpdatedAt: null,
             location: initialCoord
-              ? { latitude: initialCoord.lat, longitude: initialCoord.lng }
+              ? {
+                  latitude: initialCoord.lat,
+                  longitude: initialCoord.lng,
+                }
               : null,
-
             startCoord: initialCoord,
             lastCoord: initialCoord,
             routeTrail: initialCoord ? [initialCoord] : [],
@@ -522,6 +565,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               ...flushed,
               isRunning: false,
               stopTime: now,
+              currentSpeed: 0,
               lastUpdated: now,
             },
           }
@@ -536,59 +580,43 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         set((state) => {
           const session = state.session
 
-          // Normal guard: cannot resume if inactive or already running
-          if (!session.isActive || session.isRunning) {
+          if (!session.isActive || session.isRunning || session.startTime === null) {
             return { session }
           }
 
-          // Guard against null startTime (TS null-narrowing safety).
-          // Unreachable in practice since isActive implies startDrive
-          // already set startTime, but keeps the arithmetic below
-          // type-safe without a non-null assertion.
-          if (session.startTime === null) {
-            return { session }
-          }
-
-          // HARD BLOCK: prevent resume after max-duration cap. Re-checks
-          // against wall-clock time at the moment of resume (not a stale
-          // flag) to close the race where a teen pauses near the boundary
-          // and tries to resume well after the cap has passed.
           const totalElapsedMs = now - session.startTime - session.pausedMs
+
           if (totalElapsedMs > MAX_DRIVE_DURATION_MS) {
             return {
               session: {
                 ...session,
                 exceededMaxDuration: true,
+                currentSpeed: 0,
               },
             }
           }
 
           const coord = session.lastCoord ?? session.startCoord
-
-          const currentMode = coord
-            ? getCurrentSolarMode(new Date(now), coord.lat, coord.lng)
-            : "unverified"
-
           const pauseDurationMs =
-            session.stopTime !== null ? Math.max(0, now - session.stopTime) : 0
+            session.stopTime === null
+              ? 0
+              : Math.max(0, now - session.stopTime)
 
           return {
             session: {
               ...session,
-
               isRunning: true,
               stopTime: null,
-
-              currentMode,
-
               pausedMs: session.pausedMs + pauseDurationMs,
-
+              currentSpeed: 0,
+              currentMode: coord
+                ? getCurrentSolarMode(new Date(now), coord.lat, coord.lng)
+                : "unverified",
               solarStatus: getSolarStatus(
                 session.dayMs,
                 session.nightMs,
                 session.unverifiedMs
               ),
-
               lastUpdated: now,
               lastTickAt: now,
             },
@@ -610,10 +638,10 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           const coordForSolar = finalCoord
             ? { ...finalCoord, at: now }
             : state.session.lastCoord
-            ? { ...state.session.lastCoord, at: now }
-            : state.session.startCoord
-            ? { ...state.session.startCoord, at: now }
-            : null
+              ? { ...state.session.lastCoord, at: now }
+              : state.session.startCoord
+                ? { ...state.session.startCoord, at: now }
+                : null
 
           const flushed = flushSessionToNow(state.session, now, coordForSolar)
 
@@ -645,24 +673,23 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           return {
             session: {
               ...flushed,
-
               isActive: false,
               isRunning: false,
-
               stopTime: now,
               lastUpdated: now,
-
+              currentSpeed: 0,
               liveMiles,
               lastCoord: finalCoord
                 ? { ...finalCoord, at: now }
                 : flushed.lastCoord
-                ? { ...flushed.lastCoord, at: now }
-                : null,
-
+                  ? { ...flushed.lastCoord, at: now }
+                  : null,
               routeTrail,
-
               location: finalCoord
-                ? { latitude: finalCoord.lat, longitude: finalCoord.lng }
+                ? {
+                    latitude: finalCoord.lat,
+                    longitude: finalCoord.lng,
+                  }
                 : flushed.location,
             },
           }
@@ -690,7 +717,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               ? normalizeIncomingCoord(coord, now)
               : null
 
-                    const next = flushSessionToNow(session, now, incomingCoord)
+          const next = flushSessionToNow(session, now, incomingCoord)
 
           let liveMiles = next.liveMiles
           let currentSpeed = next.currentSpeed
@@ -702,15 +729,18 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           if (incomingCoord) {
             if (lastCoord) {
               const deltaMiles = haversineMiles(lastCoord, incomingCoord)
+
               if (shouldCountDistance(deltaMiles)) {
                 liveMiles += deltaMiles
-                currentSpeed = calculateSpeedMph(
-                  lastCoord,
-                  incomingCoord,
-                  deltaMiles
-                )
-              } else {
-                currentSpeed = 0
+              }
+
+              const rawSpeedMph = calculateManualSpeedMph(
+                lastCoord,
+                incomingCoord
+              )
+
+              if (rawSpeedMph !== null) {
+                currentSpeed = smoothSpeedMph(currentSpeed, rawSpeedMph)
               }
             }
 
@@ -718,6 +748,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             lastCoord = incomingCoord
 
             const lastTrailPoint = routeTrail.at(-1)
+
             const isDuplicate =
               lastTrailPoint?.lat === incomingCoord.lat &&
               lastTrailPoint?.lng === incomingCoord.lng
@@ -731,7 +762,14 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               longitude: incomingCoord.lng,
             }
           } else {
-            currentSpeed = 0
+            const lastFixAt = lastCoord?.at ?? null
+
+            if (
+              typeof lastFixAt !== "number" ||
+              now - lastFixAt > SPEED_STALE_AFTER_MS
+            ) {
+              currentSpeed = 0
+            }
           }
 
           return {
@@ -754,6 +792,23 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           session: {
             ...state.session,
             weather,
+            lastUpdated: Date.now(),
+          },
+        }))
+      },
+
+      setOutsideTemp: (temperatureF, updatedAt = Date.now()) => {
+        set((state) => ({
+          session: {
+            ...state.session,
+            outsideTempF:
+              typeof temperatureF === "number" && Number.isFinite(temperatureF)
+                ? temperatureF
+                : null,
+            outsideTempUpdatedAt:
+              typeof updatedAt === "number" && Number.isFinite(updatedAt)
+                ? updatedAt
+                : Date.now(),
             lastUpdated: Date.now(),
           },
         }))
@@ -793,9 +848,10 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           return Math.floor(accumulatedMs / 1_000)
         }
 
-        const liveDelta = Math.max(0, Date.now() - session.lastTickAt)
-
-        return Math.floor((accumulatedMs + liveDelta) / 1_000)
+        return Math.floor(
+          (accumulatedMs + Math.max(0, Date.now() - session.lastTickAt)) /
+            1_000
+        )
       },
 
       getDayNightSeconds: () => {
@@ -889,7 +945,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
       storage: createJSONStorage(() =>
         isBrowser() ? localStorage : noopStorage
       ),
-      version: 12,
+      version: 13,
       partialize: (state) => ({
         session: state.session,
       }),

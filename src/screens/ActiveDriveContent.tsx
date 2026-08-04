@@ -10,6 +10,8 @@ import {
 import { Capacitor } from "@capacitor/core"
 import { Geolocation } from "@capacitor/geolocation"
 
+import { fetchWeather } from "../services/weather"
+
 import {
   useActiveDriveStore,
   type RouteCoord,
@@ -286,14 +288,15 @@ function ActiveDriveContent({
   const stopConfirmRef = useRef<HTMLDivElement | null>(null)
 
   const {
-    session,
-    startDrive,
-    pauseDrive,
-    resumeDrive,
-    hardReset,
-    tick,
-    setWeather,
-  } = useActiveDriveStore()
+  session,
+  startDrive,
+  pauseDrive,
+  resumeDrive,
+  hardReset,
+  tick,
+  setWeather,
+  setOutsideTemp,
+} = useActiveDriveStore()
 
   const clearGpsWatch = useCallback(async () => {
     const watchId = watchIdRef.current
@@ -345,82 +348,112 @@ function ActiveDriveContent({
           }
 
           const position = await Geolocation.getCurrentPosition({
-            enableHighAccuracy: true,
-            timeout: 15_000,
-            maximumAge: 5_000,
-          })
+  enableHighAccuracy: true,
+  timeout: 15_000,
+  maximumAge: 5_000,
+})
 
-          const { latitude: lat, longitude: lng } = position.coords
+const { latitude: lat, longitude: lng } = position.coords
 
-          if (
-            !Number.isFinite(lat) ||
-            !Number.isFinite(lng) ||
-            lat < -90 ||
-            lat > 90 ||
-            lng < -180 ||
-            lng > 180
-          ) {
-            return null
-          }
+if (
+  !Number.isFinite(lat) ||
+  !Number.isFinite(lng) ||
+  lat < -90 ||
+  lat > 90 ||
+  lng < -180 ||
+  lng > 180
+) {
+  return null
+}
 
-          return {
-            lat,
-            lng,
-            at:
-              typeof position.timestamp === "number" &&
-              Number.isFinite(position.timestamp)
-                ? position.timestamp
-                : Date.now(),
-          }
-        }
+return {
+  lat,
+  lng,
+  at:
+    typeof position.timestamp === "number" &&
+    Number.isFinite(position.timestamp)
+      ? position.timestamp
+      : Date.now(),
+  accuracy:
+    typeof position.coords.accuracy === "number" &&
+    Number.isFinite(position.coords.accuracy)
+      ? position.coords.accuracy
+      : null,
+  heading:
+    typeof position.coords.heading === "number" &&
+    Number.isFinite(position.coords.heading)
+      ? position.coords.heading
+      : null,
+  gpsSpeedMps:
+    typeof position.coords.speed === "number" &&
+    Number.isFinite(position.coords.speed)
+      ? position.coords.speed
+      : null,
+}
+}
 
-        if (!navigator.geolocation) return null
+if (!navigator.geolocation) return null
 
-        return await new Promise<RouteCoord | null>((resolve) => {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const { latitude: lat, longitude: lng } = position.coords
+return await new Promise<RouteCoord | null>((resolve) => {
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const { latitude: lat, longitude: lng } = position.coords
 
-              if (
-                !Number.isFinite(lat) ||
-                !Number.isFinite(lng) ||
-                lat < -90 ||
-                lat > 90 ||
-                lng < -180 ||
-                lng > 180
-              ) {
-                resolve(null)
-                return
-              }
-
-              resolve({
-                lat,
-                lng,
-                at:
-                  typeof position.timestamp === "number" &&
-                  Number.isFinite(position.timestamp)
-                    ? position.timestamp
-                    : Date.now(),
-              })
-            },
-            () => resolve(null),
-            {
-              enableHighAccuracy: true,
-              timeout: 15_000,
-              maximumAge: 5_000,
-            }
-          )
-        })
-      } catch {
-        return null
-      } finally {
-        locationRequestRef.current = null
+      if (
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng) ||
+        lat < -90 ||
+        lat > 90 ||
+        lng < -180 ||
+        lng > 180
+      ) {
+        resolve(null)
+        return
       }
-    })()
 
-    locationRequestRef.current = locationPromise
-    return locationPromise
-  }, [])
+      resolve({
+        lat,
+        lng,
+        at:
+          typeof position.timestamp === "number" &&
+          Number.isFinite(position.timestamp)
+            ? position.timestamp
+            : Date.now(),
+        accuracy:
+          typeof position.coords.accuracy === "number" &&
+          Number.isFinite(position.coords.accuracy)
+            ? position.coords.accuracy
+            : null,
+        heading:
+          typeof position.coords.heading === "number" &&
+          Number.isFinite(position.coords.heading)
+            ? position.coords.heading
+            : null,
+        gpsSpeedMps:
+          typeof position.coords.speed === "number" &&
+          Number.isFinite(position.coords.speed)
+            ? position.coords.speed
+            : null,
+      })
+    },
+    () => resolve(null),
+    {
+      enableHighAccuracy: true,
+      timeout: 15_000,
+      maximumAge: 5_000,
+    }
+  )
+})
+} catch {
+  return null
+} finally {
+  locationRequestRef.current = null
+}
+})()
+
+locationRequestRef.current = locationPromise
+return locationPromise
+}, [])
 
   const getTotalActiveMs = useCallback(() => {
     const activeSession = useActiveDriveStore.getState().session
@@ -754,18 +787,34 @@ const createFrozenSnapshot = useCallback(
             }
 
             setLocationError(null)
-            tick(
-              {
-                lat,
-                lng,
-                at:
-                  typeof position.timestamp === "number" &&
-                  Number.isFinite(position.timestamp)
-                    ? position.timestamp
-                    : Date.now(),
-              },
-              Date.now()
-            )
+
+tick(
+  {
+    lat,
+    lng,
+    at:
+      typeof position.timestamp === "number" &&
+      Number.isFinite(position.timestamp)
+        ? position.timestamp
+        : Date.now(),
+    accuracy:
+      typeof position.coords.accuracy === "number" &&
+      Number.isFinite(position.coords.accuracy)
+        ? position.coords.accuracy
+        : null,
+    heading:
+      typeof position.coords.heading === "number" &&
+      Number.isFinite(position.coords.heading)
+        ? position.coords.heading
+        : null,
+    gpsSpeedMps:
+      typeof position.coords.speed === "number" &&
+      Number.isFinite(position.coords.speed)
+        ? position.coords.speed
+        : null,
+  },
+  Date.now()
+)
           }
         )
 
@@ -794,6 +843,7 @@ useEffect(() => {
   if (!session.isRunning) return
 
   const HEARTBEAT_MS = 60_000
+
   const heartbeatId = setInterval(() => {
     Geolocation.getCurrentPosition({
       enableHighAccuracy: true,
@@ -801,13 +851,31 @@ useEffect(() => {
       maximumAge: 5_000,
     })
       .then((position) => {
-        const coord = {
+        const coord: RouteCoord = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-          at: typeof position.timestamp === "number" && Number.isFinite(position.timestamp)
-            ? position.timestamp
-            : Date.now(),
+          at:
+            typeof position.timestamp === "number" &&
+            Number.isFinite(position.timestamp)
+              ? position.timestamp
+              : Date.now(),
+          accuracy:
+            typeof position.coords.accuracy === "number" &&
+            Number.isFinite(position.coords.accuracy)
+              ? position.coords.accuracy
+              : null,
+          heading:
+            typeof position.coords.heading === "number" &&
+            Number.isFinite(position.coords.heading)
+              ? position.coords.heading
+              : null,
+          gpsSpeedMps:
+            typeof position.coords.speed === "number" &&
+            Number.isFinite(position.coords.speed)
+              ? position.coords.speed
+              : null,
         }
+
         useActiveDriveStore.getState().tick(coord, Date.now())
       })
       .catch(() => {})
@@ -815,6 +883,36 @@ useEffect(() => {
 
   return () => clearInterval(heartbeatId)
 }, [session.isRunning])
+
+// WEATHER: refresh current outdoor temperature while a drive is active.
+useEffect(() => {
+  if (!session.isRunning) return
+
+  let cancelled = false
+
+  const refreshOutsideTemp = async () => {
+    const coord = await getCurrentLocation()
+
+    if (!coord || cancelled) return
+
+    const weather = await fetchWeather(coord.lat, coord.lng)
+
+    if (cancelled || weather.tempF === null) return
+
+    setOutsideTemp(weather.tempF, weather.updatedAt)
+  }
+
+  void refreshOutsideTemp()
+
+  const weatherId = globalThis.setInterval(() => {
+    void refreshOutsideTemp()
+  }, 5 * 60_000)
+
+  return () => {
+    cancelled = true
+    globalThis.clearInterval(weatherId)
+  }
+}, [getCurrentLocation, session.isRunning, setOutsideTemp])
 
 
   useEffect(() => {
@@ -1070,25 +1168,21 @@ const previewDisabled =
       ? "Lighting calculated from local sunrise and sunset"
       : "Solar verification pending"
 
-  return (
-  <>
-    {isMaximized ? (
-      <DriveDashboard
-  currentSpeed={currentSpeed}
-  formattedTimer={formattedElapsed}
-  isNightMode={isNight}
-  onMinimize={onMinimize}
-  isRunning={isRunning}
-  hasActiveDrive={hasActiveDrive}
-  onStart={handlePrimaryAction}
-  onPause={handlePrimaryAction}
-  onResume={handlePrimaryAction}
-  onEnd={() => {
-    handleStopRequest()
-    onMinimize()
-  }}
-/>
-    ) : (
+  return isMaximized ? (
+  <DriveDashboard
+    currentSpeed={currentSpeed}
+    outsideTempF={session.outsideTempF}
+    formattedTimer={formattedElapsed}
+    isNightMode={isNight}
+    onMinimize={onMinimize}
+    isRunning={isRunning}
+    hasActiveDrive={hasActiveDrive}
+    onStart={handlePrimaryAction}
+    onPause={handlePrimaryAction}
+    onResume={handlePrimaryAction}
+    onEnd={handleStopRequest}
+  />
+) : (
       <div
         className="flex w-full justify-center px-3 pt-3 text-white sm:px-4"
         style={{
@@ -1471,9 +1565,8 @@ const previewDisabled =
             </div>
           </section>
         </div>
-      </div>
-    )}
-  </>
+            </div>
+    
 )
 }
 

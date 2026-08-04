@@ -41,9 +41,11 @@ function useCompassHeading() {
     }
 
     const onOrientation = (event: DeviceOrientationEvent) => {
-      const iosHeading = (event as DeviceOrientationEvent & {
-        webkitCompassHeading?: number
-      }).webkitCompassHeading
+      const iosHeading = (
+        event as DeviceOrientationEvent & {
+          webkitCompassHeading?: number
+        }
+      ).webkitCompassHeading
 
       if (typeof iosHeading === "number" && Number.isFinite(iosHeading)) {
         setHeading(normalizeHeading(iosHeading))
@@ -131,9 +133,12 @@ export default function DriveDashboard({
     }
   }, [])
 
-  const roundedHeading = heading === null ? null : Math.round(normalizeHeading(heading))
+  const roundedHeading =
+    heading === null ? null : Math.round(normalizeHeading(heading))
+
   const directionLetter =
     roundedHeading === null ? "--" : getCardinalDirection(roundedHeading)
+
   const temperatureLabel =
     typeof outsideTempF === "number" && Number.isFinite(outsideTempF)
       ? `${Math.round(outsideTempF)}°F`
@@ -141,9 +146,11 @@ export default function DriveDashboard({
 
   const modeLabel = isNightMode ? "Night Driving" : "Day Driving"
   const speed = Math.max(0, Math.round(currentSpeed))
+
   const screenBg = isNightMode
     ? "linear-gradient(180deg, #101d45 0%, #0a1330 100%)"
     : "linear-gradient(180deg, #3a7bd5 0%, #1c4f9c 100%)"
+
   const pageBg = isNightMode
     ? "radial-gradient(ellipse at 50% 0%, #0d1b3d 0%, #050914 72%)"
     : "linear-gradient(180deg, #4ea8ff 0%, #8fd3ff 60%, #cbeaff 100%)"
@@ -151,14 +158,18 @@ export default function DriveDashboard({
   const topBar = (
     <div className="grid w-full grid-cols-3 items-center text-sm font-bold sm:text-base">
       <span className="justify-self-start text-white">{directionLetter}</span>
+
       <span className="justify-self-center text-[10px] font-bold uppercase tracking-[0.15em] text-white/75 sm:text-xs">
         Vehicle Speed
       </span>
-      <span className="justify-self-end text-[#f9c80e]">{temperatureLabel}</span>
+
+      <span className="justify-self-end text-[#f9c80e]">
+        {temperatureLabel}
+      </span>
     </div>
   )
 
-  const actionButtons = (
+  const portraitActionButtons = (
     <div className="w-full">
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <button
@@ -200,14 +211,146 @@ export default function DriveDashboard({
     </div>
   )
 
-  const dashboardContent = (
+  const landscapeActionButtons = (
+    <div className="mx-auto grid w-full max-w-3xl grid-cols-4 gap-2">
+      <button
+        type="button"
+        onClick={onStart}
+        disabled={hasActiveDrive}
+        className="min-h-10 touch-manipulation rounded-lg border-2 border-green-300/60 bg-green-600 px-2 py-1.5 text-xs font-bold text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+      >
+        Start
+      </button>
+
+      <button
+        type="button"
+        onClick={onPause}
+        disabled={!hasActiveDrive || !isRunning}
+        className="min-h-10 touch-manipulation rounded-lg border-2 border-yellow-200/60 bg-yellow-400 px-2 py-1.5 text-xs font-bold text-[#08194A] transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+      >
+        Pause
+      </button>
+
+      <button
+        type="button"
+        onClick={onResume}
+        disabled={!hasActiveDrive || isRunning}
+        className="min-h-10 touch-manipulation rounded-lg border-2 border-blue-200/60 bg-blue-500 px-2 py-1.5 text-xs font-bold text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+      >
+        Resume
+      </button>
+
+      <button
+        type="button"
+        onClick={onEnd}
+        disabled={!hasActiveDrive}
+        className="min-h-10 touch-manipulation rounded-lg border-2 border-red-300/60 bg-red-600 px-2 py-1.5 text-xs font-bold text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+      >
+        End Drive
+      </button>
+    </div>
+  )
+
+  const dashboardContent = isLandscape ? (
+    <div
+      className="
+        grid h-full w-full
+        grid-cols-[minmax(7rem,0.8fr)_minmax(14rem,1.6fr)_minmax(11rem,1fr)]
+        grid-rows-[auto_1fr_auto]
+        gap-x-[clamp(0.75rem,2vw,2.5rem)]
+        pl-[max(1rem,env(safe-area-inset-left))]
+        pr-[max(1rem,env(safe-area-inset-right))]
+        pt-[max(0.75rem,env(safe-area-inset-top))]
+        pb-[max(0.75rem,env(safe-area-inset-bottom))]
+        text-white
+      "
+    >
+      <div className="col-span-3 flex items-center justify-between border-b border-white/15 pb-[clamp(0.5rem,1.5vh,1rem)]">
+        <div className="text-[clamp(1.1rem,2.6vw,2rem)] font-black">
+          {directionLetter}
+        </div>
+
+        <div className="text-center">
+          <p className="text-[clamp(0.6rem,1.4vw,0.85rem)] font-bold uppercase tracking-[0.2em] text-white/70">
+            Vehicle Speed
+          </p>
+        </div>
+
+        <div className="text-[clamp(1.1rem,2.6vw,2rem)] font-black text-[#f9c80e]">
+          {temperatureLabel}
+        </div>
+      </div>
+
+      <div className="row-start-2 flex min-w-0 flex-col justify-center border-r border-white/15 pr-[clamp(0.75rem,2vw,2rem)]">
+        <p className="text-[clamp(0.65rem,1.5vw,0.9rem)] font-bold uppercase tracking-[0.18em] text-white/60">
+          Direction
+        </p>
+
+        <p className="mt-1 text-[clamp(3rem,9vw,7rem)] font-black leading-none">
+          {directionLetter}
+        </p>
+
+        <p className="mt-2 text-[clamp(0.75rem,1.8vw,1.1rem)] font-semibold text-white/80">
+          {roundedHeading === null
+            ? "Compass unavailable"
+            : `${roundedHeading}° heading`}
+        </p>
+
+        {needsPermission && (
+          <button
+            type="button"
+            onClick={requestPermission}
+            className="mt-4 min-h-10 touch-manipulation rounded-full bg-white/15 px-4 py-2 text-xs font-bold text-white backdrop-blur transition active:scale-95"
+          >
+            Enable Compass
+          </button>
+        )}
+      </div>
+
+      <div className="row-start-2 flex min-w-0 flex-col items-center justify-center">
+        <p className="whitespace-nowrap text-[clamp(4.25rem,15vw,10rem)] font-black leading-none tracking-tight tabular-nums drop-shadow-lg">
+          {speed}
+          <span className="ml-2 text-[clamp(1rem,2.8vw,2rem)] font-bold align-super opacity-70">
+            MPH
+          </span>
+        </p>
+
+        <p className="mt-2 whitespace-nowrap text-[clamp(1.5rem,4.5vw,3.5rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
+          {formattedTimer}
+        </p>
+
+        <div className="mt-3 flex items-center gap-2 text-center text-[clamp(0.85rem,1.8vw,1.2rem)] font-semibold text-white/90">
+          <span aria-hidden="true">{isNightMode ? "🌙" : "☀️"}</span>
+          <span>{modeLabel}</span>
+        </div>
+      </div>
+
+      <div className="row-start-2 flex min-w-0 flex-col justify-center border-l border-white/15 pl-[clamp(0.75rem,2vw,2rem)]">
+        <p className="text-[clamp(0.65rem,1.5vw,0.9rem)] font-bold uppercase tracking-[0.18em] text-white/60">
+          Outside Temperature
+        </p>
+
+        <p className="mt-1 whitespace-nowrap text-[clamp(2.75rem,7vw,5rem)] font-black leading-none text-[#f9c80e]">
+          {temperatureLabel}
+        </p>
+
+        <p className="mt-2 text-[clamp(0.75rem,1.8vw,1.1rem)] font-semibold text-white/80">
+          Live local conditions
+        </p>
+      </div>
+
+      <div className="col-span-3 row-start-3 border-t border-white/15 pt-[clamp(0.5rem,1.5vh,1rem)]">
+        {landscapeActionButtons}
+      </div>
+    </div>
+  ) : (
     <div className="flex h-full min-h-0 w-full flex-col items-center justify-between text-white">
       {topBar}
 
       <div className="h-px w-full shrink-0 bg-white/15" />
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1">
-        <p className="text-[clamp(3.5rem,16vw,7rem)] font-black leading-none tracking-tight tabular-nums drop-shadow-lg landscape:text-[clamp(3rem,10vw,5.5rem)]">
+        <p className="text-[clamp(3.5rem,16vw,7rem)] font-black leading-none tracking-tight tabular-nums drop-shadow-lg">
           {speed}
           <span className="ml-1 text-base font-bold align-super opacity-70 sm:ml-2 sm:text-lg">
             MPH
@@ -226,19 +369,29 @@ export default function DriveDashboard({
 
       <div className="h-px w-full shrink-0 bg-white/15" />
 
-      <div className="w-full pt-2">{actionButtons}</div>
+      <div className="w-full pt-2">{portraitActionButtons}</div>
     </div>
   )
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex h-[100dvh] w-screen items-center justify-center overflow-hidden px-3 py-3"
+      className={`fixed inset-0 z-[100] flex h-[100dvh] w-screen items-center justify-center overflow-hidden ${
+        isLandscape ? "p-0" : "px-3 py-3"
+      }`}
       style={{
         background: pageBg,
-        paddingTop: "max(0.75rem, env(safe-area-inset-top))",
-        paddingRight: "max(0.75rem, env(safe-area-inset-right))",
-        paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
-        paddingLeft: "max(0.75rem, env(safe-area-inset-left))",
+        paddingTop: isLandscape
+          ? 0
+          : "max(0.75rem, env(safe-area-inset-top))",
+        paddingRight: isLandscape
+          ? 0
+          : "max(0.75rem, env(safe-area-inset-right))",
+        paddingBottom: isLandscape
+          ? 0
+          : "max(0.75rem, env(safe-area-inset-bottom))",
+        paddingLeft: isLandscape
+          ? 0
+          : "max(0.75rem, env(safe-area-inset-left))",
       }}
     >
       <button
@@ -249,7 +402,7 @@ export default function DriveDashboard({
         Minimize
       </button>
 
-      {needsPermission && (
+      {!isLandscape && needsPermission && (
         <button
           type="button"
           onClick={requestPermission}
@@ -279,7 +432,7 @@ export default function DriveDashboard({
 
       {isLandscape ? (
         <div
-          className="relative z-10 h-[min(88dvh,32rem)] w-[min(94vw,56rem)] overflow-hidden rounded-[clamp(1.5rem,4vw,2.5rem)] border-[clamp(4px,0.8vw,6px)] border-[#12131a] p-[clamp(1rem,2.4vw,2rem)] shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+          className="relative z-10 h-full w-full overflow-hidden"
           style={{ background: screenBg }}
         >
           {dashboardContent}

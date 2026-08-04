@@ -1152,8 +1152,9 @@ const previewDisabled =
 
       if (mountedRef.current) {
         setIsPreviewing(false)
-      }
-    }
+  }
+}
+
   }
 
   const solarVerificationText =

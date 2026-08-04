@@ -1046,6 +1046,8 @@ const previewDisabled =
   const handleStopRequest = () => {
   if (saveDisabled || isPreparingStop) return
 
+  setIsMaximized(false) // Exit full dashboard to show main-panel confirmation
+
   wasRunningBeforeStopRef.current = session.isRunning
   setShowStopConfirm(true)
   setIsPreparingStop(true)
@@ -1053,10 +1055,6 @@ const previewDisabled =
   const stopRequestedAt = Date.now()
   const activeSession = useActiveDriveStore.getState().session
 
-  /*
-   * Freeze the active interval immediately. This stops the visible timer
-   * as soon as Stop Drive is pressed and excludes all confirmation time.
-   */
   if (activeSession.isRunning) {
     tick(undefined, stopRequestedAt)
     pauseDrive(stopRequestedAt)
@@ -1066,10 +1064,6 @@ const previewDisabled =
     )
   }
 
-  /*
-   * Build one final snapshot in the background. It obtains the endpoint GPS
-   * point and, when the route API is available, more accurate route mileage.
-   */
   void createFrozenSnapshot({ isPreview: false }).finally(() => {
     if (mountedRef.current) {
       setIsPreparingStop(false)

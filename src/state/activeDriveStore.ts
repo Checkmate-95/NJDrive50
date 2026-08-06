@@ -113,6 +113,8 @@ const MAX_SPEED_SAMPLE_MS = 15_000
 const MAX_REASONABLE_SPEED_MPH = 120
 const SPEED_STALE_AFTER_MS = 8_000
 const SPEED_SMOOTHING = 0.35
+const METERS_PER_SECOND_TO_MPH = 2.236936
+
 
 export const UNVERIFIED_GRACE_MS = 45_000
 
@@ -480,6 +482,27 @@ function calculateManualSpeedMph(
   return speedMph
 }
 
+function calculateGpsSpeedMph(coord: RouteCoord): number | null {
+  if (
+    typeof coord.gpsSpeedMps !== "number" ||
+    !Number.isFinite(coord.gpsSpeedMps)
+  ) {
+    return null
+  }
+
+  const speedMph =
+  Math.max(0, coord.gpsSpeedMps) * METERS_PER_SECOND_TO_MPH
+
+  if (
+    !Number.isFinite(speedMph) ||
+    speedMph > MAX_REASONABLE_SPEED_MPH
+  ) {
+    return null
+  }
+
+  return speedMph
+}
+
 function smoothSpeedMph(previous: number, next: number): number {
   const safePrevious = Number.isFinite(previous) ? Math.max(0, previous) : 0
   const safeNext = Number.isFinite(next) ? Math.max(0, next) : 0
@@ -727,50 +750,60 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           let location = next.location
 
           if (incomingCoord) {
-            if (lastCoord) {
-              const deltaMiles = haversineMiles(lastCoord, incomingCoord)
+  if (lastCoord) {
+    const deltaMiles = haversineMiles(lastCoord, incomingCoord)
 
-              if (shouldCountDistance(deltaMiles)) {
-                liveMiles += deltaMiles
-              }
+    if (shouldCountDistance(deltaMiles)) {
+      liveMiles += deltaMiles
+    }
 
-              const rawSpeedMph = calculateManualSpeedMph(
-                lastCoord,
-                incomingCoord
-              )
+    const gpsSpeedMph = calculateGpsSpeedMph(incomingCoord)
 
-              if (rawSpeedMph !== null) {
-                currentSpeed = smoothSpeedMph(currentSpeed, rawSpeedMph)
-              }
-            }
+    const manualSpeedMph = calculateManualSpeedMph(
+      lastCoord,
+      incomingCoord
+    )
 
-            startCoord = startCoord ?? incomingCoord
-            lastCoord = incomingCoord
+    const nextSpeedMph = gpsSpeedMph ?? manualSpeedMph
 
-            const lastTrailPoint = routeTrail.at(-1)
+    if (nextSpeedMph !== null) {
+      currentSpeed = smoothSpeedMph(currentSpeed, nextSpeedMph)
+    }
+  } else {
+    const gpsSpeedMph = calculateGpsSpeedMph(incomingCoord)
 
-            const isDuplicate =
-              lastTrailPoint?.lat === incomingCoord.lat &&
-              lastTrailPoint?.lng === incomingCoord.lng
+    if (gpsSpeedMph !== null) {
+      currentSpeed = smoothSpeedMph(currentSpeed, gpsSpeedMph)
+    }
+  }
 
-            routeTrail = isDuplicate
-              ? routeTrail
-              : [...routeTrail, incomingCoord].slice(-MAX_ROUTE_POINTS)
+  startCoord = startCoord ?? incomingCoord
+  lastCoord = incomingCoord
 
-            location = {
-              latitude: incomingCoord.lat,
-              longitude: incomingCoord.lng,
-            }
-          } else {
-            const lastFixAt = lastCoord?.at ?? null
+  const lastTrailPoint = routeTrail.at(-1)
 
-            if (
-              typeof lastFixAt !== "number" ||
-              now - lastFixAt > SPEED_STALE_AFTER_MS
-            ) {
-              currentSpeed = 0
-            }
-          }
+  const isDuplicate =
+    lastTrailPoint?.lat === incomingCoord.lat &&
+    lastTrailPoint?.lng === incomingCoord.lng
+
+  routeTrail = isDuplicate
+    ? routeTrail
+    : [...routeTrail, incomingCoord].slice(-MAX_ROUTE_POINTS)
+
+  location = {
+    latitude: incomingCoord.lat,
+    longitude: incomingCoord.lng,
+  }
+} else {
+  const lastFixAt = lastCoord?.at ?? null
+
+  if (
+    typeof lastFixAt !== "number" ||
+    now - lastFixAt > SPEED_STALE_AFTER_MS
+  ) {
+    currentSpeed = 0
+  }
+}
 
           return {
             session: {

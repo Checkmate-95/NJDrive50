@@ -5,33 +5,52 @@ export type WeatherResponse = {
   updatedAt: number
 }
 
-export async function fetchWeather(lat: number, lng: number): Promise<WeatherResponse> {
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(
+  /\/$/,
+  ""
+)
+
+export async function fetchWeather(
+  lat: number,
+  lng: number
+): Promise<WeatherResponse> {
   try {
-    const url = `/api/weather?lat=${lat}&lon=${lng}`
+    const url =
+      `${API_BASE_URL}/api/weather?lat=${encodeURIComponent(lat)}` +
+      `&lon=${encodeURIComponent(lng)}`
 
     const res = await fetch(url, {
       method: "GET",
       headers: {
-        "Content-Type": "application/json",
+        Accept: "application/json",
       },
     })
 
     if (!res.ok) {
+      console.warn("Weather request failed:", res.status, url)
       return { tempF: null, updatedAt: Date.now() }
     }
 
-    const data = await res.json()
+    const data: unknown = await res.json()
 
     const tempF =
-      typeof data.tempF === "number" && Number.isFinite(data.tempF)
-        ? data.tempF
+      data &&
+      typeof data === "object" &&
+      typeof (data as { tempF?: unknown }).tempF === "number" &&
+      Number.isFinite((data as { tempF: number }).tempF)
+        ? (data as { tempF: number }).tempF
         : null
+
+    if (tempF === null) {
+      console.warn("Weather API returned no valid temperature:", data)
+    }
 
     return {
       tempF,
       updatedAt: Date.now(),
     }
-  } catch {
+  } catch (error) {
+    console.warn("Weather request failed:", error)
     return { tempF: null, updatedAt: Date.now() }
   }
 }

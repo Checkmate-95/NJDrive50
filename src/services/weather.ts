@@ -1,5 +1,7 @@
 // src/services/weather.ts
 
+import { Capacitor } from "@capacitor/core"
+
 export type WeatherResponse = {
   tempF: number | null
   updatedAt: number
@@ -16,15 +18,21 @@ export async function fetchWeather(
 ): Promise<WeatherResponse> {
   try {
     const url =
-      `${API_BASE_URL}/api/weather?lat=${encodeURIComponent(lat)}` +
-      `&lon=${encodeURIComponent(lng)}`
+  `${API_BASE_URL}/api/weather?lat=${encodeURIComponent(lat)}` +
+  `&lon=${encodeURIComponent(lng)}`
 
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    })
+console.log("Weather request:", {
+  apiBaseUrl: API_BASE_URL,
+  url,
+  isNative: Capacitor.isNativePlatform(),
+})
+
+const res = await fetch(url, {
+  method: "GET",
+  headers: {
+    Accept: "application/json",
+  },
+})
 
     if (!res.ok) {
       console.warn("Weather request failed:", res.status, url)

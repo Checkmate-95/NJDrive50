@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react"
+import { useCompass } from "../hooks/useCompass"
+
 
 interface DriveDashboardProps {
   formattedTimer: string
@@ -26,10 +28,7 @@ function normalizeHeading(value: number): number {
   return ((value % 360) + 360) % 360
 }
 
-function getCardinalDirection(degrees: number): string {
-  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-  return directions[Math.round(normalizeHeading(degrees) / 45) % 8]
-}
+
 
 function useCompassHeading() {
   const [heading, setHeading] = useState<number | null>(null)
@@ -138,8 +137,7 @@ export default function DriveDashboard({
   const roundedHeading =
     heading === null ? null : Math.round(normalizeHeading(heading))
 
-  const directionLetter =
-    roundedHeading === null ? "--" : getCardinalDirection(roundedHeading)
+  const directionLetter = useCompass()
 
   const temperatureLabel =
     typeof outsideTempF === "number" && Number.isFinite(outsideTempF)

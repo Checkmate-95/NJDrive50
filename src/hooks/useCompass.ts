@@ -1,23 +1,27 @@
-import { useEffect, useState, useRef } from 'react'
-import { CapgoCompass } from '@capgo/capacitor-compass'
-import type { HeadingChangeEvent } from '@capgo/capacitor-compass'
+import { useEffect, useState, useRef } from "react"
+import { CapgoCompass } from "@capgo/capacitor-compass"
+import type { HeadingChangeEvent } from "@capgo/capacitor-compass"
 
-function smoothHeading(prev: number, next: number, alpha = 0.15): number {
+// Smooth heading with wrap‑around handling
+function smoothHeading(prev: number, next: number, alpha = 0.25): number {
   const diff = ((next - prev + 540) % 360) - 180
   return Math.round((prev + alpha * diff + 360) % 360)
 }
 
+// Tighter, more realistic cardinal zones
 const CARDINAL_ZONES = {
-  N: { min: 330, max: 30 },
-  E: { min: 30, max: 150 },
-  S: { min: 150, max: 210 },
-  W: { min: 210, max: 330 }
+  N: { min: 350, max: 10 },
+  E: { min: 80, max: 100 },
+  S: { min: 170, max: 190 },
+  W: { min: 260, max: 280 }
 } as const
 
+// Stable cardinal direction selection
 function stableCardinal(prev: "N" | "E" | "S" | "W", heading: number): "N" | "E" | "S" | "W" {
-  const pad = 10
+  const pad = 12
   const zone = CARDINAL_ZONES[prev]
 
+  // Handle wrap-around for North
   if (prev === "N") {
     if (heading >= (zone.min - pad + 360) % 360 || heading <= zone.max + pad) {
       return "N"
@@ -28,10 +32,14 @@ function stableCardinal(prev: "N" | "E" | "S" | "W", heading: number): "N" | "E"
     }
   }
 
-  if (heading >= 330 || heading < 30) return "N"
-  if (heading >= 30 && heading < 150) return "E"
-  if (heading >= 150 && heading < 210) return "S"
-  return "W"
+  // Fresh direction detection
+  if (heading >= 350 || heading < 10) return "N"
+  if (heading >= 80 && heading < 100) return "E"
+  if (heading >= 170 && heading < 190) return "S"
+  if (heading >= 260 && heading < 280) return "W"
+
+  // Fallback (should never hit)
+  return prev
 }
 
 export function useCompass() {
@@ -46,14 +54,16 @@ export function useCompass() {
       await CapgoCompass.startListening()
 
       const handle = await CapgoCompass.addListener(
-        'headingChange',
+        "headingChange",
         (event: HeadingChangeEvent) => {
           console.log("COMPASS EVENT:", event)
 
-          const raw = (event as any).degree ?? (event as any).value ?? (event as any).heading
-          const smoothed = smoothHeading(lastHeading.current, raw)
+          // Correct field — CapgoCompass uses ONLY event.value
+          const raw = event.value
 
+          const smoothed = smoothHeading(lastHeading.current, raw)
           lastHeading.current = smoothed
+
           setCardinal(prev => stableCardinal(prev, smoothed))
         }
       )

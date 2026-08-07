@@ -25,6 +25,7 @@
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/share": "^8.0.1",
     "@capawesome-team/capacitor-android-foreground-service": "^8.1.0",
+    "@capgo/capacitor-compass": "^8.1.17",
     "@heroicons/react": "^2.2.0",
     "@react-google-maps/api": "^2.20.8",
     "@tailwindcss/postcss": "^4.3.3",
@@ -76,8 +77,8 @@
     "vite": "^8.0.1"
   },
   "overrides": {
-  "postcss": "$postcss",
-  "sharp": "$sharp",
-  "esbuild": "$esbuild"
-}
+    "postcss": "$postcss",
+    "sharp": "$sharp",
+    "esbuild": "$esbuild"
+  }
 }

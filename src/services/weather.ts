@@ -19,11 +19,12 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherRes
     return { tempF: null, updatedAt: Date.now() }
   }
 
-  const apiKey = process.env.EXPO_PUBLIC_WEATHER_KEY
-  if (!apiKey) {
-    console.warn("Missing EXPO_PUBLIC_WEATHER_KEY")
-    return { tempF: null, updatedAt: Date.now() }
-  }
+  const apiKey = process.env.OPENWEATHER_API_KEY
+if (!apiKey) {
+  console.warn("Missing OPENWEATHER_API_KEY")
+  return { tempF: null, updatedAt: Date.now() }
+}
+
 
   const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`
   const { signal, cancel } = withTimeout(FETCH_TIMEOUT_MS)

@@ -1,64 +1,55 @@
 // src/services/weather.ts
 
-import { Capacitor } from "@capacitor/core"
-
 export type WeatherResponse = {
   tempF: number | null
   updatedAt: number
 }
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(
-  /\/$/,
-  ""
-)
+const FETCH_TIMEOUT_MS = 8000
 
-export async function fetchWeather(
-  lat: number,
-  lng: number
-): Promise<WeatherResponse> {
+function withTimeout(ms: number): { signal: AbortSignal; cancel: () => void } {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), ms)
+  return { signal: controller.signal, cancel: () => clearTimeout(timeoutId) }
+}
+
+export async function fetchWeather(lat: number, lon: number): Promise<WeatherResponse> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    console.warn("Weather request skipped: invalid coordinates", { lat, lon })
+    return { tempF: null, updatedAt: Date.now() }
+  }
+
+  const apiKey = process.env.EXPO_PUBLIC_WEATHER_KEY
+  if (!apiKey) {
+    console.warn("Missing EXPO_PUBLIC_WEATHER_KEY")
+    return { tempF: null, updatedAt: Date.now() }
+  }
+
+  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`
+  const { signal, cancel } = withTimeout(FETCH_TIMEOUT_MS)
+
   try {
-    const url =
-  `${API_BASE_URL}/api/weather?lat=${encodeURIComponent(lat)}` +
-  `&lon=${encodeURIComponent(lng)}`
-
-console.log("Weather request:", {
-  apiBaseUrl: API_BASE_URL,
-  url,
-  isNative: Capacitor.isNativePlatform(),
-})
-
-const res = await fetch(url, {
-  method: "GET",
-  headers: {
-    Accept: "application/json",
-  },
-})
+    const res = await fetch(url, { signal })
 
     if (!res.ok) {
-      console.warn("Weather request failed:", res.status, url)
+      console.warn("Weather request failed:", res.status)
       return { tempF: null, updatedAt: Date.now() }
     }
 
-    const data: unknown = await res.json()
-
-    const tempF =
-      data &&
-      typeof data === "object" &&
-      typeof (data as { tempF?: unknown }).tempF === "number" &&
-      Number.isFinite((data as { tempF: number }).tempF)
-        ? (data as { tempF: number }).tempF
-        : null
-
-    if (tempF === null) {
-      console.warn("Weather API returned no valid temperature:", data)
-    }
+    const data = await res.json()
 
     return {
-      tempF,
+      tempF: typeof data.main?.temp === "number" ? data.main.temp : null,
       updatedAt: Date.now(),
     }
-  } catch (error) {
-    console.warn("Weather request failed:", error)
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      console.warn("Weather request timed out")
+    } else {
+      console.warn("Weather request error:", err)
+    }
     return { tempF: null, updatedAt: Date.now() }
+  } finally {
+    cancel()
   }
 }

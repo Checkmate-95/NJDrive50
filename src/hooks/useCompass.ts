@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react"
+import { Capacitor } from "@capacitor/core"
 import { CapgoCompass } from "@capgo/capacitor-compass"
 import type { HeadingChangeEvent } from "@capgo/capacitor-compass"
 
@@ -21,7 +22,6 @@ function stableCardinal(prev: "N" | "E" | "S" | "W", heading: number): "N" | "E"
   const pad = 12
   const zone = CARDINAL_ZONES[prev]
 
-  // Handle wrap-around for North
   if (prev === "N") {
     if (heading >= (zone.min - pad + 360) % 360 || heading <= zone.max + pad) {
       return "N"
@@ -32,13 +32,11 @@ function stableCardinal(prev: "N" | "E" | "S" | "W", heading: number): "N" | "E"
     }
   }
 
-  // Fresh direction detection
   if (heading >= 350 || heading < 10) return "N"
   if (heading >= 80 && heading < 100) return "E"
   if (heading >= 170 && heading < 190) return "S"
   if (heading >= 260 && heading < 280) return "W"
 
-  // Fallback (should never hit)
   return prev
 }
 
@@ -47,6 +45,12 @@ export function useCompass() {
   const lastHeading = useRef(0)
 
   useEffect(() => {
+    // 🚨 Prevent plugin from running on web
+    if (Capacitor.getPlatform() === "web") {
+      console.warn("Compass not available on web")
+      return
+    }
+
     let listenerHandle: { remove: () => Promise<void> } | undefined
     let cancelled = false
 
@@ -56,14 +60,9 @@ export function useCompass() {
       const handle = await CapgoCompass.addListener(
         "headingChange",
         (event: HeadingChangeEvent) => {
-          console.log("COMPASS EVENT:", event)
-
-          // Correct field — CapgoCompass uses ONLY event.value
           const raw = event.value
-
           const smoothed = smoothHeading(lastHeading.current, raw)
           lastHeading.current = smoothed
-
           setCardinal(prev => stableCardinal(prev, smoothed))
         }
       )

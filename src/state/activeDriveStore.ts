@@ -112,7 +112,7 @@ const MIN_SPEED_SAMPLE_MS = 1_000
 const MAX_SPEED_SAMPLE_MS = 15_000
 const MAX_REASONABLE_SPEED_MPH = 120
 const SPEED_STALE_AFTER_MS = 8_000
-const SPEED_SMOOTHING = 0.35
+
 const METERS_PER_SECOND_TO_MPH = 2.236936
 
 
@@ -503,12 +503,7 @@ function calculateGpsSpeedMph(coord: RouteCoord): number | null {
   return speedMph
 }
 
-function smoothSpeedMph(previous: number, next: number): number {
-  const safePrevious = Number.isFinite(previous) ? Math.max(0, previous) : 0
-  const safeNext = Number.isFinite(next) ? Math.max(0, next) : 0
 
-  return safePrevious + (safeNext - safePrevious) * SPEED_SMOOTHING
-}
 
 export const useActiveDriveStore = create<ActiveDriveStore>()(
   persist(
@@ -767,15 +762,16 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
     const nextSpeedMph = gpsSpeedMph ?? manualSpeedMph
 
     if (nextSpeedMph !== null) {
-      currentSpeed = smoothSpeedMph(currentSpeed, nextSpeedMph)
+      currentSpeed = nextSpeedMph
+
     }
   } else {
-    const gpsSpeedMph = calculateGpsSpeedMph(incomingCoord)
+  const gpsSpeedMph = calculateGpsSpeedMph(incomingCoord)
 
-    if (gpsSpeedMph !== null) {
-      currentSpeed = smoothSpeedMph(currentSpeed, gpsSpeedMph)
-    }
+  if (gpsSpeedMph !== null) {
+    currentSpeed = gpsSpeedMph
   }
+}
 
   startCoord = startCoord ?? incomingCoord
   lastCoord = incomingCoord

@@ -943,7 +943,8 @@ const isNight = session.currentMode === "night";
 const isSolarUnverified = session.currentMode === "unverified";
 const formattedElapsed = formatTime(displayedMs);
 
-const currentSpeed = session.currentSpeed ?? 0
+const currentSpeed = session.currentSpeed ?? null
+
 
 // --- HANDLERS ---
 const onMaximize = () => setIsMaximized(true);

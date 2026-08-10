@@ -10,6 +10,8 @@ import {
 import { Capacitor } from "@capacitor/core"
 import { Geolocation } from "@capacitor/geolocation"
 
+
+
 import { fetchWeather } from "../services/weather"
 
 import {

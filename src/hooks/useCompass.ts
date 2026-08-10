@@ -9,39 +9,48 @@ function smoothHeading(prev: number, next: number, alpha = 0.25): number {
   return Math.round((prev + alpha * diff + 360) % 360)
 }
 
-// Tighter, more realistic cardinal zones
-const CARDINAL_ZONES = {
-  N: { min: 350, max: 10 },
-  E: { min: 80, max: 100 },
-  S: { min: 170, max: 190 },
-  W: { min: 260, max: 280 }
-} as const
+type Cardinal = "N" | "E" | "S" | "W"
 
-// Stable cardinal direction selection
-function stableCardinal(prev: "N" | "E" | "S" | "W", heading: number): "N" | "E" | "S" | "W" {
-  const pad = 12
-  const zone = CARDINAL_ZONES[prev]
+const CENTERS: Record<Cardinal, number> = {
+  N: 0,
+  E: 90,
+  S: 180,
+  W: 270,
+}
 
-  if (prev === "N") {
-    if (heading >= (zone.min - pad + 360) % 360 || heading <= zone.max + pad) {
-      return "N"
-    }
-  } else {
-    if (heading >= zone.min - pad && heading <= zone.max + pad) {
-      return prev
+// Distance between two headings on a 360° circle, always 0-180
+function angularDistance(a: number, b: number): number {
+  return Math.abs(((a - b + 540) % 360) - 180)
+}
+
+// Stable cardinal direction selection — full circle coverage, no dead zones,
+// with hysteresis so the label doesn't flicker near quadrant boundaries
+function stableCardinal(prev: Cardinal, heading: number): Cardinal {
+  const pad = 15 // degrees of hysteresis before switching away from current direction
+  const baseHalfWidth = 45 // each quadrant covers 90° total (45° each side of center)
+
+  // Current direction gets a wider zone before we let go of it
+  if (angularDistance(CENTERS[prev], heading) <= baseHalfWidth + pad) {
+    return prev
+  }
+
+  // Heading has clearly left the current quadrant — find the nearest actual quadrant
+  let closest: Cardinal = prev
+  let smallestDistance = Infinity
+
+  for (const direction of Object.keys(CENTERS) as Cardinal[]) {
+    const distance = angularDistance(CENTERS[direction], heading)
+    if (distance < smallestDistance) {
+      smallestDistance = distance
+      closest = direction
     }
   }
 
-  if (heading >= 350 || heading < 10) return "N"
-  if (heading >= 80 && heading < 100) return "E"
-  if (heading >= 170 && heading < 190) return "S"
-  if (heading >= 260 && heading < 280) return "W"
-
-  return prev
+  return closest
 }
 
 export function useCompass() {
-  const [cardinal, setCardinal] = useState<"N" | "E" | "S" | "W">("N")
+  const [cardinal, setCardinal] = useState<Cardinal>("N")
   const lastHeading = useRef(0)
 
   useEffect(() => {
@@ -63,7 +72,7 @@ export function useCompass() {
           const raw = event.value
           const smoothed = smoothHeading(lastHeading.current, raw)
           lastHeading.current = smoothed
-          setCardinal(prev => stableCardinal(prev, smoothed))
+          setCardinal((prev) => stableCardinal(prev, smoothed))
         }
       )
 

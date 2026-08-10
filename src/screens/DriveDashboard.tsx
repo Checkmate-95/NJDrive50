@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useCompass } from "../hooks/useCompass"
 import { Speedometer } from "../components/speedometer/Speedometer"
-import { useSmoothedSpeed } from "../hooks/useSmoothedSpeed"
+
 
 
 interface DriveDashboardProps {
@@ -115,7 +115,7 @@ export default function DriveDashboard({
   onEnd,
 }: DriveDashboardProps) {
 
-  const smoothedSpeed = useSmoothedSpeed(currentSpeed)   // ← ADD THIS LINE
+  
 
   const [isLandscape, setIsLandscape] = useState(
     typeof window !== "undefined" && window.innerWidth > window.innerHeight
@@ -314,7 +314,7 @@ export default function DriveDashboard({
 
       {/* Center panel — speed and timer */}
       <div className="row-start-2 flex min-w-0 flex-col items-center justify-center text-center">
-        <Speedometer speedMph={smoothedSpeed} variant="landscape" />
+        <Speedometer speedMph={currentSpeed} variant="landscape" />
 
 
 
@@ -354,7 +354,7 @@ export default function DriveDashboard({
       <div className="h-px w-full shrink-0 bg-white/15" />
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1">
-        <Speedometer speedMph={smoothedSpeed} variant="portrait" />
+        <Speedometer speedMph={currentSpeed} variant="portrait" />
 
 
 

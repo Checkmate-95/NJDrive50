@@ -735,102 +735,104 @@ const createFrozenSnapshot = useCallback(
     let active = true
 
     const startWatch = async () => {
-      try {
-        if (Capacitor.isNativePlatform()) {
-          const permission = await Geolocation.checkPermissions()
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const permission = await Geolocation.checkPermissions()
 
-          const needsPermission =
-            permission.location !== "granted" &&
-            permission.coarseLocation !== "granted"
+      const needsPermission =
+        permission.location !== "granted" &&
+        permission.coarseLocation !== "granted"
 
-          if (needsPermission) {
-            const requested = await Geolocation.requestPermissions()
+      if (needsPermission) {
+        const requested = await Geolocation.requestPermissions()
 
-            const granted =
-              requested.location === "granted" ||
-              requested.coarseLocation === "granted"
+        const granted =
+          requested.location === "granted" ||
+          requested.coarseLocation === "granted"
 
-            if (!granted) {
-              setLocationError(
-                "Location access is needed to verify sunlight and darkness hours."
-              )
-              return
-            }
-          }
+        if (!granted) {
+          setLocationError(
+            "Location access is needed to verify sunlight and darkness hours."
+          )
+          return
         }
-
-        const id = await Geolocation.watchPosition(
-          {
-            enableHighAccuracy: true,
-            timeout: 15_000,
-            maximumAge: 5_000,
-          },
-          (position) => {
-            if (!mountedRef.current || !active) return
-
-            if (!position) {
-              setLocationError(
-                "Location updates are unavailable. Time will remain unverified until location returns."
-              )
-              return
-            }
-
-            const { latitude: lat, longitude: lng } = position.coords
-
-            if (
-              !Number.isFinite(lat) ||
-              !Number.isFinite(lng) ||
-              lat < -90 ||
-              lat > 90 ||
-              lng < -180 ||
-              lng > 180
-            ) {
-              return
-            }
-
-            setLocationError(null)
-
-tick(
-  {
-    lat,
-    lng,
-    at:
-      typeof position.timestamp === "number" &&
-      Number.isFinite(position.timestamp)
-        ? position.timestamp
-        : Date.now(),
-    accuracy:
-      typeof position.coords.accuracy === "number" &&
-      Number.isFinite(position.coords.accuracy)
-        ? position.coords.accuracy
-        : null,
-    heading:
-      typeof position.coords.heading === "number" &&
-      Number.isFinite(position.coords.heading)
-        ? position.coords.heading
-        : null,
-    gpsSpeedMps:
-      typeof position.coords.speed === "number" &&
-      Number.isFinite(position.coords.speed)
-        ? position.coords.speed
-        : null,
-  },
-  Date.now()
-)
-          }
-        )
-
-        if (active) {
-          watchIdRef.current = id
-        } else {
-          await Geolocation.clearWatch({ id })
-        }
-      } catch {
-        setLocationError(
-          "Location access is needed to verify sunlight and darkness hours."
-        )
       }
     }
+
+    const id = await Geolocation.watchPosition(
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,               // Android 8.x uses this as the interval driver
+        maximumAge: 5000,
+        interval: 1000,              // added in 8.0.0 — desired update interval
+        minimumUpdateInterval: 1000, // added in 6.1.0 — floor on how fast updates can arrive
+      },
+      (position) => {
+        if (!mountedRef.current || !active) return
+
+        if (!position) {
+          setLocationError(
+            "Location updates are unavailable. Time will remain unverified until location returns."
+          )
+          return
+        }
+
+        const { latitude: lat, longitude: lng } = position.coords
+
+        if (
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lng) ||
+          lat < -90 ||
+          lat > 90 ||
+          lng < -180 ||
+          lng > 180
+        ) {
+          return
+        }
+
+        setLocationError(null)
+
+        tick(
+          {
+            lat,
+            lng,
+            at:
+              typeof position.timestamp === "number" &&
+              Number.isFinite(position.timestamp)
+                ? position.timestamp
+                : Date.now(),
+            accuracy:
+              typeof position.coords.accuracy === "number" &&
+              Number.isFinite(position.coords.accuracy)
+                ? position.coords.accuracy
+                : null,
+            heading:
+              typeof position.coords.heading === "number" &&
+              Number.isFinite(position.coords.heading)
+                ? position.coords.heading
+                : null,
+            gpsSpeedMps:
+              typeof position.coords.speed === "number" &&
+              Number.isFinite(position.coords.speed)
+                ? position.coords.speed
+                : null,
+          },
+          Date.now()
+        )
+      }
+    )
+
+    if (active) {
+      watchIdRef.current = id
+    } else {
+      await Geolocation.clearWatch({ id })
+    }
+  } catch {
+    setLocationError(
+      "Location access is needed to verify sunlight and darkness hours."
+    )
+  }
+}
 
     void startWatch()
 

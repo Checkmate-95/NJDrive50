@@ -1,8 +1,7 @@
+// C:\Dev\NJDRIVE50\src\screens\DriveDashboard.tsx
 import { useEffect, useState } from "react"
 import { useCompass } from "../hooks/useCompass"
 import { Speedometer } from "../components/speedometer/Speedometer"
-
-
 
 interface DriveDashboardProps {
   formattedTimer: string
@@ -26,81 +25,6 @@ const STAR_POSITIONS = Array.from({ length: 52 }, (_, index) => ({
   size: index % 5 === 0 ? 3 : 2,
 }))
 
-function normalizeHeading(value: number): number {
-  return ((value % 360) + 360) % 360
-}
-
-function useCompassHeading() {
-  const [heading, setHeading] = useState<number | null>(null)
-  const [needsPermission, setNeedsPermission] = useState(false)
-  const [permissionGranted, setPermissionGranted] = useState(false)
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !("DeviceOrientationEvent" in window)) {
-      return
-    }
-
-    const onOrientation = (event: DeviceOrientationEvent) => {
-      const iosHeading = (
-        event as DeviceOrientationEvent & {
-          webkitCompassHeading?: number
-        }
-      ).webkitCompassHeading
-
-      if (typeof iosHeading === "number" && Number.isFinite(iosHeading)) {
-        setHeading(normalizeHeading(iosHeading))
-        return
-      }
-
-      if (typeof event.alpha === "number" && Number.isFinite(event.alpha)) {
-        setHeading(normalizeHeading(360 - event.alpha))
-      }
-    }
-
-    const requestFn = (
-      DeviceOrientationEvent as unknown as {
-        requestPermission?: () => Promise<"granted" | "denied">
-      }
-    ).requestPermission
-
-    if (typeof requestFn === "function" && !permissionGranted) {
-      setNeedsPermission(true)
-      return
-    }
-
-    window.addEventListener("deviceorientationabsolute", onOrientation, true)
-    window.addEventListener("deviceorientation", onOrientation, true)
-
-    return () => {
-      window.removeEventListener("deviceorientationabsolute", onOrientation, true)
-      window.removeEventListener("deviceorientation", onOrientation, true)
-    }
-  }, [permissionGranted])
-
-  const requestPermission = async () => {
-    const requestFn = (
-      DeviceOrientationEvent as unknown as {
-        requestPermission?: () => Promise<"granted" | "denied">
-      }
-    ).requestPermission
-
-    if (typeof requestFn !== "function") return
-
-    try {
-      const result = await requestFn()
-
-      if (result === "granted") {
-        setNeedsPermission(false)
-        setPermissionGranted(true)
-      }
-    } catch {
-      setNeedsPermission(false)
-    }
-  }
-
-  return { heading, needsPermission, requestPermission }
-}
-
 export default function DriveDashboard({
   formattedTimer,
   isNightMode,
@@ -114,16 +38,11 @@ export default function DriveDashboard({
   onResume,
   onEnd,
 }: DriveDashboardProps) {
-
-  
-
   const [isLandscape, setIsLandscape] = useState(
     typeof window !== "undefined" && window.innerWidth > window.innerHeight
   )
 
-  const { heading, needsPermission, requestPermission } = useCompassHeading()
-
-  
+  const { cardinal: directionLetter, rawHeading, needsCalibration } = useCompass()
 
   useEffect(() => {
     const updateOrientation = () => {
@@ -139,10 +58,7 @@ export default function DriveDashboard({
     }
   }, [])
 
-  const roundedHeading =
-    heading === null ? null : Math.round(normalizeHeading(heading))
-
-  const directionLetter = useCompass()
+  const roundedHeading = rawHeading === null ? null : Math.round(rawHeading)
 
   const temperatureLabel =
     typeof outsideTempF === "number" && Number.isFinite(outsideTempF)
@@ -161,7 +77,14 @@ export default function DriveDashboard({
 
   const topBar = (
     <div className="grid w-full grid-cols-3 items-center text-sm font-bold sm:text-base">
-      <span className="justify-self-start text-white">{directionLetter}</span>
+      <span className="justify-self-start flex items-center gap-1 text-white">
+        {directionLetter}
+        {needsCalibration && (
+          <span className="text-xs text-yellow-300" title="Compass needs calibration">
+            ⚠
+          </span>
+        )}
+      </span>
 
       <span className="justify-self-center text-[10px] font-bold uppercase tracking-[0.15em] text-white/75 sm:text-xs">
         Vehicle Speed
@@ -270,8 +193,13 @@ export default function DriveDashboard({
       "
     >
       <div className="col-span-3 flex items-center justify-between border-b border-white/15 pb-[clamp(0.2rem,0.8dvh,0.4rem)]">
-        <div className="text-[clamp(0.7rem,2dvh,1rem)] font-black">
+        <div className="flex items-center gap-1 text-[clamp(0.7rem,2dvh,1rem)] font-black">
           {directionLetter}
+          {needsCalibration && (
+            <span className="text-[0.6rem] text-yellow-300" title="Compass needs calibration">
+              ⚠
+            </span>
+          )}
         </div>
 
         <div className="text-center">
@@ -301,22 +229,16 @@ export default function DriveDashboard({
             : `${roundedHeading}° heading`}
         </p>
 
-        {needsPermission && (
-          <button
-            type="button"
-            onClick={requestPermission}
-            className="mt-2 min-h-7 touch-manipulation rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur transition active:scale-95"
-          >
-            Enable Compass
-          </button>
+        {needsCalibration && (
+          <p className="mt-1 text-[clamp(0.55rem,1.6dvh,0.75rem)] font-semibold text-yellow-300">
+            Compass needs calibration
+          </p>
         )}
       </div>
 
       {/* Center panel — speed and timer */}
       <div className="row-start-2 flex min-w-0 flex-col items-center justify-center text-center">
         <Speedometer speedMph={currentSpeed} variant="landscape" />
-
-
 
         <p className="mt-1 whitespace-nowrap text-[clamp(1.1rem,5dvh,2.4rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
           {formattedTimer}
@@ -355,8 +277,6 @@ export default function DriveDashboard({
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1">
         <Speedometer speedMph={currentSpeed} variant="portrait" />
-
-
 
         <p className="mt-1 text-[clamp(1.25rem,5vw,2.25rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
           {formattedTimer}
@@ -402,16 +322,6 @@ export default function DriveDashboard({
       >
         Minimize
       </button>
-
-      {!isLandscape && needsPermission && (
-        <button
-          type="button"
-          onClick={requestPermission}
-          className="absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] z-[110] min-h-10 touch-manipulation rounded-full bg-black/30 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-md transition active:scale-95"
-        >
-          Enable Compass
-        </button>
-      )}
 
       {isNightMode && (
         <div className="pointer-events-none absolute inset-0 opacity-70">

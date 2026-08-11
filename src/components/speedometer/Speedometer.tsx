@@ -1,3 +1,6 @@
+// C:\Dev\NJDRIVE50\src\components\speedometer\Speedometer.tsx
+import React from "react"
+
 type SpeedometerProps = {
   speedMph: number | null
   variant: "portrait" | "landscape"
@@ -16,7 +19,21 @@ const unitSizeClasses: Record<SpeedometerProps["variant"], string> = {
   landscape: "ml-1 text-[clamp(0.75rem,2.4dvh,1.2rem)]",
 }
 
-export function Speedometer({ speedMph, variant }: SpeedometerProps) {
+function areEqual(prev: SpeedometerProps, next: SpeedometerProps): boolean {
+  const a = prev.speedMph ?? null
+  const b = next.speedMph ?? null
+  const EPS = 0.49
+
+  const speedEqual =
+    a === b || (a !== null && b !== null && Math.abs(a - b) <= EPS)
+
+  return speedEqual && prev.variant === next.variant
+}
+
+export const Speedometer = React.memo(function Speedometer({
+  speedMph,
+  variant,
+}: SpeedometerProps) {
   const displaySpeed =
     typeof speedMph !== "number" ||
     Number.isNaN(speedMph) ||
@@ -50,4 +67,4 @@ export function Speedometer({ speedMph, variant }: SpeedometerProps) {
       </span>
     </p>
   )
-}
+}, areEqual)

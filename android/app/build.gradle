@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId "com.njdrive50.app"
-        minSdkVersion rootProject.ext.minSdkVersionnpm run dev
+        minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"

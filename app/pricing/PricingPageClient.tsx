@@ -435,7 +435,7 @@ export default function PricingPageClient({
         </header>
 
         <main className="mt-6 space-y-6">
-          {process.env.NODE_ENV === "development" && (
+          {(process.env.NODE_ENV as string) === "development" && (
             <section className="rounded-[28px] border border-[#08194A]/10 bg-white px-4 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:px-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>

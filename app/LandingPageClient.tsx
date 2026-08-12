@@ -180,7 +180,8 @@ export default function LandingPageClient({
               <p className="mt-4 text-base leading-7 text-white/70">
                 If you need a simple way to track driving hours in NJ,
                 NJDrive50 keeps everything in one place so parents and teens
-                can stay organized from permit day to the NJ road test.
+                can stay organized from permit day to the NJ road test. Built
+                for use by teens with parent or guardian involvement.
               </p>
 
               <div className="mt-6 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:gap-4">
@@ -635,10 +636,17 @@ export default function LandingPageClient({
             </Link>
 
             <Link
-              href="/data-deletion"
+              href="/delete-account"
               className="min-h-[44px] py-1 text-left hover:text-white/70"
             >
-              Account &amp; Data Deletion
+              Delete Account
+            </Link>
+
+            <Link
+              href="/delete-my-data"
+              className="min-h-[44px] py-1 text-left hover:text-white/70"
+            >
+              Delete My Data
             </Link>
           </div>
 
@@ -701,10 +709,10 @@ export default function LandingPageClient({
             </p>
 
             <a
-              href="mailto:admin@njdrive50.com"
+              href="mailto:support@njdrive50.com"
               className="min-h-[44px] py-1 hover:text-white/70"
             >
-              admin@njdrive50.com
+              support@njdrive50.com
             </a>
           </div>
         </div>

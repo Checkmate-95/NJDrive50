@@ -15,7 +15,6 @@
     }
     .container { max-width: 640px; margin: 0 auto; }
 
-    /* Header */
     .header {
       background: #08194A;
       border-radius: 16px;
@@ -48,7 +47,6 @@
       line-height: 1.6;
     }
 
-    /* Cards */
     .card {
       background: white;
       border: 1px solid rgba(8,25,74,0.1);
@@ -72,7 +70,6 @@
       margin-bottom: 12px;
     }
 
-    /* In-app path */
     .step {
       display: flex;
       align-items: flex-start;
@@ -110,7 +107,6 @@
       line-height: 1.5;
     }
 
-    /* Data lists */
     ul.dlist { list-style: none; }
     ul.dlist li {
       display: flex;
@@ -132,7 +128,6 @@
       border-radius: 50%;
     }
 
-    /* Warning box */
     .warn {
       background: #FFF7DB;
       border: 1px solid rgba(249,200,14,0.4);
@@ -155,10 +150,8 @@
       line-height: 1.6;
     }
 
-    /* Retained list */
     ul.rlist li::before { background: #dc2626; }
 
-    /* Buttons */
     .btn-p {
       display: flex;
       align-items: center;
@@ -209,7 +202,6 @@
     }
     .btn-danger:hover { background: #FEE2E2; }
 
-    /* Badge */
     .badge-g {
       display: inline-flex;
       background: #ECFDF3;
@@ -222,7 +214,6 @@
       margin-bottom: 12px;
     }
 
-    /* Footer */
     .footer {
       text-align: center;
       margin-top: 24px;
@@ -240,8 +231,9 @@
   <div class="header">
     <div class="header-badge">Data Management</div>
     <h1>Delete My NJDrive50 Data</h1>
-    <p>Remove specific data from your account without closing it. Requests are
-    processed within <strong style="color:white">30 days</strong>.</p>
+    <p>Remove specific data from your account without closing it. In-app requests
+    are processed <strong style="color:white">immediately</strong>. Email requests
+    are processed within <strong style="color:white">30 days</strong>.</p>
   </div>
 
   <!-- How to request -->
@@ -254,7 +246,8 @@
       <div>
         <strong>In-App (Fastest)</strong>
         <span>Open NJDrive50 &rarr; Settings &rarr; Account &amp; Profile &rarr;
-        Delete My Data. Select the data you want removed and confirm.</span>
+        Delete My Data. Select the data you want removed and confirm. Deletion
+        happens immediately.</span>
       </div>
     </div>
 
@@ -288,10 +281,10 @@
     </p>
     <ul class="dlist">
       <li>Driving logs and session records</li>
-      <li>Teen or parent profile information</li>
-      <li>Drive summaries and permit milestones</li>
+      <li>Practice sessions and milestones</li>
+      <li>Uploaded documents and paperwork</li>
+      <li>Drive summaries and permit progress</li>
       <li>GPS route data and coordinates</li>
-      <li>Other app activity stored on our servers</li>
     </ul>
   </div>
 
@@ -301,12 +294,11 @@
     <h2>Data We May Retain</h2>
     <div class="warn">
       <strong>&#9888; Required by Law</strong>
-      <p>Some records may be retained for the minimum period required by
-      applicable law, regardless of a data deletion request.</p>
+      <p>Limited records may be retained only where required by applicable
+      law, regardless of a data deletion request.</p>
     </div>
     <ul class="dlist rlist">
-      <li>Payment receipts and billing records (financial compliance)</li>
-      <li>Fraud prevention and security audit logs</li>
+      <li>Fraud prevention and basic security audit logs</li>
       <li>Records required by applicable state or federal regulations</li>
     </ul>
   </div>
@@ -316,7 +308,7 @@
     <p class="eyebrow">Submit Request</p>
     <h2>Request Data Deletion</h2>
     <div class="badge-g">
-      &#10003; Processed within 30 days &nbsp;&middot;&nbsp; Confirmation email sent
+      &#10003; In-app deletion is immediate &nbsp;&middot;&nbsp; Email requests within 30 days
     </div>
     <a href="mailto:support@njdrive50.com?subject=Data%20Deletion%20Request&body=Please%20delete%20the%20following%20data%20from%20my%20NJDrive50%20account%3A%0A%0ARegistered%20email%3A%20%5Byour%20email%20here%5D%0AData%20to%20delete%3A%20%5Bspecify%3A%20driving%20logs%2C%20profile%2C%20etc.%5D%0A%0ANote%3A%20I%20would%20like%20to%20keep%20my%20account%20active."
       class="btn-p">
@@ -326,8 +318,7 @@
       Contact Support
     </a>
     <p style="font-size:11px;color:rgba(8,25,74,0.4);margin-top:10px;text-align:center">
-      Deleted data cannot be recovered. You will receive a confirmation email
-      when your request is complete.
+      Deleted data cannot be recovered.
     </p>
   </div>
 
@@ -351,7 +342,7 @@
     <p style="margin-top:4px">
       <a href="/privacy">Privacy Policy</a> &nbsp;&middot;&nbsp;
       <a href="/terms">Terms of Use</a> &nbsp;&middot;&nbsp;
-      &copy; 2025 NJDrive50. All rights reserved.
+      &copy; 2026 NJDrive50. All rights reserved.
     </p>
   </div>
 

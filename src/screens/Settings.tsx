@@ -1,7 +1,10 @@
 // src/screens/Settings.tsx
+import type { ReactNode } from "react"
 import { useNav } from "../state/navStore"
 import { useSettingsStore } from "../state/settingsStore"
 import { devResetAll } from "../utils/devReset"
+import { getAuth, signOut } from "firebase/auth"
+import { Preferences } from "@capacitor/preferences" // or Storage if you're on older Capacitor
 
 export default function Settings() {
   const { setScreen, goBack } = useNav()
@@ -16,9 +19,24 @@ export default function Settings() {
   const isDev = import.meta.env.DEV
 
   const handleDevReset = async () => {
-    await devResetAll()
-    setScreen("intro")
+  await devResetAll()
+  setScreen("login")   // or whatever your login screen is called
+}
+
+
+
+  const handleSignOut = async () => {
+  try {
+    const auth = getAuth()
+    await signOut(auth)
+    localStorage.clear()
+    await Preferences.clear()
+    setScreen("login")   // ← FIXED
+  } catch (err) {
+    console.error("Sign out failed:", err)
   }
+}
+
 
   return (
     <main className="min-h-screen bg-[#F7F9FC] px-3 pb-20 pt-3 text-[#08194A]">
@@ -26,7 +44,6 @@ export default function Settings() {
 
         {/* ── Header ── */}
         <header className="rounded-2xl border border-[#08194A]/8 bg-white px-4 py-4 shadow-sm">
-          {/* Row 1: Back button full width */}
           <button
             type="button"
             onClick={() => goBack()}
@@ -35,7 +52,6 @@ export default function Settings() {
             ← Back
           </button>
 
-          {/* Row 2: Preferences label + badges */}
           <div className="flex items-center justify-between mb-1">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#08194A]/40">
               Preferences
@@ -50,7 +66,6 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Row 3: Title */}
           <h1 className="text-lg font-extrabold tracking-tight text-[#08194A] leading-tight">
             Settings
           </h1>
@@ -127,6 +142,7 @@ export default function Settings() {
               <ActionButton
                 label="Sign Out"
                 tone="secondary"
+                onClick={handleSignOut}
               />
               <ActionButton
                 label="Delete Account"
@@ -242,7 +258,7 @@ function CompactCard({
 }: {
   eyebrow?: string
   title: string
-  children: React.ReactNode
+  children: ReactNode
   tone?: "default" | "danger"
 }) {
   return (

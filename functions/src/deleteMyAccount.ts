@@ -40,31 +40,27 @@ export const deleteMyAccount = onCall(
     logger.info("Starting deleteMyAccount.", { uid });
 
     try {
-      for (const collectionName of FIRESTORE_COLLECTIONS) {
-        const fullCollectionPath = `users/${uid}/${collectionName}`;
+      // Delete all subcollections in parallel
+      await Promise.all(
+        FIRESTORE_COLLECTIONS.map(async (collectionName) => {
+          const fullCollectionPath = `users/${uid}/${collectionName}`;
+          logger.info("Deleting Firestore subcollection.", { uid, fullCollectionPath });
+          const collectionRef = admin.firestore().collection(fullCollectionPath);
+          await deleteCollectionRecursive(collectionRef);
+        })
+      );
 
-        logger.info("Deleting Firestore subcollection.", {
-          uid,
-          fullCollectionPath,
-        });
+      // Delete the parent users/{uid} document itself — this was missing
+      logger.info("Deleting parent user document.", { uid });
+      await admin.firestore().doc(`users/${uid}`).delete();
 
-        const collectionRef = admin.firestore().collection(fullCollectionPath);
-        await deleteCollectionRecursive(collectionRef);
-      }
-
-      const bucket = admin.storage().bucket("njdrive50-app.firebasestorage.app");
-
-      // Trailing slash is required: without it, "users/abc123" would also
-      // match "users/abc1234/..." since GCS prefix matching is a literal
-      // string match, not a path-segment match.
+      const bucket = admin.storage().bucket(); // uses default bucket, more portable
       const prefix = `${USER_STORAGE_ROOT}/${uid}/`;
 
       logger.info("Deleting Storage files.", { uid, prefix });
-
-      await bucket.deleteFiles({
-        prefix,
-        force: true,
-      });
+      const [deletedFiles] = await bucket.getFiles({ prefix });
+      await bucket.deleteFiles({ prefix, force: true });
+      logger.info("Storage files deleted.", { uid, count: deletedFiles.length });
 
       logger.info("Deleting Firebase Auth user.", { uid });
       await admin.auth().deleteUser(uid);

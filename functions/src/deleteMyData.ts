@@ -13,7 +13,15 @@ type DeleteMyDataRequest = {
   deleteUploadedDocuments?: boolean;
 };
 
-export const deleteMyData = onCall<DeleteMyDataRequest>(
+type DeleteMyDataResponse = {
+  success: boolean;
+  message: string;
+};
+
+export const deleteMyData = onCall<
+  DeleteMyDataRequest,
+  Promise<DeleteMyDataResponse>
+>(
   {
     region: "us-central1",
     timeoutSeconds: 120,
@@ -69,7 +77,6 @@ export const deleteMyData = onCall<DeleteMyDataRequest>(
         firestoreTargets.push("paperwork", "exports");
       }
 
-      // Run all subcollection deletes in parallel instead of sequentially
       await Promise.all(
         firestoreTargets.map(async (collectionName) => {
           const fullCollectionPath = `users/${uid}/${collectionName}`;
@@ -85,8 +92,6 @@ export const deleteMyData = onCall<DeleteMyDataRequest>(
       );
 
       if (deleteUploadedDocuments) {
-        // Use the default bucket instead of hardcoding the name, so this
-        // works across environments (dev/staging/prod) without edits.
         const bucket = admin.storage().bucket();
 
         const prefixes = [
@@ -98,6 +103,7 @@ export const deleteMyData = onCall<DeleteMyDataRequest>(
         await Promise.all(
           prefixes.map(async (prefix) => {
             logger.info("Deleting Storage files.", { uid, prefix });
+
             await bucket.deleteFiles({
               prefix,
               force: true,

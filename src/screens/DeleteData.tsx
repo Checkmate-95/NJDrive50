@@ -7,7 +7,6 @@ import { useNav } from "../state/navStore";
 type DeleteDataPayload = {
   deleteDriveLogs: boolean;
   deletePracticeSessions: boolean;
-  deleteSavedVehicles: boolean;
   deleteUploadedDocuments: boolean;
 };
 
@@ -47,7 +46,6 @@ export default function DeleteData() {
 
   const [deleteDriveLogs, setDeleteDriveLogs] = useState(false);
   const [deletePracticeSessions, setDeletePracticeSessions] = useState(false);
-  const [deleteSavedVehicles, setDeleteSavedVehicles] = useState(false);
   const [deleteUploadedDocuments, setDeleteUploadedDocuments] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -67,7 +65,6 @@ export default function DeleteData() {
   const hasSelection =
     deleteDriveLogs ||
     deletePracticeSessions ||
-    deleteSavedVehicles ||
     deleteUploadedDocuments;
 
   const canSubmit =
@@ -101,7 +98,6 @@ export default function DeleteData() {
       const result = await requestDeleteData({
         deleteDriveLogs,
         deletePracticeSessions,
-        deleteSavedVehicles,
         deleteUploadedDocuments,
       });
 
@@ -142,9 +138,9 @@ export default function DeleteData() {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-[#08194A]/72">
-            You can delete specific NJDrive50 data without deleting your account.
-            This helps you manage your stored information while keeping access to
-            the app.
+            You can delete selected NJDrive50 data without deleting your account.
+            This option helps you remove certain stored information while keeping
+            access to the app and your subscription settings.
           </p>
         </header>
 
@@ -155,12 +151,15 @@ export default function DeleteData() {
             </p>
             <ul className="mt-2 space-y-1 text-xs leading-5 text-amber-700">
               <li>• Deleting selected data does not delete your NJDrive50 account.</li>
+              <li>• Deleting selected data does not cancel your Google Play subscription.</li>
               <li>• Deleted data may not be recoverable.</li>
               <li>
                 • Some limited records may be retained where required for legal,
-                security, fraud-prevention, or compliance reasons.
+                security, fraud-prevention, billing, or compliance reasons.
               </li>
-              <li>• Your Privacy Policy should explain any retention exceptions.</li>
+              <li>
+                • For full account deletion, use the separate Delete Account option.
+              </li>
             </ul>
           </div>
 
@@ -182,7 +181,7 @@ export default function DeleteData() {
                     Drive logs
                   </span>
                   <span className="block text-xs leading-5 text-[#08194A]/70">
-                    Deletes saved driving log entries linked to your account.
+                    Deletes saved driving log entries associated with your account.
                   </span>
                 </span>
               </label>
@@ -196,27 +195,10 @@ export default function DeleteData() {
                 />
                 <span>
                   <span className="block text-sm font-semibold text-[#08194A]">
-                    Practice session history
+                    Practice-session and milestone data
                   </span>
                   <span className="block text-xs leading-5 text-[#08194A]/70">
-                    Deletes stored session history and related progress records.
-                  </span>
-                </span>
-              </label>
-
-              <label className="flex items-start gap-3 rounded-xl border border-[#08194A]/8 bg-[#F7F9FC] px-3 py-3">
-                <input
-                  type="checkbox"
-                  checked={deleteSavedVehicles}
-                  onChange={(e) => setDeleteSavedVehicles(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded border border-[#08194A]/20"
-                />
-                <span>
-                  <span className="block text-sm font-semibold text-[#08194A]">
-                    Saved vehicles
-                  </span>
-                  <span className="block text-xs leading-5 text-[#08194A]/70">
-                    Deletes vehicle profiles and related saved preferences.
+                    Deletes in-progress drive data, practice-session records, and related milestone tracking data.
                   </span>
                 </span>
               </label>
@@ -230,13 +212,25 @@ export default function DeleteData() {
                 />
                 <span>
                   <span className="block text-sm font-semibold text-[#08194A]">
-                    Uploaded documents
+                    Uploaded documents and exports
                   </span>
                   <span className="block text-xs leading-5 text-[#08194A]/70">
-                    Deletes uploaded files and related stored metadata.
+                    Deletes uploaded paperwork, exported files, and related stored metadata associated with your account.
                   </span>
                 </span>
               </label>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-[#08194A]/8 bg-[#F7F9FC] px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#08194A]/70">
+                What is not deleted here
+              </p>
+              <ul className="mt-2 space-y-1 text-xs leading-5 text-[#08194A]/72">
+                <li>• Your NJDrive50 account</li>
+                <li>• Your authentication sign-in credentials</li>
+                <li>• Your Google Play billing or subscription records</li>
+                <li>• Any data not included in the selected categories above</li>
+              </ul>
             </div>
 
             <label className="mt-4 flex items-start gap-3">
@@ -298,11 +292,10 @@ export default function DeleteData() {
 
           <div className="rounded-2xl border border-[#08194A]/10 bg-white px-4 py-3 shadow-sm">
             <p className="text-xs font-semibold text-[#08194A]">
-              Need to manage your app data on the website?
+              Need to manage your data outside the app?
             </p>
             <p className="mt-1 text-xs leading-5 text-[#08194A]/70">
-              You can also request deletion of specific NJDrive50 data through our
-              secure web page.
+              You can also use our web data-deletion page without reinstalling the app.
             </p>
             <button
               type="button"

@@ -8,6 +8,15 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
+type DeleteMyAccountRequest = {
+  confirmDelete?: boolean;
+};
+
+type DeleteMyAccountResponse = {
+  success: boolean;
+  message: string;
+};
+
 const FIRESTORE_COLLECTIONS = [
   "drives",
   "exports",
@@ -20,10 +29,13 @@ const FIRESTORE_COLLECTIONS = [
   "settings",
 ] as const;
 
-export const deleteMyAccount = onCall(
+export const deleteMyAccount = onCall<
+  DeleteMyAccountRequest,
+  Promise<DeleteMyAccountResponse>
+>(
   {
     region: "us-central1",
-    timeoutSeconds: 120,
+    timeoutSeconds: 300,
     memory: "1GiB",
   },
   async (request) => {
@@ -37,30 +49,53 @@ export const deleteMyAccount = onCall(
       );
     }
 
+    const data = request.data ?? {};
+
+    if (data.confirmDelete !== true) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Account deletion must be explicitly confirmed."
+      );
+    }
+
     logger.info("Starting deleteMyAccount.", { uid });
 
     try {
-      // Delete all subcollections in parallel
       await Promise.all(
         FIRESTORE_COLLECTIONS.map(async (collectionName) => {
           const fullCollectionPath = `users/${uid}/${collectionName}`;
-          logger.info("Deleting Firestore subcollection.", { uid, fullCollectionPath });
+
+          logger.info("Deleting Firestore subcollection.", {
+            uid,
+            fullCollectionPath,
+          });
+
           const collectionRef = admin.firestore().collection(fullCollectionPath);
           await deleteCollectionRecursive(collectionRef);
         })
       );
 
-      // Delete the parent users/{uid} document itself — this was missing
       logger.info("Deleting parent user document.", { uid });
-      await admin.firestore().doc(`users/${uid}`).delete();
+      await admin
+        .firestore()
+        .doc(`users/${uid}`)
+        .delete()
+        .catch((error: unknown) => {
+          logger.warn("Parent user document delete skipped or failed.", {
+            uid,
+            errorMessage: error instanceof Error ? error.message : String(error),
+          });
+        });
 
-      const bucket = admin.storage().bucket(); // uses default bucket, more portable
+      const bucket = admin.storage().bucket();
       const prefix = `${USER_STORAGE_ROOT}/${uid}/`;
 
       logger.info("Deleting Storage files.", { uid, prefix });
-      const [deletedFiles] = await bucket.getFiles({ prefix });
-      await bucket.deleteFiles({ prefix, force: true });
-      logger.info("Storage files deleted.", { uid, count: deletedFiles.length });
+
+      await bucket.deleteFiles({
+        prefix,
+        force: true,
+      });
 
       logger.info("Deleting Firebase Auth user.", { uid });
       await admin.auth().deleteUser(uid);
@@ -69,7 +104,7 @@ export const deleteMyAccount = onCall(
 
       return {
         success: true,
-        message: "Account and all associated data deleted successfully.",
+        message: "Account and associated app data deleted successfully.",
       };
     } catch (error: unknown) {
       logger.error("deleteMyAccount failed.", {
@@ -81,7 +116,7 @@ export const deleteMyAccount = onCall(
 
       throw new HttpsError(
         "internal",
-        "Failed to delete account and user data."
+        "Failed to delete account and associated user data."
       );
     }
   }

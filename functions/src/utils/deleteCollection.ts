@@ -1,10 +1,6 @@
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
-
 /**
  * Recursively deletes a Firestore collection and everything under it.
  */

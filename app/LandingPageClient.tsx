@@ -20,11 +20,11 @@ export default function LandingPageClient({
         "Automatically separate daytime and night driving hours so you always know how many of the required 50 total hours and 10 night hours are left.",
     },
     {
-      icon: "📍",
-      title: "Log every NJ practice drive",
-      description:
-        "Save each supervised drive with GPS route data, start and end times, duration, and distance to keep your New Jersey driving log organized.",
-    },
+  icon: "📍",
+  title: "Log every NJ practice drive",
+  description:
+    "Save each supervised drive with start and end times, duration, distance, and drive details to keep your New Jersey driving log organized.",
+},
     {
       icon: "📋",
       title: "See permit and road test dates",
@@ -59,11 +59,11 @@ export default function LandingPageClient({
         "Enter the teen driver's name, birthday, permit issue date, and permit number. NJDrive50 instantly helps organize the 6-month waiting period, road test eligibility date, and key permit milestones.",
     },
     {
-      step: "02",
-      title: "Log each supervised drive",
-      description:
-        "After every practice session, record the drive with GPS tracking, duration, time of day, and supervising adult. Day and night driving hours are tracked separately.",
-    },
+  step: "02",
+  title: "Log each supervised drive",
+  description:
+    "After every practice session, record the drive with duration, time of day, and supervising adult. Day and night driving hours are tracked separately.",
+},
     {
       step: "03",
       title: "Watch progress toward 50 hours",
@@ -159,8 +159,8 @@ export default function LandingPageClient({
               <div className="mb-4 inline-flex max-w-full items-center gap-2 rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#38BDF8]" />
                 <span className="text-[10px] font-bold tracking-[0.14em] text-[#38BDF8] sm:text-[11px] sm:tracking-[0.18em]">
-                  NEW NJ LAW — EFFECTIVE FEB 1, 2025
-                </span>
+  NJ REQUIREMENT UPDATE — FOR ELIGIBLE PERMITS ISSUED ON OR AFTER FEB 1, 2025
+</span>
               </div>
 
               <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
@@ -222,11 +222,11 @@ export default function LandingPageClient({
               </p>
 
               <p className="mt-3 max-w-xl text-xs leading-6 text-white/45">
-                View subscription options on our pricing page. Free trials,
-                subscriptions, billing, and cancellations are started and
-                managed securely inside the NJDrive50 app through Google Play.
-                This website does not process payments.
-              </p>
+  View subscription options on our pricing page. Free trials,
+  subscriptions, billing, and cancellations are managed through
+  the Google Play Store or Apple App Store, depending on your device.
+  This website does not process payments.
+</p>
             </div>
 
             <div className="flex w-full flex-1 justify-center md:justify-end">
@@ -425,11 +425,11 @@ export default function LandingPageClient({
                 </h2>
 
                 <p className="mt-3 text-base leading-7 text-white/72">
-                  Starting February 1, 2025, New Jersey requires permit holders
-                  under 21 with permits issued on or after that date to complete{" "}
-                  <strong className="text-white">
-                    50 hours of supervised driving
-                  </strong>
+                  New Jersey requires permit holders under 21 whose permits were
+issued on or after February 1, 2025 to complete{" "}
+<strong className="text-white">
+  50 hours of supervised driving
+</strong>
                   , including{" "}
                   <strong className="text-white">10 hours at night</strong>,
                   before they can receive a probationary license.
@@ -587,10 +587,10 @@ export default function LandingPageClient({
             </div>
 
             <p className="mx-auto mt-3 max-w-md text-xs leading-6 text-white/45">
-              Free trials, subscriptions, billing, and cancellations are
-              started and managed securely inside the NJDrive50 app through
-              Google Play.
-            </p>
+  Free trials, subscriptions, billing, and cancellations are
+  managed through the Google Play Store or Apple App Store, depending
+  on your device.
+</p>
           </div>
         </section>
       </main>
@@ -704,24 +704,24 @@ export default function LandingPageClient({
           </div>
 
           <div className="flex flex-col gap-2 text-sm text-white/40">
-            <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">
-              Contact
-            </p>
+  <p className="mb-1 font-semibold uppercase tracking-[0.14em] text-white/25">
+    Contact
+  </p>
 
-            <a
-              href="mailto:support@njdrive50.com"
-              className="min-h-[44px] py-1 hover:text-white/70"
-            >
-              support@njdrive50.com
-            </a>
-          </div>
-        </div>
+  <a
+    href="mailto:support@njdrive50.com"
+    className="min-h-[44px] py-1 hover:text-white/70"
+  >
+    support@njdrive50.com
+  </a>
+</div>
+</div>
 
-        <div className="border-t border-white/5 px-4 py-4 text-center text-[11px] text-white/25">
-          © {new Date().getFullYear()} NJDrive50. All rights reserved. Not
-          affiliated with the New Jersey Motor Vehicle Commission.
-        </div>
-      </footer>
+<div className="border-t border-white/5 px-4 py-4 text-center text-[11px] text-white/25">
+  © {new Date().getFullYear()} NJDrive50. All rights reserved. Not
+  affiliated with the New Jersey Motor Vehicle Commission.
+</div>
+</footer>
 
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#020617]/95 p-3 backdrop-blur md:hidden">
         <div className="flex items-center gap-2">

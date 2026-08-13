@@ -217,15 +217,13 @@ export default function LandingPageClient({
               </div>
 
               <p className="mt-3 text-xs leading-6 text-white/45">
-                7-day free trial available in the app · $4.99 per month or
-                $39.99 per year.
-              </p>
+  Subscription options will be available in the NJDrive50 app.
+</p>
 
-              <p className="mt-3 max-w-xl text-xs leading-6 text-white/45">
-  View subscription options on our pricing page. Free trials,
-  subscriptions, billing, and cancellations are managed through
-  the Google Play Store or Apple App Store, depending on your device.
-  This website does not process payments.
+<p className="mt-3 max-w-xl text-xs leading-6 text-white/45">
+  When subscriptions are available, billing, cancellations, and any free-trial
+  terms will be managed through the Google Play Store or Apple App Store,
+  depending on your device. This website does not process payments.
 </p>
             </div>
 
@@ -425,26 +423,22 @@ export default function LandingPageClient({
                 </h2>
 
                 <p className="mt-3 text-base leading-7 text-white/72">
-                  New Jersey requires permit holders under 21 whose permits were
-issued on or after February 1, 2025 to complete{" "}
-<strong className="text-white">
-  50 hours of supervised driving
-</strong>
-                  , including{" "}
-                  <strong className="text-white">10 hours at night</strong>,
-                  before they can receive a probationary license.
-                </p>
+  New Jersey requires drivers under 21 whose special learner’s permits or
+  examination permits were issued on or after February 1, 2025 to complete{" "}
+  <strong className="text-white">50 hours of supervised driving</strong>,
+  including <strong className="text-white">10 hours during darkness</strong>,
+  before they can be issued a probationary license.
+</p>
 
-                <p className="mt-3 text-base leading-7 text-white/72">
-                  Drivers must also wait at least{" "}
-                  <strong className="text-white">6 months</strong> from permit
-                  issuance before taking the NJ road test, and they must bring a
-                  signed{" "}
-                  <strong className="text-white">
-                    Certification of Supervised Driving (Form BA-CSD)
-                  </strong>{" "}
-                  when applying for licensure.
-                </p>
+<p className="mt-3 text-base leading-7 text-white/72">
+  These drivers must also wait at least{" "}
+  <strong className="text-white">6 months</strong> from permit issuance before
+  taking the NJ road test, and they must bring a signed{" "}
+  <strong className="text-white">
+    Certification of Supervised Driving (Form BA-CSD)
+  </strong>{" "}
+  when applying for licensure.
+</p>
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -587,9 +581,9 @@ issued on or after February 1, 2025 to complete{" "}
             </div>
 
             <p className="mx-auto mt-3 max-w-md text-xs leading-6 text-white/45">
-  Free trials, subscriptions, billing, and cancellations are
-  managed through the Google Play Store or Apple App Store, depending
-  on your device.
+  Subscription options will be available in the NJDrive50 app. When available,
+  billing, cancellations, and any free-trial terms will be managed through the
+  Google Play Store or Apple App Store, depending on your device.
 </p>
           </div>
         </section>
@@ -687,7 +681,7 @@ issued on or after February 1, 2025 to complete{" "}
             </a>
 
             <a
-              href="https://nj.gov/mvc/pdf/license/BA-CSD.pdf"
+              href="https://www.nj.gov/mvc/pdf/license/BA-CSD.pdf"
               target="_blank"
               rel="noopener noreferrer"
               className="min-h-[44px] py-1 hover:text-white/70"

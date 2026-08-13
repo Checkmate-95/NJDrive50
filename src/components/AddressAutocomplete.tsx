@@ -31,7 +31,7 @@ export default function AddressAutocomplete({
     if (widgetRef.current) return
 
     if (!google?.maps?.places?.PlaceAutocompleteElement) {
-      if (import.meta.env.DEV) {
+      if ((import.meta as any)?.env?.DEV) {
         console.error(
           "[AddressAutocomplete] PlaceAutocompleteElement is unavailable. Check that Maps JavaScript API and Places API (New) are enabled."
         )

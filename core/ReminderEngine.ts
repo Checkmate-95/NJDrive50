@@ -82,6 +82,21 @@ type ReminderSchedule = {
   }
 }
 
+function isDevMode(): boolean {
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "development") {
+    return true
+  }
+  try {
+    const meta = import.meta as any
+    if (meta?.env?.DEV) {
+      return true
+    }
+  } catch {
+    // ignore
+  }
+  return false
+}
+
 function safeGetItem(key: string): string | null {
   try {
     return localStorage.getItem(key)
@@ -300,7 +315,7 @@ export function scheduleReminder(
   schedule[type] = { enabled: true, message, trigger: trigger.toISOString() }
   const saved = saveReminderSchedule(schedule)
 
-  if (import.meta.env.DEV) {
+  if (isDevMode()) {
     console.log(
       `[ReminderEngine] Scheduled: ${type}`,
       trigger,
@@ -317,7 +332,7 @@ export function cancelReminder(type: ReminderType): boolean {
   delete schedule[type]
   const saved = saveReminderSchedule(schedule)
 
-  if (import.meta.env.DEV) {
+  if (isDevMode()) {
     console.log(`[ReminderEngine] Cancelled: ${type}`, saved ? "✓" : "✗ FAILED")
   }
 
@@ -370,7 +385,7 @@ export function computeReminderTriggers(
     }
   }
 
-  if (import.meta.env.DEV) {
+  if (isDevMode()) {
     console.log("[ReminderEngine] Computed triggers:", triggers)
   }
 

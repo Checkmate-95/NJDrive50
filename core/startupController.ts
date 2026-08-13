@@ -3,6 +3,30 @@ import { useNav } from "../src/state/navStore"
 import { getProfile, hasProfile } from "../src/state/profileStore"
 import type { User } from "firebase/auth"
 
+function isDevMode(): boolean {
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "development") {
+    return true
+  }
+  try {
+    const meta = import.meta as any
+    if (meta?.env?.DEV) {
+      return true
+    }
+  } catch {
+    // ignore
+  }
+  return false
+}
+
+function getViteEnvVar(key: string): string | undefined {
+  try {
+    const meta = import.meta as any
+    return meta?.env?.[key]
+  } catch {
+    return undefined
+  }
+}
+
 // Temporary placeholder until Google Play Billing / verified
 // entitlement lookup has been implemented.
 async function getPurchaseStatus(
@@ -15,8 +39,8 @@ export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
 
   const shouldBypassEntitlement =
-    import.meta.env.DEV ||
-    import.meta.env.VITE_BYPASS_ENTITLEMENT === "true"
+    isDevMode() ||
+    getViteEnvVar("VITE_BYPASS_ENTITLEMENT") === "true"
 
   // Always show the app landing page to signed-out users.
   if (!authUser) {

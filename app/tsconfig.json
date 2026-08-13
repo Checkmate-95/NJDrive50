@@ -17,7 +17,7 @@
       "@/*": ["../*"]
     },
     "plugins": [{ "name": "next" }],
-    "types": ["vite/client"]
+    "types": ["node"]
   },
   "include": [
     "**/*.ts",

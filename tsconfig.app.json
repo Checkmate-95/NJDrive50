@@ -19,11 +19,12 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-    "types": ["vite/client"]
+
+    "types": ["vite/client", "node"]
   },
   "include": [
     "src",
     "core",
-    "vite-env.d.ts"
+    "import-meta-env.d.ts"
   ]
 }

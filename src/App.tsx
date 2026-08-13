@@ -125,7 +125,8 @@ const pricingFaqs = [
 ]
 
 export default function App() {
-  if (import.meta.env.MODE !== "production") {
+  const viteMode = (import.meta as any)?.env?.MODE
+  if (viteMode !== "production") {
     console.log("🔥 NJDrive50 app loaded")
   }
 

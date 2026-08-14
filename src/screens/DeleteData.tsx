@@ -102,6 +102,10 @@ export default function DeleteData() {
       });
 
       setSuccessMessage(
+      result.data?.message || "Your selected data has been deleted."
+    );
+
+      setSuccessMessage(
         result.data?.message || "Your selected data has been deleted."
       );
       setStep("success");

@@ -11,6 +11,7 @@ type NavState = {
   setScreen: (s: Screen) => void
   goBack: (fallback?: Screen) => void
   resetTo: (s: Screen) => void
+  resetAll: () => void // 🧹 Added reset method
 }
 
 export const useNav = create<NavState>()((set, get) => ({
@@ -64,8 +65,15 @@ export const useNav = create<NavState>()((set, get) => ({
       previousScreen: null,
     })
   },
+
+  // 🧩 New method to fully reset navigation state
+  resetAll: () => {
+    set({
+      screen: "onboarding", // or "loading" if you prefer a neutral start
+      stack: [],
+      previousScreen: null,
+    })
+  },
 }))
 
 export const useNavPreviousScreen = () => useNav((s) => s.previousScreen)
-
-

@@ -5,6 +5,10 @@ import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "../firebase";
 import { useNav } from "../state/navStore";
 
+type DeleteAccountRequest = {
+  confirmDelete: boolean;
+};
+
 type DeleteAccountResult = {
   success: boolean;
   message?: string;
@@ -31,6 +35,8 @@ function getErrorMessage(error: unknown): string {
       return "Too many attempts. Please wait a moment and try again.";
     case "functions/unauthenticated":
       return "Please sign in again before deleting your account.";
+    case "functions/invalid-argument":
+      return "Account deletion could not be confirmed. Please try again.";
     case "functions/internal":
       return "We could not delete your account right now. Please try again.";
     default:
@@ -51,7 +57,7 @@ export default function DeleteAccount() {
 
   const deleteMyAccount = useMemo(
     () =>
-      httpsCallable<Record<string, never>, DeleteAccountResult>(
+      httpsCallable<DeleteAccountRequest, DeleteAccountResult>(
         functions,
         "deleteMyAccount"
       ),
@@ -96,7 +102,7 @@ export default function DeleteAccount() {
         await reauthenticateWithCredential(user, credential);
       }
 
-      const result = await deleteMyAccount({});
+      const result = await deleteMyAccount({ confirmDelete: true });
 
       setPassword("");
       setSuccessMessage(

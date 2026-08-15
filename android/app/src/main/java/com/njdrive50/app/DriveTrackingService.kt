@@ -14,6 +14,7 @@ import android.os.PowerManager
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationAvailability
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
@@ -43,6 +44,15 @@ class DriveTrackingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Permission MUST be checked before startForeground() with
+        // FOREGROUND_SERVICE_TYPE_LOCATION — Android 14+ throws a
+        // SecurityException at the startForeground() call itself if
+        // location permission isn't already granted.
+        if (!hasLocationPermission()) {
+            stopAsIncomplete()
+            return START_NOT_STICKY
+        }
+
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
@@ -51,12 +61,6 @@ class DriveTrackingService : Service() {
         )
 
         acquireWakeLock()
-
-        if (!hasLocationPermission()) {
-            stopAsIncomplete()
-            return START_NOT_STICKY
-        }
-
         startLocationTracking()
         return START_NOT_STICKY
     }
@@ -84,13 +88,16 @@ class DriveTrackingService : Service() {
     }
 
     private fun setupLocationTracking() {
+        // 1Hz matches realistic phone GNSS sampling rate; slight batching
+        // window for efficiency; no distance gate so updates keep flowing
+        // even at low/zero speed.
         locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
-            5_000L
+            1_000L
         )
-            .setMinUpdateIntervalMillis(2_500L)
-            .setMinUpdateDistanceMeters(10f)
-            .setMaxUpdateDelayMillis(15_000L)
+            .setMinUpdateIntervalMillis(1_000L)
+            .setMinUpdateDistanceMeters(0f)
+            .setMaxUpdateDelayMillis(2_000L)
             .build()
 
         locationCallback = object : LocationCallback() {
@@ -101,14 +108,15 @@ class DriveTrackingService : Service() {
                     android.util.Log.d(
                         "DriveTrackingService",
                         "lat=${location.latitude}, lng=${location.longitude}, " +
-                            "accuracy=${location.accuracy}, time=${location.time}"
+                            "accuracy=${location.accuracy}, speed=${location.speed}, " +
+                            "bearing=${location.bearing}, time=${location.time}"
                     )
 
                     // TODO: Persist native point immediately (sessionId, lat, lng, accuracy, speed, bearing, timestamps)
                 }
             }
 
-            override fun onLocationAvailability(availability: com.google.android.gms.location.LocationAvailability) {
+            override fun onLocationAvailability(availability: LocationAvailability) {
                 if (!availability.isLocationAvailable) {
                     android.util.Log.w("DriveTrackingService", "Location currently unavailable")
                 }

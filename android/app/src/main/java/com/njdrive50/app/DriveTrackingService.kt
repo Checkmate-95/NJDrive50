@@ -190,7 +190,7 @@ class DriveTrackingService : Service() {
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CHANNEL_ID)
         } else {
-            Notification.Builder(this)
+            Notification.Builder(this)   
         }
 
         return builder

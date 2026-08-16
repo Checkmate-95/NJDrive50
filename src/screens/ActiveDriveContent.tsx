@@ -14,6 +14,8 @@ import BackgroundLocationDisclosure from "../components/BackgroundLocationDisclo
 
 
 
+
+
 import { fetchWeather } from "../services/weather"
 
 import {
@@ -201,8 +203,30 @@ async function ensureForegroundServiceChannel(): Promise<void> {
       description: "Keeps your active drive timer and location tracking running.",
       importance: 2,
     })
-  } catch {
-    // A channel can already exist. Notification setup is non-critical.
+  } catch (error) {
+    console.warn("[ForegroundService] Channel setup failed:", error)
+  }
+}
+
+async function ensureForegroundServicePermission(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform()) return false
+
+  try {
+    const { ForegroundService } = await import(
+      "@capawesome-team/capacitor-android-foreground-service"
+    )
+
+    const status = await ForegroundService.checkPermissions()
+
+    if (status.display === "granted") {
+      return true
+    }
+
+    const requested = await ForegroundService.requestPermissions()
+    return requested.display === "granted"
+  } catch (error) {
+    console.warn("[ForegroundService] Permission check failed:", error)
+    return false
   }
 }
 
@@ -210,6 +234,14 @@ async function startForegroundService(body: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
 
   try {
+    const allowed = await ensureForegroundServicePermission()
+
+    if (!allowed) {
+      console.warn("[ForegroundService] Notification permission not granted")
+      foregroundServiceStarted = false
+      return
+    }
+
     await ensureForegroundServiceChannel()
 
     const { ForegroundService } = await import(
@@ -248,8 +280,8 @@ async function updateForegroundService(body: string): Promise<void> {
       smallIcon: "ic_launcher_foreground",
       notificationChannelId: FS_CHANNEL_ID,
     })
-  } catch {
-    // Failure to refresh a notification must not interrupt drive tracking.
+  } catch (error) {
+    console.warn("[ForegroundService] Update failed:", error)
   }
 }
 
@@ -264,8 +296,8 @@ async function stopForegroundService(): Promise<void> {
     )
 
     await ForegroundService.stopForegroundService()
-  } catch {
-    // Cleanup failure is non-critical.
+  } catch (error) {
+    console.warn("[ForegroundService] Stop failed:", error)
   }
 }
 

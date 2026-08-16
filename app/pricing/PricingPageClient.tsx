@@ -12,7 +12,7 @@ type PlanCardProps = {
   title: string;
   badge?: string;
   description: string;
-  statusLabel: string;
+  price: string;
   helperText: string;
   trustText: string;
   features: string[];
@@ -33,6 +33,9 @@ type Faq = {
 
 const GOOGLE_PLAY_URL =
   "https://play.google.com/store/apps/details?id=com.njdrive50.app";
+
+const GOOGLE_PLAY_MANAGE_URL =
+  "https://play.google.com/store/account/subscriptions";
 
 const GOOGLE_PLAY_BADGE_SRC =
   "/GetItOnGooglePlay_Badge_Web_color_English.svg";
@@ -82,7 +85,7 @@ function GooglePlayButton({
     <button
       type="button"
       onClick={onClick}
-      aria-label="View NJDrive50 on Google Play"
+      aria-label="Install NJDrive50 from Google Play"
       className={`group w-full overflow-hidden rounded-2xl border text-left shadow-sm transition duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-offset-2 ${
         dark
           ? "border-white/15 bg-white/[0.09] text-white hover:bg-white/[0.14] focus-visible:ring-offset-[#08194A]"
@@ -102,7 +105,7 @@ function GooglePlayButton({
 
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-extrabold tracking-tight">
-            View NJDrive50 on Google Play
+            Install from Google Play
           </span>
 
           <span
@@ -110,7 +113,7 @@ function GooglePlayButton({
               dark ? "text-white/68" : "text-[#08194A]/62"
             }`}
           >
-            Subscription options will appear in the app when available
+            Start your 7-day free trial with Google Play in-app billing
           </span>
         </span>
 
@@ -145,7 +148,7 @@ function PlanCard({
   title,
   badge,
   description,
-  statusLabel,
+  price,
   helperText,
   trustText,
   features,
@@ -190,7 +193,7 @@ function PlanCard({
               : "bg-[#F7F9FC] text-[#08194A]/72"
           }`}
         >
-          {statusLabel}
+          {price}
         </span>
       </div>
 
@@ -219,7 +222,7 @@ function PlanCard({
       />
 
       <ul className="mt-6 space-y-3">
-        {features.map((feature: string) => (
+        {features.map((feature) => (
           <li key={feature} className="flex items-start gap-3">
             <span
               className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${
@@ -287,16 +290,17 @@ export default function PricingPageClient({
               </h1>
 
               <p className="mt-3 max-w-3xl text-sm leading-6 text-[#08194A]/65 sm:text-base">
-                NJDrive50 helps New Jersey families track supervised driving
-                hours, required night hours, permit milestones, and road-test
-                readiness in one place. Subscription options will be available
-                in the app.
+                Install NJDrive50 from Google Play and start with a 7-day free
+                trial using Google Play in-app billing. After the trial, continue
+                with monthly or yearly access.
               </p>
 
               <p className="mt-2 max-w-3xl text-xs leading-5 text-[#08194A]/55">
-                Subscription signup and billing will be handled through Google
-                Play inside the NJDrive50 app once plans are available. This
-                website does not process payments.
+                7-day free trial, then $4.99/month or $39.99/year. A valid
+                payment method may be required to begin the trial. Subscriptions
+                renew automatically each billing period unless canceled through
+                Google Play before renewal or before the trial ends to avoid the
+                next charge.
               </p>
             </div>
 
@@ -306,7 +310,7 @@ export default function PricingPageClient({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2"
-                aria-label="View NJDrive50 on Google Play"
+                aria-label="Install NJDrive50 from Google Play"
               >
                 <img
                   src={GOOGLE_PLAY_BADGE_SRC}
@@ -332,8 +336,7 @@ export default function PricingPageClient({
                   </h2>
 
                   <p className="mt-2 text-sm leading-6 text-[#08194A]/65">
-                    Development-only access for testing app functionality before
-                    subscription plans are publicly available.
+                    Development-only access for testing app functionality.
                   </p>
                 </div>
 
@@ -350,12 +353,12 @@ export default function PricingPageClient({
 
           <section className="grid gap-6 lg:grid-cols-2">
             <PlanCard
-              title="Subscription access"
-              badge="Coming Soon"
-              description="NJDrive50 subscription options will be available in the app when plans launch."
-              statusLabel="Coming soon"
-              helperText="Subscription details will appear in the NJDrive50 app when plans are available."
-              trustText="Subscription signup and billing will be handled through Google Play inside the NJDrive50 app."
+              title="Monthly"
+              badge="Flexible"
+              description="Full NJDrive50 access with a 7-day free trial, then monthly billing through Google Play."
+              price="$4.99 per month"
+              helperText="Start free for 7 days. Cancel through Google Play before the trial ends to avoid the first monthly charge."
+              trustText="Auto-renews every month unless canceled in Google Play. A valid payment method may be required to start the trial."
               features={[
                 "Track supervised driving hours in New Jersey",
                 "Monitor required night driving hours",
@@ -366,17 +369,17 @@ export default function PricingPageClient({
             />
 
             <PlanCard
-              title="What to expect"
-              badge="Plan Details"
-              description="When subscriptions launch, NJDrive50 will provide access through the app with Google Play handling the purchase flow."
-              statusLabel="Available in app"
-              helperText="Plan terms, billing details, and any offers will be shown in the app when available."
-              trustText="This website is for information only and does not process subscription payments."
+              title="Yearly"
+              badge="Best value"
+              description="Full NJDrive50 access with a 7-day free trial, then yearly billing through Google Play."
+              price="$39.99 per year"
+              helperText="Start free for 7 days. Cancel through Google Play before the trial ends to avoid the first yearly charge."
+              trustText="Auto-renews every year unless canceled in Google Play. A valid payment method may be required to start the trial."
               features={[
-                "Google Play purchase flow inside the app",
+                "Everything in the monthly plan",
+                "One year of driving-log access",
                 "Parent-and-teen progress tracking tools",
-                "Permit milestone organization",
-                "Road-test readiness support",
+                "Permit milestone and road-test readiness support",
               ]}
               featured
               onSelect={handleGoToStore}
@@ -396,7 +399,7 @@ export default function PricingPageClient({
               </div>
 
               <p className="text-sm text-[#08194A]/55">
-                These are the tools NJDrive50 is designed to provide families.
+                Available with an active NJDrive50 subscription.
               </p>
             </div>
 
@@ -407,7 +410,7 @@ export default function PricingPageClient({
               </div>
 
               <div className="divide-y divide-[#08194A]/8">
-                {includedRows.map((row: FeatureRow) => (
+                {includedRows.map((row) => (
                   <div
                     key={row.label}
                     className="grid grid-cols-[minmax(0,1fr)_80px] items-center px-4 py-4 text-sm sm:px-5"
@@ -417,18 +420,12 @@ export default function PricingPageClient({
                     </div>
 
                     <div className="flex justify-center">
-                      {row.available ? (
-                        <span
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#08194A] text-white"
-                          aria-label="Included"
-                        >
-                          <CheckIcon />
-                        </span>
-                      ) : (
-                        <span className="text-xs font-bold text-[#08194A]/30">
-                          —
-                        </span>
-                      )}
+                      <span
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#08194A] text-white"
+                        aria-label="Included"
+                      >
+                        <CheckIcon />
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -447,7 +444,7 @@ export default function PricingPageClient({
               </h2>
 
               <div className="mt-5 space-y-4">
-                {pricingFaqs.map(({ question, answer }: Faq) => (
+                {pricingFaqs.map(({ question, answer }) => (
                   <div
                     key={question}
                     className="rounded-2xl bg-[#F7F9FC] px-4 py-4"
@@ -461,6 +458,38 @@ export default function PricingPageClient({
                     </p>
                   </div>
                 ))}
+
+                <div className="rounded-2xl bg-[#F7F9FC] px-4 py-4">
+                  <h3 className="text-sm font-bold text-[#08194A]">
+                    How do I avoid being charged after the free trial?
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[#08194A]/68">
+                    Cancel the subscription in Google Play before the 7-day trial
+                    ends. If you do not cancel before the trial ends, the first
+                    billing period begins automatically.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-[#F7F9FC] px-4 py-4">
+                  <h3 className="text-sm font-bold text-[#08194A]">
+                    Does uninstalling the app cancel my subscription?
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[#08194A]/68">
+                    No. Uninstalling NJDrive50 does not cancel an active Google
+                    Play subscription. Manage or cancel subscriptions in Google
+                    Play.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-[#F7F9FC] px-4 py-4">
+                  <h3 className="text-sm font-bold text-[#08194A]">
+                    Where do I manage or cancel my subscription?
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[#08194A]/68">
+                    You can manage or cancel your subscription through your
+                    Google Play account subscription settings.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -471,25 +500,27 @@ export default function PricingPageClient({
                 </div>
 
                 <h2 className="mt-3 text-2xl font-extrabold tracking-tight">
-                  Subscribe in the app when available
+                  Install and start your free trial
                 </h2>
 
                 <p className="mt-3 text-sm leading-6 text-white/72">
-                  NJDrive50 purchase options will appear in the app through
-                  Google Play when plans are launched.
+                  Install NJDrive50 from Google Play and start your 7-day free
+                  trial using Google Play in-app billing. A valid payment method
+                  may be required to begin the trial.
                 </p>
 
                 <div className="mt-5 rounded-2xl bg-white/8 p-4">
                   <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
-                    Before launch
+                    Subscription options
                   </p>
 
                   <p className="mt-2 text-2xl font-extrabold tracking-tight">
-                    Pricing coming soon
+                    From $4.99 / month
                   </p>
 
                   <p className="mt-1 text-sm text-white/62">
-                    Final plan terms and any offers will be shown in the app.
+                    Or $39.99 / year after a 7-day free trial. Uninstalling the
+                    app does not cancel your subscription.
                   </p>
                 </div>
 
@@ -500,9 +531,20 @@ export default function PricingPageClient({
                 />
 
                 <p className="mt-3 text-xs leading-5 text-white/56">
-                  This page is informational. Google Play will handle purchase
-                  flow and billing when subscriptions are available.
+                  Google Play handles subscription signup, billing, renewals,
+                  cancellations, and subscription management for NJDrive50.
+                  Refund eligibility follows Google Play policies and applicable
+                  law.
                 </p>
+
+                <a
+                  href={GOOGLE_PLAY_MANAGE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex items-center rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
+                >
+                  Manage subscription on Google Play
+                </a>
               </div>
             </aside>
           </section>

@@ -1,5 +1,5 @@
 // C:\Dev\NJDRIVE50\src\screens\DriveDashboard.tsx
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { useCompass } from "../hooks/useCompass"
 import { Speedometer } from "../components/speedometer/Speedometer"
 
@@ -25,44 +25,7 @@ const STAR_POSITIONS = Array.from({ length: 52 }, (_, index) => ({
   size: index % 5 === 0 ? 3 : 2,
 }))
 
-const MIN_SPEED_THRESHOLD = 2 // mph — readings below this while "stationary" get zeroed
-const SPEED_SMOOTHING_ALPHA = 0.3
-const SPEED_EPSILON = 0.5 // only update UI when change >= 0.5 mph
 
-function clampSpeed(v: number): number {
-  if (!Number.isFinite(v) || v < 0) return 0
-  return v
-}
-
-function smoothSpeed(prev: number | null, nextRaw: number): number {
-  const next = clampSpeed(nextRaw)
-  const cleaned = next < MIN_SPEED_THRESHOLD ? 0 : next
-  if (prev === null) return cleaned
-  return prev + SPEED_SMOOTHING_ALPHA * (cleaned - prev)
-}
-
-function useSmoothedSpeed(rawSpeed: number | null) {
-  const [smoothed, setSmoothed] = useState<number | null>(null)
-  const lastRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    if (rawSpeed === null) {
-      lastRef.current = null
-      setSmoothed(null)
-      return
-    }
-
-    const nextSmoothed = smoothSpeed(lastRef.current, rawSpeed)
-    const prev = lastRef.current
-    lastRef.current = nextSmoothed
-
-    if (prev === null || Math.abs(prev - nextSmoothed) >= SPEED_EPSILON) {
-      setSmoothed(nextSmoothed)
-    }
-  }, [rawSpeed])
-
-  return smoothed
-}
 
 export default function DriveDashboard({
   formattedTimer,
@@ -82,7 +45,7 @@ export default function DriveDashboard({
   )
 
   const { cardinal: directionLetter, rawHeading, needsCalibration } = useCompass()
-  const smoothedSpeed = useSmoothedSpeed(currentSpeed ?? null)
+  const displaySpeed = currentSpeed ?? 0
 
   useEffect(() => {
     const updateOrientation = () => {
@@ -278,7 +241,7 @@ export default function DriveDashboard({
 
       {/* Center panel — speed and timer */}
       <div className="row-start-2 flex min-w-0 flex-col items-center justify-center text-center">
-        <Speedometer speedMph={smoothedSpeed} variant="landscape" />
+        <Speedometer speedMph={displaySpeed} variant="landscape" />
 
         <p className="mt-1 whitespace-nowrap text-[clamp(1.1rem,5dvh,2.4rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
           {formattedTimer}
@@ -316,7 +279,7 @@ export default function DriveDashboard({
       <div className="h-px w-full shrink-0 bg-white/15" />
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1">
-        <Speedometer speedMph={smoothedSpeed} variant="portrait" />
+        <Speedometer speedMph={displaySpeed} variant="portrait" />
 
         <p className="mt-1 text-[clamp(1.25rem,5vw,2.25rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
           {formattedTimer}

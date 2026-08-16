@@ -18,11 +18,6 @@ const unitSizeClasses: Record<SpeedometerProps["variant"], string> = {
   landscape: "ml-1 text-[clamp(0.75rem,2.4dvh,1.2rem)]",
 }
 
-// Only memoize variant — speed should always trigger a re-render
-function areEqual(prev: SpeedometerProps, next: SpeedometerProps): boolean {
-  return prev.variant === next.variant
-}
-
 export const Speedometer = React.memo(function Speedometer({
   speedMph,
   variant,
@@ -32,7 +27,7 @@ export const Speedometer = React.memo(function Speedometer({
     Number.isNaN(speedMph) ||
     speedMph < 0 ||
     speedMph > MAX_REALISTIC_SPEED
-      ? "--"
+      ? "0"
       : Math.round(speedMph).toString()
 
   const isHighSpeed =
@@ -46,11 +41,7 @@ export const Speedometer = React.memo(function Speedometer({
       className={`whitespace-nowrap font-black leading-none tracking-tight tabular-nums drop-shadow-lg ${sizeClasses[variant]} ${
         isHighSpeed ? "text-red-500" : "text-white"
       }`}
-      aria-label={
-        displaySpeed === "--"
-          ? "Speed unavailable"
-          : `${displaySpeed} miles per hour`
-      }
+      aria-label={`${displaySpeed} miles per hour`}
     >
       {displaySpeed}
       <span
@@ -60,4 +51,4 @@ export const Speedometer = React.memo(function Speedometer({
       </span>
     </p>
   )
-}, areEqual)
+})

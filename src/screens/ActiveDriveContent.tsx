@@ -971,7 +971,7 @@ const isNight = session.currentMode === "night";
 const isSolarUnverified = session.currentMode === "unverified";
 const formattedElapsed = formatTime(displayedMs);
 
-const currentSpeed = session.currentSpeed ?? null
+const currentSpeed = session.currentSpeed
 
 
 // --- HANDLERS ---

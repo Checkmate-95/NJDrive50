@@ -10,6 +10,8 @@ import {
 import { Capacitor } from "@capacitor/core"
 import { Geolocation } from "@capacitor/geolocation"
 
+import BackgroundLocationDisclosure from "../components/BackgroundLocationDisclosure"
+
 
 
 import { fetchWeather } from "../services/weather"
@@ -278,6 +280,8 @@ function ActiveDriveContent({
 
   const [isPreviewing, setIsPreviewing] = useState(false)
 
+  const [showDisclosure, setShowDisclosure] = useState(false)
+
   const mountedRef = useRef(true)
   const watchIdRef = useRef<string | null>(null)
   const frozenSnapshotRef = useRef<Promise<DriveSnapshot | null> | null>(null)
@@ -321,84 +325,35 @@ function ActiveDriveContent({
   }, [])
 
   const clearRuntimeLoops = useCallback(() => {
-    void clearGpsWatch()
-    clearNotificationInterval()
-  }, [clearGpsWatch, clearNotificationInterval])
+  void clearGpsWatch()
+  clearNotificationInterval()
+}, [clearGpsWatch, clearNotificationInterval])
 
-  const getCurrentLocation = useCallback(async (): Promise<RouteCoord | null> => {
-    if (locationRequestRef.current) {
-      return locationRequestRef.current
-    }
+const getCurrentLocation = useCallback(async (): Promise<RouteCoord | null> => {
+  if (locationRequestRef.current) {
+    return locationRequestRef.current
+  }
 
-    const locationPromise = (async () => {
-      try {
-        if (Capacitor.isNativePlatform()) {
-          const permission = await Geolocation.checkPermissions()
+  const locationPromise = (async () => {
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const permission = await Geolocation.checkPermissions()
 
-          const needsPermission =
-            permission.location !== "granted" &&
-            permission.coarseLocation !== "granted"
+      const granted =
+        permission.location === "granted" ||
+        permission.coarseLocation === "granted"
 
-          if (needsPermission) {
-            const requested = await Geolocation.requestPermissions()
+      if (!granted) {
+        console.warn("Location permission missing; returning null.")
+        return null
+      }
 
-            const granted =
-              requested.location === "granted" ||
-              requested.coarseLocation === "granted"
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15_000,
+        maximumAge: 5_000,
+      })
 
-            if (!granted) return null
-          }
-
-          const position = await Geolocation.getCurrentPosition({
-  enableHighAccuracy: true,
-  timeout: 15_000,
-  maximumAge: 5_000,
-})
-
-const { latitude: lat, longitude: lng } = position.coords
-
-if (
-  !Number.isFinite(lat) ||
-  !Number.isFinite(lng) ||
-  lat < -90 ||
-  lat > 90 ||
-  lng < -180 ||
-  lng > 180
-) {
-  return null
-}
-
-return {
-  lat,
-  lng,
-  at:
-    typeof position.timestamp === "number" &&
-    Number.isFinite(position.timestamp)
-      ? position.timestamp
-      : Date.now(),
-  accuracy:
-    typeof position.coords.accuracy === "number" &&
-    Number.isFinite(position.coords.accuracy)
-      ? position.coords.accuracy
-      : null,
-  heading:
-    typeof position.coords.heading === "number" &&
-    Number.isFinite(position.coords.heading)
-      ? position.coords.heading
-      : null,
-  gpsSpeedMps:
-    typeof position.coords.speed === "number" &&
-    Number.isFinite(position.coords.speed)
-      ? position.coords.speed
-      : null,
-}
-}
-
-if (!navigator.geolocation) return null
-
-return await new Promise<RouteCoord | null>((resolve) => {
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
       const { latitude: lat, longitude: lng } = position.coords
 
       if (
@@ -409,11 +364,10 @@ return await new Promise<RouteCoord | null>((resolve) => {
         lng < -180 ||
         lng > 180
       ) {
-        resolve(null)
-        return
+        return null
       }
 
-      resolve({
+      return {
         lat,
         lng,
         at:
@@ -436,21 +390,66 @@ return await new Promise<RouteCoord | null>((resolve) => {
           Number.isFinite(position.coords.speed)
             ? position.coords.speed
             : null,
-      })
-    },
-    () => resolve(null),
-    {
-      enableHighAccuracy: true,
-      timeout: 15_000,
-      maximumAge: 5_000,
+      }
     }
-  )
-})
-} catch {
-  return null
-} finally {
-  locationRequestRef.current = null
-}
+
+    if (!navigator.geolocation) return null
+
+    return await new Promise<RouteCoord | null>((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude: lat, longitude: lng } = position.coords
+
+          if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lng) ||
+            lat < -90 ||
+            lat > 90 ||
+            lng < -180 ||
+            lng > 180
+          ) {
+            resolve(null)
+            return
+          }
+
+          resolve({
+            lat,
+            lng,
+            at:
+              typeof position.timestamp === "number" &&
+              Number.isFinite(position.timestamp)
+                ? position.timestamp
+                : Date.now(),
+            accuracy:
+              typeof position.coords.accuracy === "number" &&
+              Number.isFinite(position.coords.accuracy)
+                ? position.coords.accuracy
+                : null,
+            heading:
+              typeof position.coords.heading === "number" &&
+              Number.isFinite(position.coords.heading)
+                ? position.coords.heading
+                : null,
+            gpsSpeedMps:
+              typeof position.coords.speed === "number" &&
+              Number.isFinite(position.coords.speed)
+                ? position.coords.speed
+                : null,
+          })
+        },
+        () => resolve(null),
+        {
+          enableHighAccuracy: true,
+          timeout: 15_000,
+          maximumAge: 5_000,
+        }
+      )
+    })
+  } catch {
+    return null
+  } finally {
+    locationRequestRef.current = null
+  }
 })()
 
 locationRequestRef.current = locationPromise
@@ -734,30 +733,23 @@ const createFrozenSnapshot = useCallback(
 
     let active = true
 
-    const startWatch = async () => {
+   const startWatch = async () => {
   try {
     if (Capacitor.isNativePlatform()) {
       const permission = await Geolocation.checkPermissions()
 
-      const needsPermission =
-        permission.location !== "granted" &&
-        permission.coarseLocation !== "granted"
+      const granted =
+        permission.location === "granted" ||
+        permission.coarseLocation === "granted"
 
-      if (needsPermission) {
-        const requested = await Geolocation.requestPermissions()
-
-        const granted =
-          requested.location === "granted" ||
-          requested.coarseLocation === "granted"
-
-        if (!granted) {
-          setLocationError(
-            "Location access is needed to verify sunlight and darkness hours."
-          )
-          return
-        }
+      if (!granted) {
+        setLocationError(
+          "Location access is needed to verify sunlight and darkness hours."
+        )
+        return
       }
     }
+     
 
     const id = await Geolocation.watchPosition(
       {
@@ -981,28 +973,41 @@ const previewDisabled =
 
 
   const startNewDrive = async () => {
-    const now = Date.now()
+  if (Capacitor.isNativePlatform()) {
+    const permission = await Geolocation.checkPermissions()
 
-    startDrive(now, null)
-    setLocationError(null)
-    setShowStopConfirm(false)
+    const needsPermission =
+      permission.location !== "granted" &&
+      permission.coarseLocation !== "granted"
 
-    void startForegroundService("Drive started — tracking time and location")
-
-    const coord = await getCurrentLocation()
-
-    if (!mountedRef.current) return
-
-    if (!coord) {
-      setLocationError(
-        "Location access is needed to verify sunlight and darkness hours."
-      )
+    if (needsPermission) {
+      setShowDisclosure(true)
       return
     }
-
-    setLocationError(null)
-    tick(coord, Date.now())
   }
+
+  const now = Date.now()
+
+  startDrive(now, null)
+  setLocationError(null)
+  setShowStopConfirm(false)
+
+  void startForegroundService("Drive started — tracking time and location")
+
+  const coord = await getCurrentLocation()
+
+  if (!mountedRef.current) return
+
+  if (!coord) {
+    setLocationError(
+      "Location access is needed to verify sunlight and darkness hours."
+    )
+    return
+  }
+
+  setLocationError(null)
+  tick(coord, Date.now())
+}
 
   const resumeCurrentDrive = async () => {
     resumeDrive(Date.now())
@@ -1441,7 +1446,7 @@ const previewDisabled =
                   {["Clear", "Rain", "Snow", "Fog"].map((weather) => {
                     const selected = session.weather === weather
 
-                    return (
+                                        return (
                       <button
                         key={weather}
                         type="button"
@@ -1563,10 +1568,40 @@ const previewDisabled =
               </button>
             </div>
           </section>
-        </div>
+
+          {showDisclosure && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+              <BackgroundLocationDisclosure
+                onContinue={async () => {
+                  setShowDisclosure(false)
+
+                  const requested = await Geolocation.requestPermissions()
+
+                  const granted =
+                    requested.location === "granted" ||
+                    requested.coarseLocation === "granted"
+
+                  if (!granted) {
+                    setLocationError(
+                      "Location access is needed to start and verify a drive."
+                    )
+                    return
+                  }
+
+                  await startNewDrive()
+                }}
+                onCancel={() => {
+                  setShowDisclosure(false)
+                  setLocationError(
+                    "Location access is needed to start and verify a drive."
+                  )
+                }}
+              />
             </div>
-    
-)
+          )}
+        </div>
+      </div>
+    )
 }
 
 export default ActiveDriveContent

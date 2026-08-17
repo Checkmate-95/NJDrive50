@@ -9,11 +9,9 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
         classpath 'com.google.gms:google-services:4.4.4'
-
-        // Kotlin plugin (Kotlin 2.x)
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0"
 
-        // KSP plugin matching Kotlin 2.3.x
+        // KSP plugin matching your project setup
         classpath "com.google.devtools.ksp:symbol-processing-gradle-plugin:2.3.5"
     }
 }
@@ -27,6 +25,6 @@ allprojects {
     }
 }
 
-task clean(type: Delete) {
+tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }

@@ -602,14 +602,14 @@ export default function PricingPageClient({
               <div className="h-px w-full bg-white/10" />
 
               <a
-                href="/delete-data/index.html"
-                className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
-              >
-                <span>Delete My Data</span>
-                <span className="text-white/35" aria-hidden="true">
-                  ›
-                </span>
-              </a>
+  href="/delete-data/index.html"
+  className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
+>
+  <span>Delete My Data</span>
+  <span className="text-white/35" aria-hidden="true">
+    ›
+  </span>
+</a>
             </div>
           </section>
         </main>

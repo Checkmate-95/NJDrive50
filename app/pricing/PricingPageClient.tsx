@@ -564,53 +564,53 @@ export default function PricingPageClient({
               the links below.
             </p>
 
-            <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-              <Link
-                href="/privacy"
-                className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
-              >
-                <span>Privacy Policy</span>
-                <span className="text-white/35" aria-hidden="true">
-                  ›
-                </span>
-              </Link>
+           <div className="mt-5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+  <Link
+    href="/privacy"
+    className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
+  >
+    <span>Privacy Policy</span>
+    <span className="text-white/35" aria-hidden="true">
+      ›
+    </span>
+  </Link>
 
-              <div className="h-px w-full bg-white/10" />
+  <div className="h-px w-full bg-white/10" />
 
-              <Link
-                href="/terms"
-                className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
-              >
-                <span>Terms of Use</span>
-                <span className="text-white/35" aria-hidden="true">
-                  ›
-                </span>
-              </Link>
+  <Link
+    href="/terms"
+    className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
+  >
+    <span>Terms of Use</span>
+    <span className="text-white/35" aria-hidden="true">
+      ›
+    </span>
+  </Link>
 
-              <div className="h-px w-full bg-white/10" />
+  <div className="h-px w-full bg-white/10" />
 
-              <Link
-                href="/delete-account"
-                className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
-              >
-                <span>Delete Account</span>
-                <span className="text-white/35" aria-hidden="true">
-                  ›
-                </span>
-              </Link>
+  <Link
+    href="/delete-account"
+    className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
+  >
+    <span>Delete Account</span>
+    <span className="text-white/35" aria-hidden="true">
+      ›
+    </span>
+  </Link>
 
-              <div className="h-px w-full bg-white/10" />
+  <div className="h-px w-full bg-white/10" />
 
-              <a
-  href="/delete-data/index.html"
-  className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
->
-  <span>Delete My Data</span>
-  <span className="text-white/35" aria-hidden="true">
-    ›
-  </span>
-</a>
-            </div>
+  <a
+    href="/delete-data/index.html"
+    className="flex min-h-[52px] w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-white/82 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-inset"
+  >
+    <span>Delete My Data</span>
+    <span className="text-white/35" aria-hidden="true">
+      ›
+    </span>
+  </a>
+</div>
           </section>
         </main>
       </div>

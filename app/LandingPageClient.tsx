@@ -636,12 +636,12 @@ export default function LandingPageClient({
               Delete Account
             </Link>
 
-            <Link
-              href="/delete-my-data"
-              className="min-h-[44px] py-1 text-left hover:text-white/70"
+            <a
+             href="/delete-data/index.html"
+             className="min-h-[44px] py-1 text-left hover:text-white/70"
             >
-              Delete My Data
-            </Link>
+             Delete My Data
+          </a>
           </div>
 
           <div className="flex flex-col gap-2 text-sm text-white/40">

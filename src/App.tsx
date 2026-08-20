@@ -30,6 +30,11 @@ import ForgotPassword from "./ForgotPassword"
 import LandingPageApp from "./LandingPageApp"
 import PricingPageClient from "../app/pricing/PricingPageClient"
 
+
+import { Preferences } from "@capacitor/preferences"
+
+
+
 // ─── Legal ────────────────────────────────────────────────────────────────────
 import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
@@ -139,18 +144,26 @@ export default function App() {
 
   // ─── Firebase Auth + Startup Controller ─────────────────────────────────────
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setAuthUser(user)
-      setAuthReady(true)
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    setAuthUser(user);
+    setAuthReady(true);
 
-      requestAnimationFrame(() => {
-        startupController(user)
-      })
-    })
+    const { value: testMode } = await Preferences.get({ key: "testMode" });
 
-    return () => unsubscribe()
-  }, [])
+    if (testMode === "true") {
+      setScreen("home");
+      return;
+    }
 
+    requestAnimationFrame(() => {
+      startupController(user);
+    });
+  });
+
+  return () => unsubscribe();
+}, [setScreen]);
+
+  
   // ─── Location Permission ────────────────────────────────────────────────────
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
@@ -194,6 +207,7 @@ export default function App() {
     )
   }
 
+  
   const renderScreen = () => {
     switch (safeScreen) {
       case "landingApp":

@@ -5,33 +5,37 @@ import {
   type CSSProperties,
   type FormEvent,
   type KeyboardEvent,
-} from "react"
-import { useNav } from "../state/navStore"
+} from "react";
+import { useNav } from "../state/navStore";
 
 const QUICK_PROMPTS = [
   "What documents do I need for the road test?",
   "How do I know if the 50-hour requirement is complete?",
   "What counts as night driving in New Jersey?",
-]
+];
 
-const API_URL =
-  import.meta.env.VITE_AI_HELPER_API_URL || "/api/njdrive50-ai"
+const API_URL = import.meta.env.VITE_AI_HELPER_API_URL?.trim();
+
+if (!API_URL) {
+  throw new Error("Missing VITE_AI_HELPER_API_URL");
+}
+
 
 export default function AIHelperScreen() {
-  const { goBack } = useNav()
+  const { goBack } = useNav();
 
-  const [prompt, setPrompt] = useState("")
-  const [response, setResponse] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [isPromptFocused, setIsPromptFocused] = useState(false)
+  const [prompt, setPrompt] = useState("");
+  const [response, setResponse] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isPromptFocused, setIsPromptFocused] = useState(false);
 
-  const responseRef = useRef<HTMLDivElement | null>(null)
-  const promptRef = useRef<HTMLTextAreaElement | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  const responseRef = useRef<HTMLDivElement | null>(null);
+  const promptRef = useRef<HTMLTextAreaElement | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const trimmedPrompt = prompt.trim()
-  const canSend = !!trimmedPrompt && !loading
-  const canClear = (!!prompt || !!response) && !loading
+  const trimmedPrompt = prompt.trim();
+  const canSend = !!trimmedPrompt && !loading;
+  const canClear = (!!prompt || !!response) && !loading;
 
   const cardStyle: CSSProperties = {
     background: "#FFFFFF",
@@ -39,86 +43,108 @@ export default function AIHelperScreen() {
     borderRadius: 20,
     padding: 20,
     boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-  }
+  };
 
   const sendPrompt = async () => {
-    if (!canSend) return
+  if (!canSend) return;
 
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
+  abortRef.current?.abort();
+  const controller = new AbortController();
+  abortRef.current = controller;
 
-    setLoading(true)
-    setResponse("")
+  setLoading(true);
+  setResponse("");
 
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmedPrompt, mode: "faq" }),
-        signal: controller.signal,
-      })
+  try {
+    console.log("AI Helper request URL:", API_URL);
 
-      const data = await res.json().catch(() => null)
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: trimmedPrompt, mode: "faq" }),
+      signal: controller.signal,
+    });
 
-      if (!res.ok) {
-        throw new Error(data?.error || `Server error: ${res.status}`)
-      }
+    const contentType = res.headers.get("content-type") ?? "";
+    const data = contentType.includes("application/json")
+      ? await res.json().catch(() => null)
+      : null;
 
-      setResponse(
-        typeof data?.output === "string" && data.output.trim()
-          ? data.output
-          : "No response received."
-      )
-    } catch (error) {
-      if ((error as Error)?.name === "AbortError") return
+    if (!res.ok) {
+      throw new Error(
+        data?.error ||
+          data?.message ||
+          `AI Helper server error (${res.status}).`
+      );
+    }
 
-      setResponse(
-        error instanceof Error && error.message
+    const output =
+      typeof data?.output === "string"
+        ? data.output.trim()
+        : typeof data?.answer === "string"
+          ? data.answer.trim()
+          : "";
+
+    setResponse(output || "No response received. Please try again.");
+  } catch (error) {
+    if ((error as Error)?.name === "AbortError") return;
+
+    const message =
+      error instanceof TypeError && error.message === "Failed to fetch"
+        ? "Could not connect to the AI Helper. Please check your internet connection and try again."
+        : error instanceof Error && error.message
           ? error.message
-          : "We couldn't reach the AI helper right now. Please try again in a moment."
-      )
-    } finally {
-      if (abortRef.current === controller) {
-        abortRef.current = null
-        setLoading(false)
-      }
+          : "We couldn't reach the AI Helper right now. Please try again in a moment.";
+
+    setResponse(message);
+  } finally {
+    if (abortRef.current === controller) {
+      abortRef.current = null;
+      setLoading(false);
     }
   }
+};
+
 
   const clearAll = () => {
-    if (!canClear) return
-    abortRef.current?.abort()
-    abortRef.current = null
-    setPrompt("")
-    setResponse("")
-    setLoading(false)
-    promptRef.current?.focus()
-  }
+    if (!canClear) return;
+
+    abortRef.current?.abort();
+    abortRef.current = null;
+
+    setPrompt("");
+    setResponse("");
+    setLoading(false);
+
+    promptRef.current?.focus();
+  };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    void sendPrompt()
-  }
+    e.preventDefault();
+    void sendPrompt();
+  };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault()
-      void sendPrompt()
+      e.preventDefault();
+      void sendPrompt();
     }
-  }
+  };
 
   useEffect(() => {
     if (loading || response) {
-      responseRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      responseRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
-  }, [loading, response])
+  }, [loading, response]);
 
   useEffect(() => {
     return () => {
-      abortRef.current?.abort()
-    }
-  }, [])
+      abortRef.current?.abort();
+    };
+  }, []);
 
   return (
     <div
@@ -311,6 +337,7 @@ export default function AIHelperScreen() {
               <div style={{ fontSize: 12, color: "#5B6B82", fontWeight: 600 }}>
                 Ask anything about permits, hours, paperwork, or the road test.
               </div>
+
               <div style={{ fontSize: 12, color: "#64748B", fontWeight: 700 }}>
                 {trimmedPrompt.length} / 3000 characters
               </div>
@@ -328,14 +355,21 @@ export default function AIHelperScreen() {
             Press Ctrl + Enter on Windows or Cmd + Enter on Mac to send quickly.
           </div>
 
-          <div style={{ marginTop: 14, display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div
+            style={{
+              marginTop: 14,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+            }}
+          >
             {QUICK_PROMPTS.map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => {
-                  setPrompt(item)
-                  promptRef.current?.focus()
+                  setPrompt(item);
+                  promptRef.current?.focus();
                 }}
                 disabled={loading}
                 style={{
@@ -444,6 +478,7 @@ export default function AIHelperScreen() {
               >
                 AI response
               </div>
+
               <div
                 style={{
                   marginTop: 4,
@@ -461,7 +496,11 @@ export default function AIHelperScreen() {
                 fontSize: 11,
                 fontWeight: 800,
                 color: loading ? "#92400E" : response ? "#166534" : "#475569",
-                background: loading ? "#FFF7ED" : response ? "#ECFDF3" : "#F8FAFC",
+                background: loading
+                  ? "#FFF7ED"
+                  : response
+                    ? "#ECFDF3"
+                    : "#F8FAFC",
                 border: `1px solid ${
                   loading ? "#FED7AA" : response ? "#BBF7D0" : "#CBD5E1"
                 }`,
@@ -505,5 +544,5 @@ export default function AIHelperScreen() {
         </div>
       </div>
     </div>
-  )
+  );
 }

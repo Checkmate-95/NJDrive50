@@ -784,67 +784,65 @@ const createFrozenSnapshot = useCallback(
      
 
     const id = await Geolocation.watchPosition(
+  {
+    enableHighAccuracy: true,
+    timeout: 5000,               // Android 8.x uses this as the interval driver
+    maximumAge: 0,               // use fresh readings for live speed
+    interval: 1000,              // desired update interval
+    minimumUpdateInterval: 1000, // floor on how fast updates can arrive
+  },
+  (position) => {
+    if (!mountedRef.current || !active) return
+
+    if (!position) {
+      setLocationError(
+        "Location updates are unavailable. Time will remain unverified until location returns."
+      )
+      return
+    }
+
+    const { latitude: lat, longitude: lng, accuracy, heading, speed } =
+      position.coords
+
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      lat < -90 ||
+      lat > 90 ||
+      lng < -180 ||
+      lng > 180
+    ) {
+      return
+    }
+
+    setLocationError(null)
+
+    tick(
       {
-        enableHighAccuracy: true,
-        timeout: 5000,               // Android 8.x uses this as the interval driver
-        maximumAge: 5000,
-        interval: 1000,              // added in 8.0.0 — desired update interval
-        minimumUpdateInterval: 1000, // added in 6.1.0 — floor on how fast updates can arrive
+        lat,
+        lng,
+        at:
+          typeof position.timestamp === "number" &&
+          Number.isFinite(position.timestamp)
+            ? position.timestamp
+            : Date.now(),
+        accuracy:
+          typeof accuracy === "number" && Number.isFinite(accuracy)
+            ? accuracy
+            : null,
+        heading:
+          typeof heading === "number" && Number.isFinite(heading)
+            ? heading
+            : null,
+        gpsSpeedMps:
+          typeof speed === "number" && Number.isFinite(speed)
+            ? speed
+            : null,
       },
-      (position) => {
-        if (!mountedRef.current || !active) return
-
-        if (!position) {
-          setLocationError(
-            "Location updates are unavailable. Time will remain unverified until location returns."
-          )
-          return
-        }
-
-        const { latitude: lat, longitude: lng } = position.coords
-
-        if (
-          !Number.isFinite(lat) ||
-          !Number.isFinite(lng) ||
-          lat < -90 ||
-          lat > 90 ||
-          lng < -180 ||
-          lng > 180
-        ) {
-          return
-        }
-
-        setLocationError(null)
-
-        tick(
-          {
-            lat,
-            lng,
-            at:
-              typeof position.timestamp === "number" &&
-              Number.isFinite(position.timestamp)
-                ? position.timestamp
-                : Date.now(),
-            accuracy:
-              typeof position.coords.accuracy === "number" &&
-              Number.isFinite(position.coords.accuracy)
-                ? position.coords.accuracy
-                : null,
-            heading:
-              typeof position.coords.heading === "number" &&
-              Number.isFinite(position.coords.heading)
-                ? position.coords.heading
-                : null,
-            gpsSpeedMps:
-              typeof position.coords.speed === "number" &&
-              Number.isFinite(position.coords.speed)
-                ? position.coords.speed
-                : null,
-          },
-          Date.now()
-        )
-      }
+      Date.now()
     )
+  }
+)
 
     if (active) {
       watchIdRef.current = id

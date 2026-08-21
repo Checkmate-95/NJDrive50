@@ -1,52 +1,56 @@
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Capacitor } from "@capacitor/core"
-import { CapgoCompass } from "@capgo/capacitor-compass"
-import type { HeadingChangeEvent, AccuracyChangeEvent } from "@capgo/capacitor-compass"
-import { CompassAccuracy } from "@capgo/capacitor-compass"
+import {
+  CapgoCompass,
+  CompassAccuracy,
+  type AccuracyChangeEvent,
+  type HeadingChangeEvent,
+} from "@capgo/capacitor-compass"
 
-// Correct sign: New Jersey has WEST declination ≈ -13°
+// New Jersey is west of true north by about 13°
 const DEFAULT_DECLINATION = -13
 
 type Cardinal = "N" | "E" | "S" | "W"
-const CENTERS: Record<Cardinal, number> = { N: 0, E: 90, S: 180, W: 270 }
+
+const CENTERS: Record<Cardinal, number> = {
+  N: 0,
+  E: 90,
+  S: 180,
+  W: 270,
+}
+
+function normalizeHeadingDegrees(value: number): number {
+  return ((value % 360) + 360) % 360
+}
 
 function angularDistance(a: number, b: number): number {
   return Math.abs(((a - b + 540) % 360) - 180)
 }
 
-function smoothHeading(prev: number | null, next: number, alpha = 0.22): number {
+function smoothHeading(
+  prev: number | null,
+  next: number,
+  alpha = 0.22
+): number {
   if (prev == null) return next
   const diff = ((next - prev + 540) % 360) - 180
-  return (prev + alpha * diff + 360) % 360
+  return normalizeHeadingDegrees(prev + alpha * diff)
 }
 
-function getOrientationOffset(): number {
-  try {
-    const screenAny = (typeof window !== "undefined" && (window as any).screen)
-      ? (window as any).screen
-      : null
-
-    const type = screenAny?.orientation?.type ?? ""
-
-    if (typeof type === "string") {
-      if (type.startsWith("landscape-primary")) return 90
-      if (type.startsWith("landscape-secondary")) return 270
-      if (type === "portrait-secondary") return 180
-    }
-  } catch (_) {}
-
-  return 0
-}
-
-function applyDeclination(magneticHeading: number, declinationDegrees: number): number {
-  return ((magneticHeading + declinationDegrees) % 360 + 360) % 360
+function applyDeclination(
+  magneticHeading: number,
+  declinationDegrees: number
+): number {
+  return normalizeHeadingDegrees(magneticHeading + declinationDegrees)
 }
 
 function stableCardinal(prev: Cardinal, heading: number): Cardinal {
   const pad = 15
   const baseHalfWidth = 45
 
-  if (angularDistance(CENTERS[prev], heading) <= baseHalfWidth + pad) return prev
+  if (angularDistance(CENTERS[prev], heading) <= baseHalfWidth + pad) {
+    return prev
+  }
 
   let closest: Cardinal = prev
   let smallestDistance = Infinity
@@ -68,7 +72,11 @@ export type UseCompassResult = {
   rawHeading: number | null
 }
 
-export function useCompass({ declination = DEFAULT_DECLINATION } = {}): UseCompassResult {
+export function useCompass({
+  declination = DEFAULT_DECLINATION,
+}: {
+  declination?: number
+} = {}): UseCompassResult {
   const [cardinal, setCardinal] = useState<Cardinal>("N")
   const [needsCalibration, setNeedsCalibration] = useState(false)
   const [rawHeadingState, setRawHeadingState] = useState<number | null>(null)
@@ -85,72 +93,116 @@ export function useCompass({ declination = DEFAULT_DECLINATION } = {}): UseCompa
     }
 
     cancelled.current = false
+    lastHeading.current = null
 
     const setup = async () => {
       try {
-        // Idempotent guard: prevents duplicate listeners in React StrictMode
-        try { await CapgoCompass.stopListening() } catch {}
+        try {
+          await CapgoCompass.stopListening()
+        } catch {}
 
         await CapgoCompass.startListening()
 
-        const h = await CapgoCompass.addListener("headingChange", (event: HeadingChangeEvent) => {
-          const raw = event?.value
-          if (raw == null || Number.isNaN(raw)) return
+        const h = await CapgoCompass.addListener(
+          "headingChange",
+          (event: HeadingChangeEvent) => {
+            const raw = event?.value
 
-          const orientationCorrected = (raw + getOrientationOffset() + 360) % 360
-          const declinationCorrected = applyDeclination(orientationCorrected, declination)
+            if (raw == null || !Number.isFinite(raw)) return
 
-          if (lastHeading.current == null) {
-            lastHeading.current = declinationCorrected
-            setRawHeadingState(declinationCorrected)
-            setCardinal((prev) => stableCardinal(prev, declinationCorrected))
-            return
+            const magneticHeading = normalizeHeadingDegrees(raw)
+            const declinationCorrected = applyDeclination(
+              magneticHeading,
+              declination
+            )
+
+            if (lastHeading.current == null) {
+              lastHeading.current = declinationCorrected
+              setRawHeadingState(declinationCorrected)
+              setCardinal((prev) =>
+                stableCardinal(prev, declinationCorrected)
+              )
+              return
+            }
+
+            const jump = angularDistance(
+              lastHeading.current,
+              declinationCorrected
+            )
+
+            if (jump > 120) return
+
+            const smoothed = smoothHeading(
+              lastHeading.current,
+              declinationCorrected
+            )
+
+            lastHeading.current = smoothed
+            setRawHeadingState(smoothed)
+            setCardinal((prev) => stableCardinal(prev, smoothed))
           }
+        )
 
-          const jump = angularDistance(lastHeading.current, declinationCorrected)
-          if (jump > 120) return
-
-          const smoothed = smoothHeading(lastHeading.current, declinationCorrected)
-          lastHeading.current = smoothed
-          setRawHeadingState(smoothed)
-
-          setCardinal((prev) => stableCardinal(prev, smoothed))
-        })
+        if (!cancelled.current) {
+          headingHandle.current = h
+        } else {
+          await h.remove()
+        }
 
         try {
           await CapgoCompass.watchAccuracy()
-          const a = await CapgoCompass.addListener("accuracyChange", (ev: AccuracyChangeEvent) => {
-            setNeedsCalibration(
-              ev.accuracy === CompassAccuracy.LOW ||
-              ev.accuracy === CompassAccuracy.UNRELIABLE
-            )
-          })
-          accuracyHandle.current = a
-        } catch {}
 
-        if (!cancelled.current) headingHandle.current = h
-        else await h.remove()
+          const a = await CapgoCompass.addListener(
+            "accuracyChange",
+            (ev: AccuracyChangeEvent) => {
+              setNeedsCalibration(
+                ev.accuracy === CompassAccuracy.LOW ||
+                  ev.accuracy === CompassAccuracy.UNRELIABLE
+              )
+            }
+          )
+
+          if (!cancelled.current) {
+            accuracyHandle.current = a
+          } else {
+            await a.remove()
+          }
+        } catch {}
       } catch (err) {
         console.error("Compass setup failed:", err)
       }
     }
 
-    setup()
+    void setup()
 
     return () => {
       cancelled.current = true
-      ;(async () => {
-        try { if (headingHandle.current) await headingHandle.current.remove() } catch {}
+
+      void (async () => {
+        try {
+          if (headingHandle.current) await headingHandle.current.remove()
+        } catch {}
         headingHandle.current = null
 
-        try { if (accuracyHandle.current) await accuracyHandle.current.remove() } catch {}
+        try {
+          if (accuracyHandle.current) await accuracyHandle.current.remove()
+        } catch {}
         accuracyHandle.current = null
 
-        try { await CapgoCompass.stopListening() } catch {}
-        try { await CapgoCompass.unwatchAccuracy() } catch {}
+        try {
+          await CapgoCompass.stopListening()
+        } catch {}
+
+        try {
+          await CapgoCompass.unwatchAccuracy()
+        } catch {}
       })()
     }
   }, [declination])
 
-  return { cardinal, needsCalibration, rawHeading: rawHeadingState }
+  return {
+    cardinal,
+    needsCalibration,
+    rawHeading: rawHeadingState,
+  }
 }

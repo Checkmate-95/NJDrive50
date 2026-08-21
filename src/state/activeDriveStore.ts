@@ -112,7 +112,8 @@ const MIN_SPEED_SAMPLE_MS = 1_000
 const MAX_SPEED_SAMPLE_MS = 15_000
 const MAX_REASONABLE_SPEED_MPH = 120
 const SPEED_STALE_AFTER_MS = 8_000
-const SPEED_ZERO_THRESHOLD_MPH = 1.5
+const PARKED_SPEED_THRESHOLD_MPH = 4
+const TINY_MOVEMENT_MILES = 0.001
 
 
 const METERS_PER_SECOND_TO_MPH = 2.236936
@@ -753,26 +754,37 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
     }
 
     const gpsSpeedMph = calculateGpsSpeedMph(incomingCoord)
-
-    const manualSpeedMph = calculateManualSpeedMph(
-      lastCoord,
-      incomingCoord
-    )
-
+    const manualSpeedMph = calculateManualSpeedMph(lastCoord, incomingCoord)
     const nextSpeedMph = gpsSpeedMph ?? manualSpeedMph
 
-if (nextSpeedMph !== null) {
-  currentSpeed =
-    nextSpeedMph < SPEED_ZERO_THRESHOLD_MPH ? 0 : nextSpeedMph
-}
-  } else {
-  const gpsSpeedMph = calculateGpsSpeedMph(incomingCoord)
+    const isPoorAccuracy =
+      typeof incomingCoord.accuracy === "number" &&
+      incomingCoord.accuracy > MAX_GPS_ACCURACY_METERS
 
-  if (gpsSpeedMph !== null) {
-  currentSpeed =
-    gpsSpeedMph < SPEED_ZERO_THRESHOLD_MPH ? 0 : gpsSpeedMph
-}
-}
+    const isTinyMovement = deltaMiles < TINY_MOVEMENT_MILES
+    const isLowSpeed =
+      nextSpeedMph !== null && nextSpeedMph < PARKED_SPEED_THRESHOLD_MPH
+
+    if (nextSpeedMph !== null) {
+      currentSpeed =
+        isPoorAccuracy || isTinyMovement || isLowSpeed
+          ? 0
+          : nextSpeedMph
+    }
+  } else {
+    const gpsSpeedMph = calculateGpsSpeedMph(incomingCoord)
+
+    const isPoorAccuracy =
+      typeof incomingCoord.accuracy === "number" &&
+      incomingCoord.accuracy > MAX_GPS_ACCURACY_METERS
+
+    if (gpsSpeedMph !== null) {
+      currentSpeed =
+        isPoorAccuracy || gpsSpeedMph < PARKED_SPEED_THRESHOLD_MPH
+          ? 0
+          : gpsSpeedMph
+    }
+  }
 
   startCoord = startCoord ?? incomingCoord
   lastCoord = incomingCoord
@@ -801,6 +813,7 @@ if (nextSpeedMph !== null) {
     currentSpeed = 0
   }
 }
+
 
           return {
             session: {

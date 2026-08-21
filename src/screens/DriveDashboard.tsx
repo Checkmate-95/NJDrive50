@@ -182,114 +182,114 @@ export default function DriveDashboard({
   )
 
   const dashboardContent = isLandscape ? (
-    <div
-      className="
-        grid h-full w-full
-        grid-cols-[minmax(4rem,1fr)_minmax(8rem,1.3fr)_minmax(5rem,1fr)]
-        grid-rows-[auto_1fr_auto]
-        gap-x-[clamp(0.25rem,0.75vw,0.75rem)]
-        pl-[max(0.5rem,env(safe-area-inset-left))]
-        pr-[max(0.5rem,env(safe-area-inset-right))]
-        pt-[max(0.25rem,env(safe-area-inset-top))]
-        pb-[max(0.25rem,env(safe-area-inset-bottom))]
-        text-white
-      "
-    >
-      <div className="col-span-3 flex items-center justify-between border-b border-white/15 pb-[clamp(0.2rem,0.8dvh,0.4rem)]">
-        <div className="flex items-center gap-1 text-[clamp(0.7rem,2dvh,1rem)] font-black">
-          {directionLetter}
-          {needsCalibration && (
-            <span className="text-[0.6rem] text-yellow-300" title="Compass needs calibration">
-              ⚠
-            </span>
-          )}
-        </div>
-
-        <div className="text-center">
-          <p className="text-[clamp(0.5rem,1.6dvh,0.7rem)] font-bold uppercase tracking-[0.12em] text-white/70">
-            Vehicle Speed
-          </p>
-        </div>
-
-        <div className="text-[clamp(0.7rem,2dvh,1rem)] font-black text-[#f9c80e]">
-          {temperatureLabel}
-        </div>
-      </div>
-
-      <div className="row-start-2 flex min-w-0 flex-col items-center justify-center border-r border-white/15 pr-[clamp(0.25rem,0.75vw,0.75rem)] text-center">
-        <p className="text-[clamp(0.5rem,1.6dvh,0.7rem)] font-bold uppercase tracking-[0.12em] text-white/60">
-          Direction
-        </p>
-
-        <p className="mt-0.5 text-[clamp(1.6rem,8dvh,3.5rem)] font-black leading-none">
-          {directionLetter}
-        </p>
-
-        <p className="mt-1 text-[clamp(0.6rem,1.8dvh,0.85rem)] font-semibold leading-tight text-white/80">
-          {roundedHeading === null
-            ? "Compass unavailable"
-            : `${roundedHeading}° heading`}
-        </p>
-
+  <div
+    className="
+      grid h-full w-full
+      grid-cols-[minmax(4rem,1fr)_minmax(8rem,1.3fr)_minmax(5rem,1fr)]
+      grid-rows-[auto_1fr_auto]
+      gap-x-[clamp(0.25rem,0.75vw,0.75rem)]
+      pl-[max(0.5rem,env(safe-area-inset-left))]
+      pr-[max(0.5rem,env(safe-area-inset-right))]
+      pt-[max(0.25rem,env(safe-area-inset-top))]
+      pb-[max(0.25rem,env(safe-area-inset-bottom))]
+      text-white
+    "
+  >
+    <div className="col-span-3 flex items-center justify-between border-b border-white/15 pb-[clamp(0.2rem,0.8dvh,0.4rem)]">
+      <div className="flex items-center gap-1 text-[clamp(0.7rem,2dvh,1rem)] font-black">
+        {directionLetter}
         {needsCalibration && (
-          <p className="mt-1 text-[clamp(0.55rem,1.6dvh,0.75rem)] font-semibold text-yellow-300">
-            Compass needs calibration
-          </p>
+          <span className="text-[0.6rem] text-yellow-300" title="Compass needs calibration">
+            ⚠
+          </span>
         )}
       </div>
 
-      <div className="row-start-2 flex min-w-0 flex-col items-center justify-center text-center">
-        <Speedometer speedMph={displaySpeed} variant="landscape" />
-
-        <div className="mt-2 flex flex-col items-center text-center">
-          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/55">
-            Trip Distance
-          </p>
-          <p className="mt-0.5 whitespace-nowrap text-[clamp(0.8rem,2.2dvh,1.05rem)] font-extrabold tabular-nums text-white/90">
-            {liveMiles.toFixed(1)}
-            <span className="ml-1 text-[0.6rem] font-bold text-white/65">
-              mi
-            </span>
-          </p>
-        </div>
-
-        <p className="mt-1 whitespace-nowrap text-[clamp(1.1rem,5dvh,2.4rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
-          {formattedTimer}
+      <div className="text-center">
+        <p className="text-[clamp(0.5rem,1.6dvh,0.7rem)] font-bold uppercase tracking-[0.12em] text-white/70">
+          Vehicle Speed
         </p>
-
-        <div className="mt-1 flex items-center gap-1 text-center text-[clamp(0.75rem,2.2dvh,1.1rem)] font-semibold text-white/90">
-          <span aria-hidden="true">{isNightMode ? "🌙" : "☀️"}</span>
-          <span>{modeLabel}</span>
-        </div>
       </div>
 
-      <div className="row-start-2 flex min-w-0 flex-col items-center justify-center border-l border-white/15 pl-[clamp(0.25rem,0.75vw,0.75rem)] text-center">
-        <p className="text-[clamp(0.5rem,1.6dvh,0.7rem)] font-bold uppercase tracking-[0.12em] text-white/60">
-          Outside Temp
-        </p>
-
-        <p className="mt-0.5 whitespace-nowrap text-[clamp(1.6rem,8dvh,3.5rem)] font-black leading-none text-[#f9c80e]">
-          {temperatureLabel}
-        </p>
-
-        <p className="mt-1 text-[clamp(0.6rem,1.8dvh,0.85rem)] font-semibold leading-tight text-white/80">
-          Local conditions
-        </p>
-
-        <button
-          type="button"
-          onClick={onMinimize}
-          className="mt-2 min-h-7 touch-manipulation rounded-full bg-black/30 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-md transition active:scale-95"
-        >
-          Minimize
-        </button>
-      </div>
-
-      <div className="col-span-3 row-start-3 border-t border-white/15 pt-[clamp(0.2rem,0.8dvh,0.4rem)]">
-        {landscapeActionButtons}
+      <div className="text-[clamp(0.7rem,2dvh,1rem)] font-black text-[#f9c80e]">
+        {temperatureLabel}
       </div>
     </div>
-  ) : (
+
+    <div className="row-start-2 flex min-w-0 flex-col items-center justify-center border-r border-white/15 pr-[clamp(0.25rem,0.75vw,0.75rem)] text-center">
+      <p className="text-[clamp(0.5rem,1.6dvh,0.7rem)] font-bold uppercase tracking-[0.12em] text-white/60">
+        Direction
+      </p>
+
+      <p className="mt-0.5 text-[clamp(1.6rem,8dvh,3.5rem)] font-black leading-none">
+        {directionLetter}
+      </p>
+
+      <p className="mt-1 text-[clamp(0.6rem,1.8dvh,0.85rem)] font-semibold leading-tight text-white/80">
+        {roundedHeading === null
+          ? "Compass unavailable"
+          : `${roundedHeading}° heading`}
+      </p>
+
+      {needsCalibration && (
+        <p className="mt-1 text-[clamp(0.55rem,1.6dvh,0.75rem)] font-semibold text-yellow-300">
+          Compass needs calibration
+        </p>
+      )}
+    </div>
+
+    <div className="row-start-2 flex min-w-0 flex-col items-center justify-center text-center">
+      <Speedometer speedMph={displaySpeed} variant="landscape" />
+
+      <div className="mt-2 flex flex-col items-center text-center">
+        <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/55">
+          Trip Distance
+        </p>
+        <p className="mt-0.5 whitespace-nowrap text-[clamp(0.8rem,2.2dvh,1.05rem)] font-extrabold tabular-nums text-white/90">
+          {liveMiles.toFixed(1)}
+          <span className="ml-1 text-[0.6rem] font-bold text-white/65">
+            mi
+          </span>
+        </p>
+      </div>
+
+      <p className="mt-1 whitespace-nowrap text-[clamp(1.1rem,5dvh,2.4rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
+        {formattedTimer}
+      </p>
+
+      <div className="mt-1 flex items-center gap-1 text-center text-[clamp(0.75rem,2.2dvh,1.1rem)] font-semibold text-white/90">
+        <span aria-hidden="true">{isNightMode ? "🌙" : "☀️"}</span>
+        <span>{modeLabel}</span>
+      </div>
+    </div>
+
+    <div className="row-start-2 flex min-w-0 flex-col items-center justify-center border-l border-white/15 pl-[clamp(0.25rem,0.75vw,0.75rem)] text-center">
+      <button
+        type="button"
+        onClick={onMinimize}
+        className="mb-2 min-h-7 touch-manipulation rounded-full bg-black/30 px-3 py-1 text-[10px] font-semibold text-white backdrop-blur-md transition active:scale-95"
+      >
+        Minimize
+      </button>
+
+      <p className="text-[clamp(0.5rem,1.6dvh,0.7rem)] font-bold uppercase tracking-[0.12em] text-white/60">
+        Outside Temp
+      </p>
+
+      <p className="mt-0.5 whitespace-nowrap text-[clamp(1.6rem,8dvh,3.5rem)] font-black leading-none text-[#f9c80e]">
+        {temperatureLabel}
+      </p>
+
+      <p className="mt-1 text-[clamp(0.6rem,1.8dvh,0.85rem)] font-semibold leading-tight text-white/80">
+        Local conditions
+      </p>
+    </div>
+
+    <div className="col-span-3 row-start-3 border-t border-white/15 pt-[clamp(0.2rem,0.8dvh,0.4rem)]">
+      {landscapeActionButtons}
+    </div>
+  </div>
+) : (
     <div className="flex h-full min-h-0 w-full flex-col items-center justify-between text-white">
       {topBar}
 

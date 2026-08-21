@@ -7,15 +7,20 @@ interface DriveDashboardProps {
   formattedTimer: string
   isNightMode: boolean
   onMinimize: () => void
+
   currentSpeed?: number | null
+  liveMiles?: number            // ← ADD THIS LINE
+
   outsideTempF?: number | null
   isRunning?: boolean
   hasActiveDrive?: boolean
+
   onStart?: () => void
   onPause?: () => void
   onResume?: () => void
   onEnd?: () => void
 }
+
 
 const STAR_POSITIONS = Array.from({ length: 52 }, (_, index) => ({
   id: index,
@@ -32,6 +37,7 @@ export default function DriveDashboard({
   isNightMode,
   onMinimize,
   currentSpeed = null,
+  liveMiles = 0,        // ⭐ ADD THIS
   outsideTempF = null,
   isRunning = false,
   hasActiveDrive = false,
@@ -40,6 +46,7 @@ export default function DriveDashboard({
   onResume,
   onEnd,
 }: DriveDashboardProps) {
+
   const [isLandscape, setIsLandscape] = useState(
     typeof window !== "undefined" && window.innerWidth > window.innerHeight
   )
@@ -241,11 +248,21 @@ export default function DriveDashboard({
 
       {/* Center panel — speed and timer */}
       <div className="row-start-2 flex min-w-0 flex-col items-center justify-center text-center">
-        <Speedometer speedMph={displaySpeed} variant="landscape" />
+  <Speedometer speedMph={displaySpeed} variant="landscape" />
 
-        <p className="mt-1 whitespace-nowrap text-[clamp(1.1rem,5dvh,2.4rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
-          {formattedTimer}
-        </p>
+  <div className="mt-2 flex flex-col items-center text-center">
+    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60 sm:text-[11px]">
+      Trip Distance
+    </p>
+    <p className="mt-0.5 whitespace-nowrap text-[clamp(1rem,4vw,1.5rem)] font-extrabold tabular-nums text-white">
+      {liveMiles.toFixed(1)}
+      <span className="ml-1 text-xs font-bold text-white/70">mi</span>
+    </p>
+  </div>
+
+  <p className="mt-1 whitespace-nowrap text-[clamp(1.1rem,5dvh,2.4rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
+    {formattedTimer}
+  </p>
 
         <div className="mt-1 flex items-center gap-1 text-center text-[clamp(0.75rem,2.2dvh,1.1rem)] font-semibold text-white/90">
           <span aria-hidden="true">{isNightMode ? "🌙" : "☀️"}</span>
@@ -279,11 +296,21 @@ export default function DriveDashboard({
       <div className="h-px w-full shrink-0 bg-white/15" />
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center py-1">
-        <Speedometer speedMph={displaySpeed} variant="portrait" />
+  <Speedometer speedMph={displaySpeed} variant="portrait" />
 
-        <p className="mt-1 text-[clamp(1.25rem,5vw,2.25rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
-          {formattedTimer}
-        </p>
+  <div className="mt-2 flex flex-col items-center text-center">
+    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60 sm:text-[11px]">
+      Trip Distance
+    </p>
+    <p className="mt-0.5 whitespace-nowrap text-[clamp(1rem,4vw,1.5rem)] font-extrabold tabular-nums text-white">
+      {liveMiles.toFixed(1)}
+      <span className="ml-1 text-xs font-bold text-white/70">mi</span>
+    </p>
+  </div>
+
+  <p className="mt-1 text-[clamp(1.25rem,5vw,2.25rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
+    {formattedTimer}
+  </p>
 
         <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-white/90 sm:text-base">
           <span aria-hidden="true">{isNightMode ? "🌙" : "☀️"}</span>

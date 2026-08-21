@@ -1202,9 +1202,11 @@ const previewDisabled =
       ? "Lighting calculated from local sunrise and sunset"
       : "Solar verification pending"
 
+  
   return isMaximized ? (
   <DriveDashboard
     currentSpeed={currentSpeed}
+    liveMiles={session.liveMiles}
     outsideTempF={session.outsideTempF}
     formattedTimer={formattedElapsed}
     isNightMode={isNight}

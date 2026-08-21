@@ -251,14 +251,14 @@ export default function DriveDashboard({
   <Speedometer speedMph={displaySpeed} variant="landscape" />
 
   <div className="mt-2 flex flex-col items-center text-center">
-    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60 sm:text-[11px]">
-      Trip Distance
-    </p>
-    <p className="mt-0.5 whitespace-nowrap text-[clamp(1rem,4vw,1.5rem)] font-extrabold tabular-nums text-white">
-      {liveMiles.toFixed(1)}
-      <span className="ml-1 text-xs font-bold text-white/70">mi</span>
-    </p>
-  </div>
+  <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/55">
+    Trip Distance
+  </p>
+  <p className="mt-0.5 whitespace-nowrap text-[clamp(0.8rem,2.2dvh,1.05rem)] font-extrabold tabular-nums text-white/90">
+    {liveMiles.toFixed(1)}
+    <span className="ml-1 text-[0.6rem] font-bold text-white/65">mi</span>
+  </p>
+</div>
 
   <p className="mt-1 whitespace-nowrap text-[clamp(1.1rem,5dvh,2.4rem)] font-extrabold tracking-wide text-[#ffd700] tabular-nums drop-shadow-md">
     {formattedTimer}

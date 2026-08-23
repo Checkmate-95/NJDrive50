@@ -22,6 +22,7 @@ abstract class DriveDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: DriveDatabase? = null
 
+        @JvmStatic
         fun getInstance(context: Context): DriveDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(

@@ -3,5 +3,6 @@
     <string name="app_name">NJDRIVE50</string>
     <string name="title_activity_main">NJDRIVE50</string>
     <string name="package_name">com.njdrive50.app</string>
+    <string name="webview_desc">WebView for NJDrive50</string>
     <string name="custom_url_scheme">com.njdrive50.app</string>
 </resources>

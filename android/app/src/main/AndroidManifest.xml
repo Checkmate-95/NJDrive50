@@ -43,9 +43,10 @@
             android:foregroundServiceType="location" />
 
         <service
-            android:name=".db.DriveTrackingService"
+            android:name=".DriveTrackingService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
 
         <provider
             android:name="androidx.core.content.FileProvider"

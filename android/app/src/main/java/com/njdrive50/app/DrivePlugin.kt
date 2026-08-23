@@ -14,7 +14,7 @@ import com.getcapacitor.annotation.PermissionCallback
 import com.getcapacitor.PluginMethod
 import com.njdrive50.app.db.DriveDao
 import com.njdrive50.app.db.DriveDatabase
-import com.njdrive50.app.db.DriveTrackingService
+import com.njdrive50.app.DriveTrackingService
 import com.njdrive50.app.db.FinalizedDriveEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

@@ -14,9 +14,6 @@ type AppShellProps = PropsWithChildren<{
 }>
 
 const CHROMELESS_SCREENS: Screen[] = [
-  "landing",
-  "landingApp",
-  "pricing",
   "intro",
   "onboarding",
   "privacy",

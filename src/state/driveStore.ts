@@ -1,3 +1,4 @@
+// src/state/driveStore.ts
 import { useSyncExternalStore } from "react"
 
 const DRIVE_HISTORY_STORAGE_KEY_PREFIX = "njdrive50_history"
@@ -105,7 +106,10 @@ function getHistoryStorageKey(userId: string | null): string | null {
   return `${DRIVE_HISTORY_STORAGE_KEY_PREFIX}:${userId}`
 }
 
-function getBlobPayloadKey(userId: string | null, driveId: string): string | null {
+function getBlobPayloadKey(
+  userId: string | null,
+  driveId: string
+): string | null {
   if (!userId) return null
   return `${userId}:${driveId}`
 }
@@ -127,6 +131,7 @@ function openDriveBlobDb(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = () => {
       const db = request.result
+
       if (!db.objectStoreNames.contains(DRIVE_BLOB_STORE)) {
         db.createObjectStore(DRIVE_BLOB_STORE)
       }
@@ -162,7 +167,7 @@ async function loadDriveBlobPayload(
 
   const db = await openDriveBlobDb()
 
-  return await new Promise<DriveBlobPayload | undefined>((resolve, reject) => {
+  return new Promise<DriveBlobPayload | undefined>((resolve, reject) => {
     const tx = db.transaction(DRIVE_BLOB_STORE, "readonly")
     const request = tx.objectStore(DRIVE_BLOB_STORE).get(blobKey)
 
@@ -182,6 +187,38 @@ async function deleteDriveBlobPayload(id: string): Promise<void> {
     tx.objectStore(DRIVE_BLOB_STORE).delete(blobKey)
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
+  })
+}
+
+async function deleteAllDriveBlobPayloadsForUser(userId: string): Promise<void> {
+  if (!isBrowser()) return
+
+  const db = await openDriveBlobDb()
+  const prefix = `${userId}:`
+
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(DRIVE_BLOB_STORE, "readwrite")
+    const store = tx.objectStore(DRIVE_BLOB_STORE)
+    const request = store.openCursor()
+
+    request.onsuccess = () => {
+      const cursor = request.result
+
+      if (!cursor) return
+
+      if (
+        typeof cursor.key === "string" &&
+        cursor.key.startsWith(prefix)
+      ) {
+        cursor.delete()
+      }
+
+      cursor.continue()
+    }
+
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+    tx.onabort = () => reject(tx.error)
   })
 }
 
@@ -238,7 +275,6 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
   }
 
   const totalDurationHours = Math.max(0, totalRaw)
-
   let dayDurationHours = Math.max(0, dayRaw)
   let nightDurationHours = Math.max(0, nightRaw)
 
@@ -400,7 +436,7 @@ function toPersistedDriveEntry(entry: DriveEntry): PersistedDriveEntry {
 async function hydrateBlobFields(
   entries: PersistedDriveEntry[]
 ): Promise<DriveEntry[]> {
-  const hydrated = await Promise.all(
+  return Promise.all(
     entries.map(async (entry) => {
       if (!entry.hasTeenPhoto && !entry.hasRouteCoords) {
         return entry as DriveEntry
@@ -415,8 +451,6 @@ async function hydrateBlobFields(
       }
     })
   )
-
-  return hydrated
 }
 
 async function loadHistoryFromStorage(): Promise<void> {
@@ -427,6 +461,7 @@ async function loadHistoryFromStorage(): Promise<void> {
   }
 
   const key = getHistoryStorageKey(activeUserId)
+
   if (!key) {
     driveHistory = []
     cachedSnapshot = []
@@ -463,13 +498,16 @@ async function loadHistoryFromStorage(): Promise<void> {
   }
 }
 
-async function saveHistoryToStorage(changedEntry?: DriveEntry): Promise<void> {
+async function saveHistoryToStorage(
+  changedEntry?: DriveEntry
+): Promise<void> {
   if (!isBrowser() || !activeUserId) {
     cachedSnapshot = [...driveHistory]
     return
   }
 
   const key = getHistoryStorageKey(activeUserId)
+
   if (!key) {
     cachedSnapshot = [...driveHistory]
     return
@@ -486,7 +524,6 @@ async function saveHistoryToStorage(changedEntry?: DriveEntry): Promise<void> {
     const persisted = driveHistory.map(toPersistedDriveEntry)
 
     localStorage.setItem(key, JSON.stringify(persisted))
-
     cachedSnapshot = [...driveHistory]
     emitDriveHistoryChange()
   } catch {
@@ -494,25 +531,9 @@ async function saveHistoryToStorage(changedEntry?: DriveEntry): Promise<void> {
   }
 }
 
-function migrateLegacyHistoryIfNeeded(userId: string): void {
-  if (!isBrowser()) return
-
-  const scopedKey = getHistoryStorageKey(userId)
-  if (!scopedKey) return
-
-  try {
-    const hasScopedHistory = localStorage.getItem(scopedKey)
-    const legacyHistory = localStorage.getItem(DRIVE_HISTORY_STORAGE_KEY_PREFIX)
-
-    if (!hasScopedHistory && legacyHistory) {
-      localStorage.setItem(scopedKey, legacyHistory)
-    }
-  } catch {
-    // silent fail
-  }
-}
-
-export async function setActiveDriveUser(userId: string | null): Promise<void> {
+export async function setActiveDriveUser(
+  userId: string | null
+): Promise<void> {
   activeUserId = userId
 
   if (!activeUserId) {
@@ -522,7 +543,9 @@ export async function setActiveDriveUser(userId: string | null): Promise<void> {
     return
   }
 
-  migrateLegacyHistoryIfNeeded(activeUserId)
+  // Do not migrate old global `njdrive50_history` data into a user account.
+  // Legacy global history is ambiguous on shared devices and could belong
+  // to a different person who previously used the app.
   await loadHistoryFromStorage()
   emitDriveHistoryChange()
 }
@@ -595,11 +618,31 @@ export function replaceDriveHistory(next: DriveEntry[]): void {
   void saveHistoryToStorage()
 }
 
-export function clearDriveHistory(): void {
+export function clearDriveHistory(options?: {
+  removePersistedData?: boolean
+}): void {
+  const userId = activeUserId
+
   driveHistory = []
   cachedSnapshot = []
   emitDriveHistoryChange()
-  void saveHistoryToStorage()
+
+  if (!options?.removePersistedData || !userId || !isBrowser()) {
+    void saveHistoryToStorage()
+    return
+  }
+
+  const key = getHistoryStorageKey(userId)
+
+  if (key) {
+    try {
+      localStorage.removeItem(key)
+    } catch {
+      // Keep in-memory state cleared even if storage removal fails.
+    }
+  }
+
+  void deleteAllDriveBlobPayloadsForUser(userId)
 }
 
 export function deleteDriveEntry(id: string): void {
@@ -622,6 +665,7 @@ function subscribeHistory(listener: () => void): () => void {
 
   const onStorageEvent = (event: StorageEvent) => {
     const activeKey = getHistoryStorageKey(activeUserId)
+
     if (event.key && activeKey && event.key === activeKey) {
       void loadHistoryFromStorage().then(listener)
     }

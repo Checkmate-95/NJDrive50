@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "../firebase";
 import { useNav } from "../state/navStore";
+import { clearDriveHistory } from "../state/driveStore";
+import { resetActiveDriveStore } from "../state/activeDriveStore";
 
 type DeleteDataPayload = {
   deleteDriveLogs: boolean;
@@ -101,16 +103,19 @@ export default function DeleteData() {
         deleteUploadedDocuments,
       });
 
-      setSuccessMessage(
-      result.data?.message || "Your selected data has been deleted."
-    );
+      if (deleteDriveLogs) {
+        clearDriveHistory({ removePersistedData: true });
+      }
+
+      if (deletePracticeSessions) {
+        resetActiveDriveStore();
+      }
 
       setSuccessMessage(
         result.data?.message || "Your selected data has been deleted."
       );
       setStep("success");
       setScreen("dataClearedPartial");
-
     } catch (error) {
       setStep("idle");
       setErrorMessage(getErrorMessage(error));

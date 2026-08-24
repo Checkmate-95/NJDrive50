@@ -4,7 +4,6 @@ import { useNav } from "../state/navStore"
 import { useSettingsStore } from "../state/settingsStore"
 import { devResetAll } from "../utils/devReset"
 import { getAuth, signOut } from "firebase/auth"
-import { Preferences } from "@capacitor/preferences" // or Storage if you're on older Capacitor
 
 export default function Settings() {
   const { setScreen, goBack } = useNav()
@@ -19,40 +18,32 @@ export default function Settings() {
   const isDev = import.meta.env.DEV
 
   const handleDevReset = async () => {
-  await devResetAll()
-  setScreen("login")   // or whatever your login screen is called
-}
-
-
+    await devResetAll()
+    setScreen("login")
+  }
 
   const handleSignOut = async () => {
-  try {
-    const auth = getAuth()
-    await signOut(auth)
-    localStorage.clear()
-    await Preferences.clear()
-    setScreen("login")   // ← FIXED
-  } catch (err) {
-    console.error("Sign out failed:", err)
+    try {
+      const auth = getAuth()
+      await signOut(auth)
+    } catch (err) {
+      console.error("Sign out failed:", err)
+    }
   }
-}
-
 
   return (
     <main className="min-h-screen bg-[#F7F9FC] px-3 pb-20 pt-3 text-[#08194A]">
       <div className="mx-auto w-full max-w-2xl">
-
-        {/* ── Header ── */}
         <header className="rounded-2xl border border-[#08194A]/8 bg-white px-4 py-4 shadow-sm">
           <button
             type="button"
             onClick={() => goBack()}
-            className="inline-flex h-9 w-full items-center justify-center rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/70 transition hover:bg-[#EEF3FA] mb-3"
+            className="mb-3 inline-flex h-9 w-full items-center justify-center rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] px-3 text-xs font-bold uppercase tracking-[0.14em] text-[#08194A]/70 transition hover:bg-[#EEF3FA]"
           >
             ← Back
           </button>
 
-          <div className="flex items-center justify-between mb-1">
+          <div className="mb-1 flex items-center justify-between">
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#08194A]/40">
               Preferences
             </p>
@@ -66,14 +57,12 @@ export default function Settings() {
             </div>
           </div>
 
-          <h1 className="text-lg font-extrabold tracking-tight text-[#08194A] leading-tight">
+          <h1 className="text-lg font-extrabold leading-tight tracking-tight text-[#08194A]">
             Settings
           </h1>
         </header>
 
         <div className="mt-3 space-y-3">
-
-          {/* ── App Preferences ── */}
           <CompactCard eyebrow="Core" title="App Preferences">
             <ToggleRow
               title="Notifications"
@@ -89,7 +78,6 @@ export default function Settings() {
             />
           </CompactCard>
 
-          {/* ── App Status ── */}
           <CompactCard eyebrow="Status" title="App Status">
             <div className="grid grid-cols-3 gap-2">
               <SidebarStat
@@ -110,7 +98,6 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── Reminders ── */}
           <CompactCard eyebrow="Reminders" title="Reminder Tools">
             <div className="flex flex-col gap-2">
               <ActionButton
@@ -126,7 +113,6 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── Profile ── */}
           <CompactCard eyebrow="Profile" title="Account & Profile">
             <div className="flex flex-col gap-2">
               <ActionButton
@@ -157,7 +143,6 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── DMV Tools ── */}
           <CompactCard eyebrow="DMV" title="DMV Tools & History">
             <div className="flex flex-col gap-2">
               <ActionButton
@@ -178,7 +163,6 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── AI Assistant ── */}
           <CompactCard eyebrow="AI Assistant" title="NJDrive50 Q&A">
             <div className="flex flex-col gap-2">
               <ActionButton
@@ -194,7 +178,6 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── Support ── */}
           <CompactCard eyebrow="Support" title="Help & Contact">
             <a
               href="mailto:support@njdrive50.com"
@@ -204,7 +187,6 @@ export default function Settings() {
             </a>
           </CompactCard>
 
-          {/* ── Legal ── */}
           <CompactCard eyebrow="Legal" title="Privacy & Terms">
             <div className="divide-y divide-[#08194A]/8 overflow-hidden rounded-xl border border-[#08194A]/10 bg-[#F7F9FC]">
               <button
@@ -226,11 +208,12 @@ export default function Settings() {
             </div>
           </CompactCard>
 
-          {/* ── Dev Tools ── */}
           {isDev && (
             <CompactCard eyebrow="Internal" title="Developer Tools" tone="danger">
               <div className="mb-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
-                <p className="text-xs font-bold text-red-800">Internal testing only</p>
+                <p className="text-xs font-bold text-red-800">
+                  Internal testing only
+                </p>
                 <p className="mt-0.5 text-xs text-red-700">
                   Remove before production release.
                 </p>
@@ -242,14 +225,12 @@ export default function Settings() {
               />
             </CompactCard>
           )}
-
         </div>
       </div>
     </main>
   )
 }
 
-// ── CompactCard ────────────────────────────────────────────────────────────────
 function CompactCard({
   eyebrow,
   title,
@@ -287,7 +268,6 @@ function CompactCard({
   )
 }
 
-// ── ActionButton ───────────────────────────────────────────────────────────────
 function ActionButton({
   label,
   onClick,
@@ -306,7 +286,7 @@ function ActionButton({
       "h-11 w-full rounded-xl bg-[#f9c80e] px-4 text-sm font-extrabold text-[#08194A] transition hover:bg-[#ffd84a]",
     danger:
       "h-11 w-full rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-extrabold text-red-700 transition hover:bg-red-100",
-  }
+  } as const
 
   return (
     <button type="button" onClick={onClick} className={classMap[tone]}>
@@ -315,7 +295,6 @@ function ActionButton({
   )
 }
 
-// ── ToggleRow ──────────────────────────────────────────────────────────────────
 function ToggleRow({
   title,
   description,
@@ -357,7 +336,6 @@ function ToggleRow({
   )
 }
 
-// ── SidebarStat ────────────────────────────────────────────────────────────────
 function SidebarStat({
   label,
   value,
@@ -376,7 +354,9 @@ function SidebarStat({
 
   return (
     <div className={`rounded-xl border px-2 py-2 text-center ${toneClasses}`}>
-      <p className="truncate text-[10px] font-bold uppercase tracking-[0.12em]">{label}</p>
+      <p className="truncate text-[10px] font-bold uppercase tracking-[0.12em]">
+        {label}
+      </p>
       <p className="mt-0.5 text-sm font-semibold">{value}</p>
     </div>
   )

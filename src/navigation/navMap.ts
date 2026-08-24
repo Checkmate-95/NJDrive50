@@ -5,24 +5,7 @@ type NavShape = {
 };
 
 export const NAV = {
-  // ⭐ NEW: Loading screen must exist in NavShape
   loading: {},
-
-  // ⭐ NEW APP LANDING PAGE
-  landingApp: {
-    continue: "pricing",
-    login: "login",
-  },
-
-  landing: {
-    continue: "intro",
-    pricing: "pricing",
-  },
-
-  pricing: {
-    continue: "intro",
-    landing: "landing",
-  },
 
   intro: {
     continue: "onboarding",
@@ -161,7 +144,6 @@ export const NAV = {
     back: "settings",
   },
 
-  // Authentication screens
   login: {
     continue: "home",
     forgotPassword: "forgotPassword",
@@ -177,7 +159,6 @@ export const NAV = {
     continue: "login",
   },
 
-  // Legal
   privacy: {
     home: "home",
   },

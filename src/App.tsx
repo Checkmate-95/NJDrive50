@@ -26,11 +26,6 @@ import Login from "./Login"
 import Register from "./Register"
 import ForgotPassword from "./ForgotPassword"
 
-// ─── App Landing Page ─────────────────────────────────────────────────────────
-import LandingPageApp from "./LandingPageApp"
-import PricingPageClient from "../app/pricing/PricingPageClient"
-
-
 import { Preferences } from "@capacitor/preferences"
 
 
@@ -71,8 +66,6 @@ import type { DriveEntry } from "./state/driveStore"
 
 export type Screen =
   | "loading"
-  | "landing"
-  | "landingApp"
   | "intro"
   | "onboarding"
   | "home"
@@ -101,7 +94,6 @@ export type Screen =
   | "restartOnboarding"
   | "dataCleared"
   | "practiceTest"
-  | "pricing"
   | "privacy"
   | "terms"
   | "about"
@@ -111,23 +103,6 @@ export type Screen =
   | "register"
   | "forgotPassword"
 
-const pricingFaqs = [
-  {
-    question: "Can I test the app before purchasing?",
-    answer:
-      "Yes. This build is being used for tester flow verification before live billing is finalized.",
-  },
-  {
-    question: "Will my driving log still work during testing?",
-    answer:
-      "Yes. Core navigation and app screens can still be tested while pricing and billing are being finalized.",
-  },
-  {
-    question: "Is this the final subscription setup?",
-    answer:
-      "No. This is a temporary testing configuration so the app can be verified end-to-end.",
-  },
-]
 
 export default function App() {
   const viteMode = (import.meta as any)?.env?.MODE
@@ -172,7 +147,8 @@ export default function App() {
   }, [])
 
   // ─── Safe Screen Fallback ───────────────────────────────────────────────────
-  const safeScreen: Screen = screen ?? "landingApp"
+  const safeScreen: Screen = screen ?? "home"
+
 
   // ─── setScreen Compat Wrapper ───────────────────────────────────────────────
   const setScreenCompat = useCallback(
@@ -210,14 +186,7 @@ export default function App() {
   
   const renderScreen = () => {
     switch (safeScreen) {
-      case "landingApp":
-        return <LandingPageApp />
-
-      case "pricing":
-  return <PricingPageClient pricingFaqs={pricingFaqs} />
-
-
-
+      
       case "intro":
         return <HomeIntro setScreen={setScreenCompat} />
 
@@ -327,7 +296,11 @@ export default function App() {
         return <Settings />
 
       default:
-        return <LandingPageApp />
+  return <HomeDashboardContent
+    setScreen={setScreenCompat}
+    setLocationPermissionGranted={setLocationPermissionGranted}
+  />
+
     }
   }
 

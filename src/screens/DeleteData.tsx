@@ -109,7 +109,8 @@ export default function DeleteData() {
         result.data?.message || "Your selected data has been deleted."
       );
       setStep("success");
-      setScreen("dataCleared");
+      setScreen("dataClearedPartial");
+
     } catch (error) {
       setStep("idle");
       setErrorMessage(getErrorMessage(error));

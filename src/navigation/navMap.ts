@@ -106,6 +106,8 @@ export const NAV = {
 
   restartOnboarding: {},
   dataCleared: {},
+  dataClearedFull: {},        // ← add this
+  dataClearedPartial: {},     // ← add this
 
   dmv: {
     next: "dmvPrep",

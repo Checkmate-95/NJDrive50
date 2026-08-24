@@ -93,6 +93,8 @@ export type Screen =
   | "manageProfile"
   | "restartOnboarding"
   | "dataCleared"
+  | "dataClearedFull"     
+  | "dataClearedPartial"
   | "practiceTest"
   | "privacy"
   | "terms"

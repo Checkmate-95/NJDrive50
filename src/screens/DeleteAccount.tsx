@@ -4,6 +4,7 @@ import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { auth, functions } from "../firebase";
 import { useNav } from "../state/navStore";
+import { devResetAll } from "../utils/devReset";
 
 type DeleteAccountRequest = {
   confirmDelete: boolean;
@@ -104,6 +105,8 @@ export default function DeleteAccount() {
 
       const result = await deleteMyAccount({ confirmDelete: true });
 
+      await devResetAll();
+
       setPassword("");
       setSuccessMessage(
         result.data?.message || "Your account and associated data have been deleted."
@@ -111,7 +114,8 @@ export default function DeleteAccount() {
       setStep("success");
 
       await auth.signOut();
-      setScreen("dataCleared");
+      setScreen("dataClearedFull");
+
     } catch (error) {
       const code = getErrorCode(error);
 

@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react"
 
-const PHOTO_KEY = "njdrive50_teenPhoto"
-const PROFILE_KEY = "njdrive50_profile"
+const PROFILE_KEY_PREFIX = "njdrive50_profile"
+const PHOTO_KEY_PREFIX = "njdrive50_teenPhoto"
 
 const PHOTO_EVENT = "njdrive50-teen-photo-change"
 const PROFILE_EVENT = "njdrive50-profile-change"
@@ -36,6 +36,7 @@ function freezeProfile(profile: Profile): Profile {
 
 const EMPTY_PROFILE = freezeProfile({ ...defaultProfile })
 
+let activeUserId: string | null = null
 let cachedTeenPhoto: string | null = null
 let cachedProfileSnapshot: Profile = EMPTY_PROFILE
 
@@ -100,14 +101,30 @@ function emitProfileChange() {
   }
 }
 
+function getProfileStorageKey(userId: string | null): string | null {
+  if (!userId) return null
+  return `${PROFILE_KEY_PREFIX}:${userId}`
+}
+
+function getPhotoStorageKey(userId: string | null): string | null {
+  if (!userId) return null
+  return `${PHOTO_KEY_PREFIX}:${userId}`
+}
+
 function loadTeenPhotoFromStorage(): string | null {
-  if (!canUseLocalStorage()) {
+  if (!canUseLocalStorage() || !activeUserId) {
+    cachedTeenPhoto = null
+    return cachedTeenPhoto
+  }
+
+  const key = getPhotoStorageKey(activeUserId)
+  if (!key) {
     cachedTeenPhoto = null
     return cachedTeenPhoto
   }
 
   try {
-    cachedTeenPhoto = window.localStorage.getItem(PHOTO_KEY)
+    cachedTeenPhoto = window.localStorage.getItem(key)
     return cachedTeenPhoto
   } catch {
     cachedTeenPhoto = null
@@ -116,13 +133,19 @@ function loadTeenPhotoFromStorage(): string | null {
 }
 
 function loadProfileFromStorage(): Profile {
-  if (!canUseLocalStorage()) {
+  if (!canUseLocalStorage() || !activeUserId) {
+    cachedProfileSnapshot = EMPTY_PROFILE
+    return cachedProfileSnapshot
+  }
+
+  const key = getProfileStorageKey(activeUserId)
+  if (!key) {
     cachedProfileSnapshot = EMPTY_PROFILE
     return cachedProfileSnapshot
   }
 
   try {
-    const raw = window.localStorage.getItem(PROFILE_KEY)
+    const raw = window.localStorage.getItem(key)
 
     if (!raw) {
       cachedProfileSnapshot = EMPTY_PROFILE
@@ -138,33 +161,107 @@ function loadProfileFromStorage(): Profile {
   }
 }
 
-if (canUseLocalStorage()) {
-  loadTeenPhotoFromStorage()
-  loadProfileFromStorage()
+function migrateLegacyProfileIfNeeded(userId: string): void {
+  if (!canUseLocalStorage()) return
 
-  // ⭐ One-time migration: if profile has a teenName but isOnboarded is false,
-  // they completed onboarding before this field existed — mark them as onboarded
-  const p = cachedProfileSnapshot
-  if (p.teenName.length > 0 && !p.isOnboarded) {
-    const migrated = freezeProfile({ ...p, isOnboarded: true, profileComplete: true })
+  const scopedProfileKey = getProfileStorageKey(userId)
+  const scopedPhotoKey = getPhotoStorageKey(userId)
+
+  if (!scopedProfileKey || !scopedPhotoKey) return
+
+  try {
+    const hasScopedProfile = window.localStorage.getItem(scopedProfileKey)
+    const legacyProfileRaw = window.localStorage.getItem(PROFILE_KEY_PREFIX)
+
+    if (!hasScopedProfile && legacyProfileRaw) {
+      const migratedProfile = normalizeProfile(JSON.parse(legacyProfileRaw))
+      window.localStorage.setItem(scopedProfileKey, JSON.stringify(migratedProfile))
+
+      if (isDev) {
+        console.log("[profileStore] Migrated legacy global profile to scoped key")
+      }
+    }
+  } catch {
+    // silent fail
+  }
+
+  try {
+    const hasScopedPhoto = window.localStorage.getItem(scopedPhotoKey)
+    const legacyPhotoRaw = window.localStorage.getItem(PHOTO_KEY_PREFIX)
+
+    if (!hasScopedPhoto && legacyPhotoRaw) {
+      window.localStorage.setItem(scopedPhotoKey, legacyPhotoRaw)
+
+      if (isDev) {
+        console.log("[profileStore] Migrated legacy global teen photo to scoped key")
+      }
+    }
+  } catch {
+    // silent fail
+  }
+
+  const profile = loadProfileFromStorage()
+  if (profile.teenName.length > 0 && !profile.isOnboarded) {
+    const migrated = freezeProfile({
+      ...profile,
+      isOnboarded: true,
+      profileComplete: true,
+    })
+
     try {
-      window.localStorage.setItem(PROFILE_KEY, JSON.stringify(migrated))
+      window.localStorage.setItem(scopedProfileKey, JSON.stringify(migrated))
       cachedProfileSnapshot = migrated
-      if (isDev) console.log("[profileStore] Migrated existing profile → isOnboarded: true")
+
+      if (isDev) {
+        console.log("[profileStore] Migrated existing scoped profile → isOnboarded: true")
+      }
     } catch {
       // silent fail
     }
   }
 }
 
-// ─── setTeenPhoto ─────────────────────────────────────────────────────────────
+export function setActiveProfileUser(userId: string | null): void {
+  activeUserId = userId
+
+  if (!activeUserId) {
+    cachedTeenPhoto = null
+    cachedProfileSnapshot = EMPTY_PROFILE
+    emitPhotoChange()
+    emitProfileChange()
+    return
+  }
+
+  migrateLegacyProfileIfNeeded(activeUserId)
+  loadTeenPhotoFromStorage()
+  loadProfileFromStorage()
+  emitPhotoChange()
+  emitProfileChange()
+}
+
+export function resetProfileStore(): void {
+  activeUserId = null
+  cachedTeenPhoto = null
+  cachedProfileSnapshot = EMPTY_PROFILE
+  emitPhotoChange()
+  emitProfileChange()
+}
+
+export function getActiveProfileUser(): string | null {
+  return activeUserId
+}
+
 export function setTeenPhoto(url: string): boolean {
   const normalized = url.trim()
 
+  if (!activeUserId || !canUseLocalStorage()) return false
+
+  const key = getPhotoStorageKey(activeUserId)
+  if (!key) return false
+
   if (!normalized) {
-    if (!canUseLocalStorage()) return false
     try {
-      window.localStorage.removeItem(PHOTO_KEY)
+      window.localStorage.removeItem(key)
       cachedTeenPhoto = null
       emitPhotoChange()
       return true
@@ -184,14 +281,17 @@ export function setTeenPhoto(url: string): boolean {
   const isAppRelative = normalized.startsWith("/")
 
   if (!isDataUrl && !isHttpUrl && !isAppRelative) {
-    if (isDev) console.warn("setTeenPhoto rejected unrecognized URL format:", normalized.slice(0, 40))
+    if (isDev) {
+      console.warn(
+        "setTeenPhoto rejected unrecognized URL format:",
+        normalized.slice(0, 40)
+      )
+    }
     return false
   }
 
-  if (!canUseLocalStorage()) return false
-
   try {
-    window.localStorage.setItem(PHOTO_KEY, normalized)
+    window.localStorage.setItem(key, normalized)
     cachedTeenPhoto = normalized
     emitPhotoChange()
     return true
@@ -202,10 +302,13 @@ export function setTeenPhoto(url: string): boolean {
 }
 
 export function clearTeenPhoto(): boolean {
-  if (!canUseLocalStorage()) return false
+  if (!activeUserId || !canUseLocalStorage()) return false
+
+  const key = getPhotoStorageKey(activeUserId)
+  if (!key) return false
 
   try {
-    window.localStorage.removeItem(PHOTO_KEY)
+    window.localStorage.removeItem(key)
     cachedTeenPhoto = null
     emitPhotoChange()
     return true
@@ -230,10 +333,13 @@ function subscribePhoto(listener: () => void) {
     return () => {}
   }
 
-  const onCustom = () => { listener() }
+  const onCustom = () => {
+    listener()
+  }
 
   const onStorage = (e: StorageEvent) => {
-    if (e.key === PHOTO_KEY) {
+    const activeKey = getPhotoStorageKey(activeUserId)
+    if (e.key && activeKey && e.key === activeKey) {
       loadTeenPhotoFromStorage()
       listener()
     }
@@ -256,18 +362,20 @@ export function getProfile(): Profile {
   return cachedProfileSnapshot
 }
 
-// ⭐ Check if a real profile exists (not just the empty default)
 export function hasProfile(): boolean {
   const p = cachedProfileSnapshot
   return p.teenName.length > 0
 }
 
 export function setProfile(profile: Profile): boolean {
-  if (!canUseLocalStorage()) return false
+  if (!activeUserId || !canUseLocalStorage()) return false
+
+  const key = getProfileStorageKey(activeUserId)
+  if (!key) return false
 
   try {
     const normalized = normalizeProfile(profile)
-    window.localStorage.setItem(PROFILE_KEY, JSON.stringify(normalized))
+    window.localStorage.setItem(key, JSON.stringify(normalized))
     cachedProfileSnapshot = normalized
     emitProfileChange()
     return true
@@ -280,10 +388,13 @@ export function setProfile(profile: Profile): boolean {
 }
 
 export function clearProfile(): boolean {
-  if (!canUseLocalStorage()) return false
+  if (!activeUserId || !canUseLocalStorage()) return false
+
+  const key = getProfileStorageKey(activeUserId)
+  if (!key) return false
 
   try {
-    window.localStorage.removeItem(PROFILE_KEY)
+    window.localStorage.removeItem(key)
     cachedProfileSnapshot = EMPTY_PROFILE
     emitProfileChange()
     return true
@@ -308,10 +419,13 @@ function subscribeProfile(listener: () => void) {
     return () => {}
   }
 
-  const onCustom = () => { listener() }
+  const onCustom = () => {
+    listener()
+  }
 
   const onStorage = (e: StorageEvent) => {
-    if (e.key === PROFILE_KEY) {
+    const activeKey = getProfileStorageKey(activeUserId)
+    if (e.key && activeKey && e.key === activeKey) {
       loadProfileFromStorage()
       listener()
     }

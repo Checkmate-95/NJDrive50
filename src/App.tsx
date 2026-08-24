@@ -28,8 +28,6 @@ import ForgotPassword from "./ForgotPassword"
 
 import { Preferences } from "@capacitor/preferences"
 
-
-
 // ─── Legal ────────────────────────────────────────────────────────────────────
 import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
@@ -58,11 +56,19 @@ const HelpFaq = lazy(() => import("./screens/HelpFAQ"))
 const AIHelperScreen = lazy(() => import("./screens/AIHelperScreen"))
 const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
+const DataClearedFull = lazy(() => import("./screens/DataClearedFull"))
+const DataClearedPartial = lazy(() => import("./screens/DataClearedPartial"))
 
 // ─── State ────────────────────────────────────────────────────────────────────
 import { useNav } from "./state/navStore"
 import { MapProvider } from "./components/map/MapProvider"
 import type { DriveEntry } from "./state/driveStore"
+import { setActiveDriveUser, resetDriveStore } from "./state/driveStore"
+import { resetActiveDriveStore } from "./state/activeDriveStore"
+import {
+  setActiveProfileUser,
+  resetProfileStore,
+} from "./state/profileStore"
 
 export type Screen =
   | "loading"
@@ -93,7 +99,7 @@ export type Screen =
   | "manageProfile"
   | "restartOnboarding"
   | "dataCleared"
-  | "dataClearedFull"     
+  | "dataClearedFull"
   | "dataClearedPartial"
   | "practiceTest"
   | "privacy"
@@ -104,9 +110,6 @@ export type Screen =
   | "login"
   | "register"
   | "forgotPassword"
-  
-
-
 
 export default function App() {
   const viteMode = (import.meta as any)?.env?.MODE
@@ -121,28 +124,35 @@ export default function App() {
   const prevStackLengthRef = useRef(stack.length)
   const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
 
-  // ─── Firebase Auth + Startup Controller ─────────────────────────────────────
+  // ─── Firebase Auth + User-Scoped Store Hydration ───────────────────────────
   useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
-    setAuthUser(user);
-    setAuthReady(true);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setAuthUser(user)
 
-    const { value: testMode } = await Preferences.get({ key: "testMode" });
+      if (!user) {
+  resetProfileStore()
+  resetDriveStore()
+  resetActiveDriveStore()
+} else {
+  setActiveProfileUser(user.uid)
+  await setActiveDriveUser(user.uid)
+}
 
-    if (testMode === "true") {
-      setScreen("home");
-      return;
-    }
+      const { value: testMode } = await Preferences.get({ key: "testMode" })
 
-    requestAnimationFrame(() => {
-      startupController(user);
-    });
-  });
+      if (testMode === "true") {
+        setAuthReady(true)
+        setScreen("home")
+        return
+      }
 
-  return () => unsubscribe();
-}, [setScreen]);
+      startupController(user)
+      setAuthReady(true)
+    })
 
-  
+    return () => unsubscribe()
+  }, [setScreen])
+
   // ─── Location Permission ────────────────────────────────────────────────────
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
@@ -152,7 +162,6 @@ export default function App() {
 
   // ─── Safe Screen Fallback ───────────────────────────────────────────────────
   const safeScreen: Screen = screen ?? "home"
-
 
   // ─── setScreen Compat Wrapper ───────────────────────────────────────────────
   const setScreenCompat = useCallback(
@@ -187,10 +196,8 @@ export default function App() {
     )
   }
 
-  
   const renderScreen = () => {
     switch (safeScreen) {
-      
       case "intro":
         return <HomeIntro setScreen={setScreenCompat} />
 
@@ -211,6 +218,12 @@ export default function App() {
 
       case "dataCleared":
         return <DataCleared />
+
+      case "dataClearedFull":
+        return <DataClearedFull />
+
+      case "dataClearedPartial":
+        return <DataClearedPartial />
 
       case "home":
         return (
@@ -300,11 +313,12 @@ export default function App() {
         return <Settings />
 
       default:
-  return <HomeDashboardContent
-    setScreen={setScreenCompat}
-    setLocationPermissionGranted={setLocationPermissionGranted}
-  />
-
+        return (
+          <HomeDashboardContent
+            setScreen={setScreenCompat}
+            setLocationPermissionGranted={setLocationPermissionGranted}
+          />
+        )
     }
   }
 

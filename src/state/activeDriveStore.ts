@@ -1008,3 +1008,8 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
     }
   )
 )
+
+export function resetActiveDriveStore(): void {
+  useActiveDriveStore.getState().hardReset()
+  void useActiveDriveStore.persist.clearStorage()
+}

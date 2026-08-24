@@ -2,19 +2,6 @@ import { useNav } from "../src/state/navStore"
 import { getProfile, hasProfile } from "../src/state/profileStore"
 import type { User } from "firebase/auth"
 
-function isDevMode(): boolean {
-  if (typeof process !== "undefined" && process.env?.NODE_ENV === "development") {
-    return true
-  }
-  try {
-    const meta = import.meta as any
-    if (meta?.env?.DEV) {
-      return true
-    }
-  } catch {}
-  return false
-}
-
 function getViteEnvVar(key: string): string | undefined {
   try {
     const meta = import.meta as any
@@ -33,7 +20,6 @@ export async function startupController(authUser: User | null) {
   }
 
   const shouldBypassEntitlement =
-    isDevMode() ||
     getViteEnvVar("VITE_BYPASS_ENTITLEMENT") === "true"
 
   if (shouldBypassEntitlement) {
@@ -49,7 +35,7 @@ export async function startupController(authUser: User | null) {
 
     const profile = getProfile()
 
-    if (!profile || !profile.isOnboarded) {
+    if (!profile.isOnboarded) {
       nav.resetTo("intro")
       return
     }

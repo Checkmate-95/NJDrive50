@@ -1,8 +1,6 @@
-// src/state/driveStore.ts
-
 import { useSyncExternalStore } from "react"
 
-const DRIVE_HISTORY_STORAGE_KEY = "njdrive50_history"
+const DRIVE_HISTORY_STORAGE_KEY_PREFIX = "njdrive50_history"
 const DRIVE_HISTORY_EVENT = "njdrive50-history-change"
 const DRIVE_BLOB_DB = "njdrive50-drive-blobs"
 const DRIVE_BLOB_STORE = "payloads"
@@ -98,8 +96,25 @@ export function isDriveVerified(drive: DriveEntry): boolean {
   )
 }
 
+let activeUserId: string | null = null
 let driveHistory: DriveEntry[] = []
 let cachedSnapshot: DriveEntry[] = []
+
+function getHistoryStorageKey(userId: string | null): string | null {
+  if (!userId) return null
+  return `${DRIVE_HISTORY_STORAGE_KEY_PREFIX}:${userId}`
+}
+
+function getBlobPayloadKey(userId: string | null, driveId: string): string | null {
+  if (!userId) return null
+  return `${userId}:${driveId}`
+}
+
+function emitDriveHistoryChange(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
+  }
+}
 
 function openDriveBlobDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -126,11 +141,14 @@ async function saveDriveBlobPayload(
   id: string,
   payload: DriveBlobPayload
 ): Promise<void> {
+  const blobKey = getBlobPayloadKey(activeUserId, id)
+  if (!blobKey) return
+
   const db = await openDriveBlobDb()
 
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(DRIVE_BLOB_STORE, "readwrite")
-    tx.objectStore(DRIVE_BLOB_STORE).put(payload, id)
+    tx.objectStore(DRIVE_BLOB_STORE).put(payload, blobKey)
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })
@@ -139,25 +157,29 @@ async function saveDriveBlobPayload(
 async function loadDriveBlobPayload(
   id: string
 ): Promise<DriveBlobPayload | undefined> {
+  const blobKey = getBlobPayloadKey(activeUserId, id)
+  if (!blobKey) return undefined
+
   const db = await openDriveBlobDb()
 
-  return await new Promise<DriveBlobPayload | undefined>(
-    (resolve, reject) => {
-      const tx = db.transaction(DRIVE_BLOB_STORE, "readonly")
-      const request = tx.objectStore(DRIVE_BLOB_STORE).get(id)
+  return await new Promise<DriveBlobPayload | undefined>((resolve, reject) => {
+    const tx = db.transaction(DRIVE_BLOB_STORE, "readonly")
+    const request = tx.objectStore(DRIVE_BLOB_STORE).get(blobKey)
 
-      request.onsuccess = () => resolve(request.result as DriveBlobPayload)
-      request.onerror = () => reject(request.error)
-    }
-  )
+    request.onsuccess = () => resolve(request.result as DriveBlobPayload)
+    request.onerror = () => reject(request.error)
+  })
 }
 
 async function deleteDriveBlobPayload(id: string): Promise<void> {
+  const blobKey = getBlobPayloadKey(activeUserId, id)
+  if (!blobKey) return
+
   const db = await openDriveBlobDb()
 
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(DRIVE_BLOB_STORE, "readwrite")
-    tx.objectStore(DRIVE_BLOB_STORE).delete(id)
+    tx.objectStore(DRIVE_BLOB_STORE).delete(blobKey)
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })
@@ -226,7 +248,6 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
       ? Math.max(0, raw.unverifiedDurationHours)
       : 0
 
-  // verifiedNightDurationHours MUST be let so we can scale it
   let verifiedNightDurationHours =
     typeof raw.verifiedNightDurationHours === "number" &&
     Number.isFinite(raw.verifiedNightDurationHours)
@@ -236,7 +257,6 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
   const bucketSum =
     dayDurationHours + nightDurationHours + unverifiedDurationHours
 
-  // SCALE DOWN if buckets exceed total
   if (bucketSum > totalDurationHours && bucketSum > 0) {
     const scale = totalDurationHours / bucketSum
 
@@ -244,7 +264,6 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
     nightDurationHours *= scale
     unverifiedDurationHours *= scale
 
-    // keep verified night hours consistent
     if (verifiedNightDurationHours !== undefined) {
       verifiedNightDurationHours *= scale
     }
@@ -276,8 +295,6 @@ function normalizeDriveEntry(value: unknown): DriveEntry | null {
       ? raw.isVerifiedDay
       : undefined
 
-  // NEW: pass through the multi-day-drive review flag set by
-  // ActiveDriveContent.tsx when a session exceeds MAX_DRIVE_DURATION_MS.
   const needsReview =
     typeof raw.needsReview === "boolean" ? raw.needsReview : false
 
@@ -403,14 +420,21 @@ async function hydrateBlobFields(
 }
 
 async function loadHistoryFromStorage(): Promise<void> {
-  if (!isBrowser()) {
+  if (!isBrowser() || !activeUserId) {
+    driveHistory = []
+    cachedSnapshot = []
+    return
+  }
+
+  const key = getHistoryStorageKey(activeUserId)
+  if (!key) {
     driveHistory = []
     cachedSnapshot = []
     return
   }
 
   try {
-    const raw = localStorage.getItem(DRIVE_HISTORY_STORAGE_KEY)
+    const raw = localStorage.getItem(key)
 
     if (!raw) {
       driveHistory = []
@@ -440,7 +464,13 @@ async function loadHistoryFromStorage(): Promise<void> {
 }
 
 async function saveHistoryToStorage(changedEntry?: DriveEntry): Promise<void> {
-  if (!isBrowser()) {
+  if (!isBrowser() || !activeUserId) {
+    cachedSnapshot = [...driveHistory]
+    return
+  }
+
+  const key = getHistoryStorageKey(activeUserId)
+  if (!key) {
     cachedSnapshot = [...driveHistory]
     return
   }
@@ -455,24 +485,62 @@ async function saveHistoryToStorage(changedEntry?: DriveEntry): Promise<void> {
 
     const persisted = driveHistory.map(toPersistedDriveEntry)
 
-    localStorage.setItem(
-      DRIVE_HISTORY_STORAGE_KEY,
-      JSON.stringify(persisted)
-    )
+    localStorage.setItem(key, JSON.stringify(persisted))
 
     cachedSnapshot = [...driveHistory]
-
-    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
+    emitDriveHistoryChange()
   } catch {
     cachedSnapshot = [...driveHistory]
   }
 }
 
-if (isBrowser()) {
-  void loadHistoryFromStorage()
+function migrateLegacyHistoryIfNeeded(userId: string): void {
+  if (!isBrowser()) return
+
+  const scopedKey = getHistoryStorageKey(userId)
+  if (!scopedKey) return
+
+  try {
+    const hasScopedHistory = localStorage.getItem(scopedKey)
+    const legacyHistory = localStorage.getItem(DRIVE_HISTORY_STORAGE_KEY_PREFIX)
+
+    if (!hasScopedHistory && legacyHistory) {
+      localStorage.setItem(scopedKey, legacyHistory)
+    }
+  } catch {
+    // silent fail
+  }
+}
+
+export async function setActiveDriveUser(userId: string | null): Promise<void> {
+  activeUserId = userId
+
+  if (!activeUserId) {
+    driveHistory = []
+    cachedSnapshot = []
+    emitDriveHistoryChange()
+    return
+  }
+
+  migrateLegacyHistoryIfNeeded(activeUserId)
+  await loadHistoryFromStorage()
+  emitDriveHistoryChange()
+}
+
+export function resetDriveStore(): void {
+  activeUserId = null
+  driveHistory = []
+  cachedSnapshot = []
+  emitDriveHistoryChange()
+}
+
+export function getActiveDriveUser(): string | null {
+  return activeUserId
 }
 
 export function addDriveToHistory(entry: DriveEntry): void {
+  if (!activeUserId) return
+
   const normalized = normalizeDriveEntry(entry)
   if (!normalized) return
 
@@ -481,10 +549,7 @@ export function addDriveToHistory(entry: DriveEntry): void {
 
   driveHistory = [...driveHistory, normalized]
   cachedSnapshot = [...driveHistory]
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
-  }
+  emitDriveHistoryChange()
 
   void saveHistoryToStorage(normalized)
 }
@@ -496,6 +561,8 @@ export function getDriveHistory(): DriveEntry[] {
 }
 
 export function updateDriveInHistory(updated: DriveEntry): void {
+  if (!activeUserId) return
+
   const normalized = normalizeDriveEntry(updated)
   if (!normalized) return
 
@@ -504,36 +571,43 @@ export function updateDriveInHistory(updated: DriveEntry): void {
   )
 
   cachedSnapshot = [...driveHistory]
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
-  }
+  emitDriveHistoryChange()
 
   void saveHistoryToStorage(normalized)
 }
 
 export function replaceDriveHistory(next: DriveEntry[]): void {
+  if (!activeUserId) {
+    driveHistory = []
+    cachedSnapshot = []
+    emitDriveHistoryChange()
+    return
+  }
+
   driveHistory = next
     .map(normalizeDriveEntry)
     .filter((entry): entry is DriveEntry => entry !== null)
     .sort((a, b) => a.startTime.localeCompare(b.startTime))
 
   cachedSnapshot = [...driveHistory]
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
-  }
+  emitDriveHistoryChange()
 
   void saveHistoryToStorage()
 }
 
+export function clearDriveHistory(): void {
+  driveHistory = []
+  cachedSnapshot = []
+  emitDriveHistoryChange()
+  void saveHistoryToStorage()
+}
+
 export function deleteDriveEntry(id: string): void {
+  if (!activeUserId) return
+
   driveHistory = driveHistory.filter((entry) => entry.id !== id)
   cachedSnapshot = [...driveHistory]
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(DRIVE_HISTORY_EVENT))
-  }
+  emitDriveHistoryChange()
 
   void deleteDriveBlobPayload(id)
   void saveHistoryToStorage()
@@ -547,7 +621,8 @@ function subscribeHistory(listener: () => void): () => void {
   const onCustomEvent = () => listener()
 
   const onStorageEvent = (event: StorageEvent) => {
-    if (event.key === DRIVE_HISTORY_STORAGE_KEY) {
+    const activeKey = getHistoryStorageKey(activeUserId)
+    if (event.key && activeKey && event.key === activeKey) {
       void loadHistoryFromStorage().then(listener)
     }
   }

@@ -519,19 +519,21 @@ export default function PricingPageClient({
                 </p>
 
                 <div className="mt-5 rounded-2xl bg-white/8 p-4">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
-                    Subscription options
-                  </p>
+  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
+    Subscription options
+  </p>
 
-                  <p className="mt-2 text-2xl font-extrabold tracking-tight">
-                    From $4.99 / month
-                  </p>
+  <p className="mt-2 text-2xl font-extrabold tracking-tight">
+    $39.99 / year
+  </p>
 
-                  <p className="mt-1 text-sm text-white/62">
-                    Or $39.99 / year after a 7-day free trial. Uninstalling the
-                    app does not cancel your subscription.
-                  </p>
-                </div>
+  <p className="mt-1 text-sm text-white/62">
+    Equivalent to $3.33/month, billed annually after a 7-day free trial.
+    Monthly billing also available at $4.99/month. Uninstalling the app
+    does not cancel your subscription.
+  </p>
+</div>
+
 
                 <GooglePlayButton
                   onClick={handleGoToStore}

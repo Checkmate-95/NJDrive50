@@ -54,13 +54,13 @@ export default function LandingPageApp() {
 
             <div className="mt-7 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
               <button
-                id="view-plans"
-                type="button"
-                onClick={() => setScreen("pricing")}
-                className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9] active:scale-[0.99] sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
-              >
-                View plans
-              </button>
+  type="button"
+  onClick={() => setScreen("about")}
+  className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-[#38BDF8] px-6 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] transition hover:bg-[#0EA5E9] active:scale-[0.99] sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
+>
+  Learn more
+</button>
+
             </div>
 
             <p className="mt-3 max-w-xl text-xs leading-6 text-white/55">

@@ -1,13 +1,13 @@
-import { doc, getDoc, setDoc } from "firebase/firestore"
+// src/state/purchaseStore.ts
+import { doc, getDoc } from "firebase/firestore"
 import { db } from "../firebase"
 
-// ⭐ This is the structure we store in Firebase
 export type PurchaseStatus = {
   hasPurchased: boolean
-  purchaseToken?: string // future Google Play Billing token
+  purchaseToken?: string
 }
 
-// ⭐ 1. Read purchase status from Firebase
+// ⭐ Read-only — safe for client use, gated by Firestore rules (owner-only read)
 export async function getPurchaseStatus(uid: string): Promise<PurchaseStatus> {
   try {
     const ref = doc(db, "purchases", uid)
@@ -17,25 +17,18 @@ export async function getPurchaseStatus(uid: string): Promise<PurchaseStatus> {
       return { hasPurchased: false }
     }
 
-    return snap.data() as PurchaseStatus
+    const data = snap.data()
+    return {
+      hasPurchased: typeof data?.hasPurchased === "boolean" ? data.hasPurchased : false,
+      purchaseToken: typeof data?.purchaseToken === "string" ? data.purchaseToken : undefined,
+    }
   } catch (err) {
     console.error("Error reading purchase status:", err)
     return { hasPurchased: false }
   }
 }
 
-// ⭐ 2. Write purchase status to Firebase (used later after billing)
-export async function setPurchased(
-  uid: string,
-  purchaseToken?: string
-): Promise<void> {
-  try {
-    const ref = doc(db, "purchases", uid)
-    await setDoc(ref, {
-      hasPurchased: true,
-      purchaseToken: purchaseToken ?? null,
-    })
-  } catch (err) {
-    console.error("Error setting purchase status:", err)
-  }
-}
+// 🔒 setPurchased removed — writing purchase status must happen server-side
+// via a Cloud Function that verifies the purchase token against the
+// Google Play Developer API before granting entitlement. Do not write
+// `hasPurchased: true` directly from the client.

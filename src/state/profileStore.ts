@@ -1,3 +1,4 @@
+// src/state/profileStore.ts
 import { useSyncExternalStore } from "react"
 
 const PROFILE_KEY_PREFIX = "njdrive50_profile"
@@ -30,8 +31,11 @@ const defaultProfile: Profile = {
   profileComplete: false,
 }
 
+// ⭐ Always freeze — this object is shared across every "empty" read.
+// Freezing only in dev left production callers able to silently mutate
+// the shared default, corrupting the empty state app-wide.
 function freezeProfile(profile: Profile): Profile {
-  return isDev ? Object.freeze(profile) : profile
+  return Object.freeze(profile)
 }
 
 const EMPTY_PROFILE = freezeProfile({ ...defaultProfile })
@@ -177,6 +181,10 @@ function migrateLegacyProfileIfNeeded(userId: string): void {
       const migratedProfile = normalizeProfile(JSON.parse(legacyProfileRaw))
       window.localStorage.setItem(scopedProfileKey, JSON.stringify(migratedProfile))
 
+      // ⭐ Remove the legacy key so a different user signing in on the
+      // same device doesn't also inherit this profile.
+      window.localStorage.removeItem(PROFILE_KEY_PREFIX)
+
       if (isDev) {
         console.log("[profileStore] Migrated legacy global profile to scoped key")
       }
@@ -191,6 +199,9 @@ function migrateLegacyProfileIfNeeded(userId: string): void {
 
     if (!hasScopedPhoto && legacyPhotoRaw) {
       window.localStorage.setItem(scopedPhotoKey, legacyPhotoRaw)
+
+      // ⭐ Same cleanup for the legacy photo key.
+      window.localStorage.removeItem(PHOTO_KEY_PREFIX)
 
       if (isDev) {
         console.log("[profileStore] Migrated legacy global teen photo to scoped key")

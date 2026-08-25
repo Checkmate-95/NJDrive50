@@ -1,12 +1,24 @@
+// C:\Dev\NJDRIVE50\src\Register.tsx
 import { useState } from "react";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
 } from "firebase/auth";
-import type { FirebaseError } from "firebase/app";
 
 import { auth } from "./firebase";
 import { useNav } from "./state/navStore";
+
+function getFirebaseErrorCode(err: unknown): string {
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    typeof (err as { code?: unknown }).code === "string"
+  ) {
+    return (err as { code: string }).code;
+  }
+  return "";
+}
 
 function getFriendlyError(code: string): string {
   switch (code) {
@@ -117,8 +129,7 @@ export default function Register() {
       await sendEmailVerification(user);
       setVerificationSent(true);
     } catch (err: unknown) {
-      const firebaseErr = err as FirebaseError;
-      setError(getFriendlyError(firebaseErr.code));
+      setError(getFriendlyError(getFirebaseErrorCode(err)));
     } finally {
       setLoading(false);
     }
@@ -135,8 +146,10 @@ export default function Register() {
       await sendEmailVerification(user);
       setResendMessage("Verification email resent! Check your inbox.");
     } catch (err: unknown) {
-      const firebaseErr = err as FirebaseError;
-      setResendMessage(getFriendlyError(firebaseErr.code));
+      const code = getFirebaseErrorCode(err);
+      setResendMessage(
+        code ? getFriendlyError(code) : "Couldn't resend the email. Please try again."
+      );
     } finally {
       setResendLoading(false);
     }
@@ -422,16 +435,16 @@ export default function Register() {
         </div>
 
         {/* Footer links */}
-<div className="mt-6 flex flex-col items-center gap-3 text-center text-sm text-[#08194A]/50">
-  <button
-    type="button"
-    onClick={() => setScreen("login")}
-    className="font-semibold text-[#08194A] underline-offset-2 hover:underline"
-  >
-    ← Back to sign in
-  </button>
-</div>
-</div>
-</main>
-);
+        <div className="mt-6 flex flex-col items-center gap-3 text-center text-sm text-[#08194A]/50">
+          <button
+            type="button"
+            onClick={() => setScreen("login")}
+            className="font-semibold text-[#08194A] underline-offset-2 hover:underline"
+          >
+            ← Back to sign in
+          </button>
+        </div>
+      </div>
+    </main>
+  );
 }

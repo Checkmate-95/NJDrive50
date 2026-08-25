@@ -1,39 +1,49 @@
 import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import type { FirebaseError } from "firebase/app";
+import { Preferences } from "@capacitor/preferences";
 
 import { auth } from "./firebase";
 import { useNav } from "./state/navStore";
 
 const REMEMBER_EMAIL_KEY = "njdrive50_remembered_email";
 
-// ⭐ Cross-platform storage helpers — Capacitor on Android, localStorage on desktop
+// ⭐ Cross-platform storage helpers — Capacitor's web implementation
+// already falls back to localStorage on desktop/browser, so no manual fallback needed.
 async function getRememberedEmail(): Promise<string | null> {
   try {
-    const { Preferences } = await import("@capacitor/preferences");
     const { value } = await Preferences.get({ key: REMEMBER_EMAIL_KEY });
     return value;
   } catch {
-    try { return window.localStorage.getItem(REMEMBER_EMAIL_KEY); } catch { return null; }
+    return null;
   }
 }
 
 async function setRememberedEmail(email: string): Promise<void> {
   try {
-    const { Preferences } = await import("@capacitor/preferences");
     await Preferences.set({ key: REMEMBER_EMAIL_KEY, value: email });
   } catch {
-    try { window.localStorage.setItem(REMEMBER_EMAIL_KEY, email); } catch { /* silent */ }
+    /* silent */
   }
 }
 
 async function removeRememberedEmail(): Promise<void> {
   try {
-    const { Preferences } = await import("@capacitor/preferences");
     await Preferences.remove({ key: REMEMBER_EMAIL_KEY });
   } catch {
-    try { window.localStorage.removeItem(REMEMBER_EMAIL_KEY); } catch { /* silent */ }
+    /* silent */
   }
+}
+
+function getFirebaseErrorCode(err: unknown): string {
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    typeof (err as { code?: unknown }).code === "string"
+  ) {
+    return (err as { code: string }).code;
+  }
+  return "";
 }
 
 function getFriendlyError(code: string): string {
@@ -67,12 +77,16 @@ export default function Login() {
 
   // ⭐ Load remembered email on mount
   useEffect(() => {
+    let isMounted = true;
     getRememberedEmail().then((value) => {
-      if (value) {
+      if (isMounted && value) {
         setEmail(value);
         setRememberMe(true);
       }
     });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -97,10 +111,8 @@ export default function Login() {
       }
 
       // ✅ Do nothing — startupController handles navigation via onAuthStateChanged
-
     } catch (err: unknown) {
-      const firebaseErr = err as FirebaseError;
-      setError(getFriendlyError(firebaseErr.code));
+      setError(getFriendlyError(getFirebaseErrorCode(err)));
     } finally {
       setLoading(false);
     }

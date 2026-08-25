@@ -1,6 +1,7 @@
 // src/state/settingsStore.ts
 import { create } from "zustand"
-import { persist, createJSONStorage } from "zustand/middleware"
+import { persist, createJSONStorage, type StateStorage } from "zustand/middleware"
+import { Preferences } from "@capacitor/preferences"
 
 const SETTINGS_STORAGE_KEY = "njdrive50_settings"
 
@@ -22,13 +23,15 @@ type RawPersistedSettingsState = {
   autoExport?: unknown
 }
 
-const noopStorage = {
-  getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
-}
+// ⭐ Capacitor Preferences-backed storage (native SharedPreferences/UserDefaults),
+// with a safe localStorage fallback for browser/desktop testing.
+function getSafeLocalStorage(): StateStorage {
+  const noopStorage: StateStorage = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+  }
 
-function getSafeLocalStorage() {
   if (typeof window === "undefined") return noopStorage
 
   try {
@@ -39,6 +42,31 @@ function getSafeLocalStorage() {
   } catch {
     return noopStorage
   }
+}
+
+const preferencesStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    try {
+      const { value } = await Preferences.get({ key: name })
+      return value ?? null
+    } catch {
+      return getSafeLocalStorage().getItem(name)
+    }
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    try {
+      await Preferences.set({ key: name, value })
+    } catch {
+      getSafeLocalStorage().setItem(name, value)
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    try {
+      await Preferences.remove({ key: name })
+    } catch {
+      getSafeLocalStorage().removeItem(name)
+    }
+  },
 }
 
 function normalizePersistedSettings(
@@ -68,7 +96,7 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: SETTINGS_STORAGE_KEY,
-      storage: createJSONStorage(getSafeLocalStorage),
+      storage: createJSONStorage(() => preferencesStorage),
       version: 1,
       migrate: (persistedState: unknown) => {
         return normalizePersistedSettings(persistedState)

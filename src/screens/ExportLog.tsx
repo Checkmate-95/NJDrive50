@@ -312,11 +312,12 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       const pdfBase64 = toBase64FromArrayBuffer(pdfArrayBuffer)
 
       const result = await Filesystem.writeFile({
-        path: fileName,
-        data: pdfBase64,
-        directory: Directory.Documents,
-        recursive: true,
-      })
+  path: fileName,
+  data: pdfBase64,
+  directory: Directory.Cache,
+  recursive: true,
+})
+
 
       const fileUri = result.uri?.replace(/\/$/, "")
 
@@ -402,11 +403,12 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       const csvBase64 = toBase64Utf8(csvContent)
 
       const result = await Filesystem.writeFile({
-        path: fileName,
-        data: csvBase64,
-        directory: Directory.Documents,
-        recursive: true,
-      })
+  path: fileName,
+  data: csvBase64,
+  directory: Directory.Cache,
+  recursive: true,
+})
+
 
       const fileUri = result.uri?.replace(/\/$/, "")
 

@@ -2,6 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import Drive from '../native/drive'
 import type { FinalizedDrive } from '../native/drive'
 
+function generateDriveId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `drive-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function getErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message
+  return fallback
+}
 
 export default function DriveDebug() {
   const [driveId, setDriveId] = useState<string | null>(null)
@@ -20,7 +31,7 @@ export default function DriveDebug() {
   }, [])
 
   const start = async () => {
-    const id = crypto.randomUUID()
+    const id = generateDriveId()
     setError(null)
     setResult(null)
     setIsWorking(true)
@@ -38,8 +49,8 @@ export default function DriveDebug() {
       }, 1000)
 
       console.log('Drive started:', started)
-    } catch (err: any) {
-      setError(err.message ?? 'Unknown error starting drive')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Unknown error starting drive'))
       console.error(err)
     } finally {
       setIsWorking(false)
@@ -47,7 +58,7 @@ export default function DriveDebug() {
   }
 
   const stop = async () => {
-    if (!driveId) return
+    if (!driveId || isWorking) return
     setIsWorking(true)
     setError(null)
 
@@ -60,8 +71,8 @@ export default function DriveDebug() {
       const finalized = await Drive.stopDrive({ driveId })
       setResult(finalized)
       console.log('Finalized drive:', finalized)
-    } catch (err: any) {
-      setError(err.message ?? 'Unknown error stopping drive')
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Unknown error stopping drive'))
       console.error(err)
     } finally {
       setIsWorking(false)

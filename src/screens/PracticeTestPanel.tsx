@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { practiceQuestions as QUESTIONS } from "../data/practiceQuestions"
 import {
   buildTestQuestions,
@@ -11,20 +11,32 @@ const LANDING_PAGE_URL = "https://njdrive50.com"
 
 type TestMode = "part1" | "part2" | "full"
 
-const MODE_CONFIG: Record<TestMode, { label: string; description: string; count: number; slice?: [number, number] }> = {
+const MODE_CONFIG: Record<
+  TestMode,
+  { label: string; description: string; count: number; slice?: [number, number] }
+> = {
   part1: { label: "Part 1", description: "Questions 1–25", count: 25, slice: [0, 25] },
   part2: { label: "Part 2", description: "Questions 26–50", count: 25, slice: [25, 50] },
-  full:  { label: "Full Round", description: "All 50 Questions", count: 50 },
+  full: { label: "Full Round", description: "All 50 Questions", count: 50 },
+}
+
+function createSeededRandom(seed: number) {
+  let value = seed || 1
+  return () => {
+    value = (value * 1664525 + 1013904223) % 4294967296
+    return value / 4294967296
+  }
 }
 
 function shuffleAnswers(
   answers: readonly [string, string, string, string],
-  correctIndex: number
+  correctIndex: number,
+  random: () => number
 ): { answers: [string, string, string, string]; correctIndex: number } {
   const indexed = answers.map((a, i) => ({ text: a, isCorrect: i === correctIndex }))
   for (let i = indexed.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [indexed[i], indexed[j]] = [indexed[j], indexed[i]]
+    const j = Math.floor(random() * (i + 1))
+    ;[indexed[i], indexed[j]] = [indexed[j], indexed[i]]
   }
   return {
     answers: indexed.map((a) => a.text) as [string, string, string, string],
@@ -50,8 +62,10 @@ export default function PracticeTestPanel() {
     const cfg = MODE_CONFIG[mode]
     const pool = cfg.slice ? QUESTIONS.slice(cfg.slice[0], cfg.slice[1]) : QUESTIONS
     const built = buildTestQuestions(pool, cfg.count)
+    const random = createSeededRandom(testSeed + 1)
+
     return built.map((q) => {
-      const shuffled = shuffleAnswers(q.answers, q.correctIndex)
+      const shuffled = shuffleAnswers(q.answers, q.correctIndex, random)
       return { ...q, answers: shuffled.answers, correctIndex: shuffled.correctIndex }
     })
   }, [mode, testSeed])
@@ -73,6 +87,47 @@ export default function PracticeTestPanel() {
   )
 
   const passed = isPassing(scorePercent, PASSING_PERCENT)
+
+  const handleSelect = (i: number) => {
+    if (showResult) return
+    setSelected(i)
+  }
+
+  const handleSubmit = useCallback(() => {
+  if (selected === null || !current || showResult) return
+  if (selected === current.correctIndex) {
+    setScore((s) => s + 1)
+  }
+  setShowResult(true)
+}, [current, selected, showResult])
+
+  const handleNext = () => {
+    if (index >= totalQuestions - 1) {
+      setIndex(totalQuestions)
+      setSelected(null)
+      setShowResult(false)
+      return
+    }
+    setIndex((i) => i + 1)
+    setSelected(null)
+    setShowResult(false)
+  }
+
+  const handleRestart = () => {
+    setTestSeed((n) => n + 1)
+    setIndex(0)
+    setScore(0)
+    setSelected(null)
+    setShowResult(false)
+  }
+
+  const handleBackToModes = () => {
+    setMode(null)
+    setIndex(0)
+    setScore(0)
+    setSelected(null)
+    setShowResult(false)
+  }
 
   useEffect(() => {
     if (!showResult) {
@@ -120,48 +175,7 @@ export default function PracticeTestPanel() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [current, selected, showResult])
-
-  const handleSelect = (i: number) => {
-    if (showResult) return
-    setSelected(i)
-  }
-
-  const handleSubmit = () => {
-    if (selected === null || !current || showResult) return
-    if (selected === current.correctIndex) {
-      setScore((s) => s + 1)
-    }
-    setShowResult(true)
-  }
-
-  const handleNext = () => {
-    if (index >= totalQuestions - 1) {
-      setIndex(totalQuestions)
-      setSelected(null)
-      setShowResult(false)
-      return
-    }
-    setIndex((i) => i + 1)
-    setSelected(null)
-    setShowResult(false)
-  }
-
-  const handleRestart = () => {
-    setTestSeed((n) => n + 1)
-    setIndex(0)
-    setScore(0)
-    setSelected(null)
-    setShowResult(false)
-  }
-
-  const handleBackToModes = () => {
-    setMode(null)
-    setIndex(0)
-    setScore(0)
-    setSelected(null)
-    setShowResult(false)
-  }
+  }, [current, selected, showResult, handleSubmit])
 
   // ── Mode picker ──────────────────────────────────────────────────────────────
   if (mode === null) {

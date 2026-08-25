@@ -6,21 +6,25 @@ function useSmoothedSpeed(
   rawSpeed: number | null,
   smoothingFactor = 0.18
 ) {
-  const [smoothSpeed, setSmoothSpeed] = useState<number | null>(rawSpeed)
+  const isValidSpeed =
+    rawSpeed != null && Number.isFinite(rawSpeed) && rawSpeed >= 0
+
+  const [animatedSpeed, setAnimatedSpeed] = useState<number | null>(
+    isValidSpeed ? rawSpeed : null
+  )
   const rawSpeedRef = useRef(rawSpeed)
   const frameRef = useRef<number | null>(null)
 
-  rawSpeedRef.current = rawSpeed
+  useEffect(() => {
+    rawSpeedRef.current = rawSpeed
+  }, [rawSpeed])
 
   useEffect(() => {
-    if (rawSpeed == null || Number.isNaN(rawSpeed) || rawSpeed < 0) {
-      setSmoothSpeed(null)
-
+    if (!isValidSpeed) {
       if (frameRef.current !== null) {
         cancelAnimationFrame(frameRef.current)
         frameRef.current = null
       }
-
       return
     }
 
@@ -34,7 +38,7 @@ function useSmoothedSpeed(
 
       let shouldContinue = true
 
-      setSmoothSpeed((prev) => {
+      setAnimatedSpeed((prev) => {
         if (prev == null || Number.isNaN(prev)) {
           return target
         }
@@ -64,9 +68,9 @@ function useSmoothedSpeed(
         frameRef.current = null
       }
     }
-  }, [rawSpeed, smoothingFactor])
+  }, [isValidSpeed, rawSpeed, smoothingFactor])
 
-  return smoothSpeed
+  return isValidSpeed ? animatedSpeed : null
 }
 
 export { useSmoothedSpeed }

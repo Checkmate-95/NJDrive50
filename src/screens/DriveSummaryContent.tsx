@@ -60,7 +60,8 @@ function getEffectiveNightHours(drive: DriveEntry): number {
 export default function DriveSummaryContent({
   setScreen,
 }: DriveSummaryContentProps) {
-  const drives = useDriveHistory() || []
+  const driveHistory = useDriveHistory()
+  const drives = useMemo(() => driveHistory ?? [], [driveHistory])
   const teenPhoto = useTeenPhoto()
 
   const activeSession = useActiveDriveStore((s) => s.session)

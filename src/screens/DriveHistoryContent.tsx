@@ -113,8 +113,8 @@ const LocationEstimatedBadge = () => (
 export default function DriveHistoryContent() {
   const { goBack, setScreen } = useNav()
 
-  const history = useDriveHistory() || []
-  const drives = useMemo(() => history.slice().reverse(), [history])
+  const history = useDriveHistory()
+  const drives = useMemo(() => (history ?? []).slice().reverse(), [history])
 
   const [editDrive, setEditDrive] = useState<DriveEntry | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -368,6 +368,7 @@ export default function DriveHistoryContent() {
 
       {editDrive && (
         <EditDriveModal
+          key={editDrive.id}
           open={isEditOpen}
           entry={editDrive}
           onClose={handleCloseEdit}

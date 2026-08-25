@@ -40,11 +40,15 @@ export default class ErrorBoundary extends Component<
 
   componentDidUpdate(
     _prevProps: Readonly<ErrorBoundaryProps>,
-    prevState: Readonly<ErrorBoundaryState>,
+    prevState: Readonly<ErrorBoundaryState>
   ) {
     if (!prevState.hasError && this.state.hasError) {
       window.requestAnimationFrame(() => {
-        this.tryAgainButtonRef.current?.focus() ?? this.headingRef.current?.focus()
+        if (this.tryAgainButtonRef.current) {
+          this.tryAgainButtonRef.current.focus()
+        } else {
+          this.headingRef.current?.focus()
+        }
       })
     }
   }
@@ -123,23 +127,23 @@ export default class ErrorBoundary extends Component<
             Try again to reload this section. If the problem continues, reload the app.
           </p>
 
-          {(import.meta as any)?.env?.DEV && error && (
-  <div className="mt-4 rounded-2xl bg-black/20 p-3 text-left">
-    <p className="text-xs font-semibold text-white/60">Developer details</p>
+          {import.meta.env.DEV && error && (
+            <div className="mt-4 rounded-2xl bg-black/20 p-3 text-left">
+              <p className="text-xs font-semibold text-white/60">Developer details</p>
 
-    <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs text-red-100">
-      {error.stack ?? error.message}
-    </pre>
+              <pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs text-red-100">
+                {error.stack ?? error.message}
+              </pre>
 
-    <button
-      type="button"
-      onClick={this.copyErrorDetails}
-      className="mt-2 text-xs font-semibold text-white/70 underline underline-offset-4 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-    >
-      Copy error details
-    </button>
-  </div>
-)}
+              <button
+                type="button"
+                onClick={this.copyErrorDetails}
+                className="mt-2 text-xs font-semibold text-white/70 underline underline-offset-4 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+              >
+                Copy error details
+              </button>
+            </div>
+          )}
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <button

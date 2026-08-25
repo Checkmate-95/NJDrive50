@@ -138,7 +138,8 @@ function StatusBanner({
 }
 
 export default function ExportLog({ setScreen }: ExportLogProps) {
-  const drives = useDriveHistory() ?? []
+  const driveHistory = useDriveHistory()
+  const drives = useMemo(() => driveHistory ?? [], [driveHistory])
   const [status, setStatus] = useState<StatusState>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [exportingKind, setExportingKind] = useState<"pdf" | "csv" | null>(null)
@@ -161,14 +162,6 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       const estimatedNight = safeNumber(d.nightDurationHours)
       const nightHours = verifiedNight > 0 ? verifiedNight : estimatedNight
 
-      /*
-       * FIX: Use the same isDriveVerified() logic that drives the
-       * Verified/Estimated badge everywhere else in the app (TodaysDrive,
-       * DriveHistoryContent). Previously this checked only
-       * verifiedNightDurationHours > 0, which incorrectly labeled fully
-       * verified all-daylight drives (isVerifiedDay === true, zero night
-       * hours) as "Estimated" in the exported PDF/CSV.
-       */
       const verified = isDriveVerified(d)
 
       return {

@@ -50,7 +50,8 @@ export default function HomeDashboardContent({
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null)
   const lastFocusedElementRef = useRef<HTMLElement | null>(null)
 
-  const drives = useDriveHistory() ?? []
+  const driveHistory = useDriveHistory()
+  const drives = useMemo(() => driveHistory ?? [], [driveHistory])
   const activeSession = useActiveDriveStore((s) => s.session)
   const hasActiveDrive = Boolean(activeSession?.isActive)
 

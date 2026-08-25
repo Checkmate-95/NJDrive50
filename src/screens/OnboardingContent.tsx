@@ -8,6 +8,8 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react"
+
+
 import type { Screen } from "../App"
 import BottomPanel from "../components/meters/BottomPanel"
 import PhotoCropModal from "../components/PhotoCropModal"
@@ -23,6 +25,8 @@ import {
   getProfile,
   setProfile,
 } from "../state/profileStore"
+
+
 import { useMapContext } from "../components/map/MapContext"
 import AddressAutocomplete from "../components/AddressAutocomplete"
 
@@ -164,10 +168,6 @@ const TeenPanelContent = memo(function TeenPanelContent({
   const [birthday, setBirthday] = useState(initialBirthday)
   const [phone, setPhone] = useState(initialPhone)
 
-  useEffect(() => setName(initialName), [initialName])
-  useEffect(() => setBirthday(initialBirthday), [initialBirthday])
-  useEffect(() => setPhone(initialPhone), [initialPhone])
-
   return (
     <div
       className="max-h-[80vh] overflow-y-auto p-6"
@@ -258,8 +258,6 @@ const TeenPanelContent = memo(function TeenPanelContent({
   )
 })
 
-// ─── ParentPanelContent ──────────────────────────────────────────────────────
-
 type ParentPanelContentProps = {
   initialName: string
   initialEmail: string
@@ -286,11 +284,6 @@ const ParentPanelContent = memo(function ParentPanelContent({
   const [email, setEmail] = useState(initialEmail)
   const [phone, setPhone] = useState(initialPhone)
   const [rel, setRel] = useState(initialRelationship)
-
-  useEffect(() => setName(initialName), [initialName])
-  useEffect(() => setEmail(initialEmail), [initialEmail])
-  useEffect(() => setPhone(initialPhone), [initialPhone])
-  useEffect(() => setRel(initialRelationship), [initialRelationship])
 
   return (
     <div
@@ -332,7 +325,9 @@ const ParentPanelContent = memo(function ParentPanelContent({
 
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <label className={labelClass + " mb-0"}>Parent Phone Number</label>
+            <label className={labelClass + " mb-0"}>
+              Parent Phone Number
+            </label>
             <button
               type="button"
               onClick={onShowPhoneInfo}
@@ -369,7 +364,9 @@ const ParentPanelContent = memo(function ParentPanelContent({
         <button
           type="button"
           className={`${actionButtonClass} bg-[#0A1E5E] text-white`}
-          onClick={() => onSave({ name, email, phone, relationship: rel })}
+          onClick={() =>
+            onSave({ name, email, phone, relationship: rel })
+          }
         >
           Save Parent Info
         </button>
@@ -1020,13 +1017,14 @@ export default function OnboardingContent({
         title="Teen Driver Info"
       >
         <TeenPanelContent
-          initialName={teenName}
-          initialBirthday={teenBirthday}
-          initialPhone={teenPhone}
-          stateValue={stateValue}
-          onSave={handleTeenPanelSave}
-          onShowPhoneInfo={handleShowPhoneInfo}
-        />
+  key={`${showTeenPanel}-${teenName}-${teenBirthday}-${teenPhone}`}
+  initialName={teenName}
+  initialBirthday={teenBirthday}
+  initialPhone={teenPhone}
+  stateValue={stateValue}
+  onSave={handleTeenPanelSave}
+  onShowPhoneInfo={handleShowPhoneInfo}
+/>
       </BottomPanel>
 
       <BottomPanel
@@ -1035,13 +1033,14 @@ export default function OnboardingContent({
         title="Parent / Guardian Info"
       >
         <ParentPanelContent
-          initialName={parentName}
-          initialEmail={parentEmail}
-          initialPhone={parentPhone}
-          initialRelationship={relationship}
-          onSave={handleParentPanelSave}
-          onShowPhoneInfo={handleShowPhoneInfo}
-        />
+  key={`${showParentPanel}-${parentName}-${parentEmail}-${parentPhone}-${relationship}`}
+  initialName={parentName}
+  initialEmail={parentEmail}
+  initialPhone={parentPhone}
+  initialRelationship={relationship}
+  onSave={handleParentPanelSave}
+  onShowPhoneInfo={handleShowPhoneInfo}
+/>
       </BottomPanel>
 
       <BottomPanel

@@ -33,7 +33,8 @@ type MilestoneItem = {
 }
 
 export default function MilestonesContent() {
-  const history = useDriveHistory() || []
+  const driveHistory = useDriveHistory()
+  const history = useMemo(() => driveHistory ?? [], [driveHistory])
   const teenPhoto = useTeenPhoto()
   const [teenImgFailed, setTeenImgFailed] = useState(false)
   const { goBack } = useNav()

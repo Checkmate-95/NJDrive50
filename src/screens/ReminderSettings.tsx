@@ -154,10 +154,10 @@ function SettingItem({
 // ---------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------
-function formatLastSaved(timestamp: number | null) {
+function formatLastSaved(timestamp: number | null, now: number) {
   if (!timestamp) return "Changes save automatically."
 
-  const diffMs = Date.now() - timestamp
+  const diffMs = now - timestamp
   const diffSeconds = Math.max(0, Math.floor(diffMs / 1000))
 
   if (diffSeconds < 5) return "Saved just now."
@@ -241,6 +241,15 @@ export default function ReminderSettings() {
     message: "Changes save automatically.",
   })
   const [previewKey, setPreviewKey] = useState<ReminderType | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(intervalId)
+  }, [])
 
   useEffect(() => {
     if (!flash.type) return
@@ -248,18 +257,17 @@ export default function ReminderSettings() {
     const timer = window.setTimeout(() => {
       setFlash({
         type: null,
-        message: formatLastSaved(lastSavedAt),
+        message: formatLastSaved(lastSavedAt, now),
       })
     }, 1800)
 
     return () => window.clearTimeout(timer)
-  }, [flash.type, lastSavedAt])
+  }, [flash.type, lastSavedAt, now])
 
-  const lastSavedText = flash.type ? flash.message : formatLastSaved(lastSavedAt)
+  const lastSavedText = flash.type ? flash.message : formatLastSaved(lastSavedAt, now)
 
-  function markSaved(message = "Saved just now.") {
-    const now = Date.now()
-    setLastSavedAt(now)
+  function markSaved(timestamp: number, message = "Saved just now.") {
+    setLastSavedAt(timestamp)
     setFlash({
       type: "saved",
       message,
@@ -270,7 +278,7 @@ export default function ReminderSettings() {
     const updated = { ...prefs, [key]: value }
     setPrefs(updated)
     saveReminderPreferences(updated)
-    markSaved()
+    markSaved(now)
 
     if (value) {
       const onboarding = loadOnboardingData()
@@ -306,8 +314,8 @@ export default function ReminderSettings() {
       }
     })
 
-    const now = Date.now()
-    setLastSavedAt(now)
+    const timestamp = Date.now()
+    setLastSavedAt(timestamp)
     setFlash({
       type: "restored",
       message: "Defaults restored.",

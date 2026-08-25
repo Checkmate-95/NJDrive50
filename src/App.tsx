@@ -112,7 +112,7 @@ export type Screen =
   | "forgotPassword"
 
 export default function App() {
-  const viteMode = (import.meta as any)?.env?.MODE
+  const viteMode = import.meta.env?.MODE
   if (viteMode !== "production") {
     console.log("🔥 NJDrive50 app loaded")
   }
@@ -122,7 +122,9 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false)
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const prevStackLengthRef = useRef(stack.length)
-  const [locationPermissionGranted, setLocationPermissionGranted] = useState(false)
+  const [locationPermissionGranted, setLocationPermissionGranted] = useState(
+    () => !Capacitor.isNativePlatform()
+  )
 
   // ─── Firebase Auth + User-Scoped Store Hydration ───────────────────────────
   useEffect(() => {
@@ -130,13 +132,13 @@ export default function App() {
       setAuthUser(user)
 
       if (!user) {
-  resetProfileStore()
-  resetDriveStore()
-  resetActiveDriveStore()
-} else {
-  setActiveProfileUser(user.uid)
-  await setActiveDriveUser(user.uid)
-}
+        resetProfileStore()
+        resetDriveStore()
+        resetActiveDriveStore()
+      } else {
+        setActiveProfileUser(user.uid)
+        await setActiveDriveUser(user.uid)
+      }
 
       const { value: testMode } = await Preferences.get({ key: "testMode" })
 
@@ -152,13 +154,6 @@ export default function App() {
 
     return () => unsubscribe()
   }, [setScreen])
-
-  // ─── Location Permission ────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) {
-      setLocationPermissionGranted(true)
-    }
-  }, [])
 
   // ─── Safe Screen Fallback ───────────────────────────────────────────────────
   const safeScreen: Screen = screen ?? "home"

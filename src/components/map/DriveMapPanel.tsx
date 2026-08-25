@@ -51,7 +51,7 @@ export const DriveMapPanel = ({
   const [showLive, setShowLive] = useState(true)
   const [showOptions, setShowOptions] = useState(false)
   const [styleMode, setStyleMode] = useState<"light" | "dark" | "minimal">("light")
-  const [playback, setPlayback] = useState(false)
+  const [playbackRequested, setPlaybackRequested] = useState(false)
   const [playIndex, setPlayIndex] = useState(0)
   const [mapsLoaded, setMapsLoaded] = useState(false)
 
@@ -61,6 +61,9 @@ export const DriveMapPanel = ({
   )
 
   const hasRoute = route.length > 0
+
+  const playback =
+    playbackRequested && route.length > 0 && playIndex < route.length - 1
 
   const mapStyles = useMemo(() => {
     switch (styleMode) {
@@ -116,24 +119,17 @@ export const DriveMapPanel = ({
   useEffect(() => {
     if (!playback) return
 
-    if (route.length === 0) {
-      setPlayback(false)
-      return
-    }
-
-    if (playIndex >= route.length - 1) {
-      setPlayback(false)
-      return
-    }
-
     const id = window.setTimeout(() => {
       setPlayIndex((i) => i + 1)
     }, 350)
 
     return () => window.clearTimeout(id)
-  }, [playback, playIndex, route.length])
+  }, [playback, playIndex])
 
-  const playbackPosition = playback && route.length > 0 ? route[playIndex] : null
+  const playbackPosition =
+    playbackRequested && route.length > 0
+      ? route[Math.min(playIndex, route.length - 1)]
+      : null
 
   const startIcon = useMemo(() => {
     if (!mapsLoaded) return undefined
@@ -306,16 +302,16 @@ export const DriveMapPanel = ({
           <button
             type="button"
             onClick={() => {
-              if (playback) {
-                setPlayback(false)
+              if (playbackRequested) {
+                setPlaybackRequested(false)
                 return
               }
               setPlayIndex(0)
-              setPlayback(true)
+              setPlaybackRequested(true)
             }}
             style={optionBtn}
           >
-            {playback ? "Stop Playback" : "Play Route"}
+            {playbackRequested ? "Stop Playback" : "Play Route"}
           </button>
         </div>
       )}

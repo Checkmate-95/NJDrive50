@@ -99,7 +99,9 @@ export function useCompass({
       try {
         try {
           await CapgoCompass.stopListening()
-        } catch {}
+        } catch {
+          // Ignore cleanup errors from prior listeners.
+        }
 
         await CapgoCompass.startListening()
 
@@ -167,7 +169,9 @@ export function useCompass({
           } else {
             await a.remove()
           }
-        } catch {}
+        } catch {
+          // Accuracy watching is optional; continue without it.
+        }
       } catch (err) {
         console.error("Compass setup failed:", err)
       }
@@ -181,21 +185,29 @@ export function useCompass({
       void (async () => {
         try {
           if (headingHandle.current) await headingHandle.current.remove()
-        } catch {}
+        } catch {
+          // Ignore listener removal failures during cleanup.
+        }
         headingHandle.current = null
 
         try {
           if (accuracyHandle.current) await accuracyHandle.current.remove()
-        } catch {}
+        } catch {
+          // Ignore listener removal failures during cleanup.
+        }
         accuracyHandle.current = null
 
         try {
           await CapgoCompass.stopListening()
-        } catch {}
+        } catch {
+          // Ignore stop failures during cleanup.
+        }
 
         try {
           await CapgoCompass.unwatchAccuracy()
-        } catch {}
+        } catch {
+          // Ignore accuracy unwatch failures during cleanup.
+        }
       })()
     }
   }, [declination])

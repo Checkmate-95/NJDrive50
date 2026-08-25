@@ -525,15 +525,11 @@ function FilteredCollapse({
   autoOpen: boolean
   children: ReactNode
 }) {
-  const [open, setOpen] = useState(false)
+  const [manualOpen, setManualOpen] = useState(false)
   const panelId = useId()
   const buttonId = useId()
 
-  useEffect(() => {
-    if (query && autoOpen) {
-      setOpen(true)
-    }
-  }, [query, autoOpen])
+  const open = autoOpen || manualOpen
 
   return (
     <section className="overflow-hidden rounded-[24px] border border-[#08194A]/10 bg-white shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
@@ -543,7 +539,7 @@ function FilteredCollapse({
           type="button"
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((prev) => !prev)}
+          onClick={() => setManualOpen((prev) => !prev)}
           className="flex min-h-[56px] w-full items-center justify-between gap-3 px-4 py-4 text-left sm:px-5"
         >
           <span className="text-base font-bold text-[#0A1E5E] sm:text-lg">

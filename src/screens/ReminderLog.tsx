@@ -8,26 +8,27 @@ import {
 const REMINDER_SCHEDULE_STORAGE_KEY = "njdrive50_reminder_schedule"
 const REMINDER_SCHEDULE_EVENT = "njdrive50-reminder-schedule-change"
 
+function getValidEntries() {
+  const all = loadReminderScheduleForUI()
+
+  return all
+    .filter((e) => {
+      const timestamp = e.trigger?.getTime()
+      return e.enabled === true && typeof timestamp === "number" && !Number.isNaN(timestamp)
+    })
+    .sort((a, b) => a.trigger.getTime() - b.trigger.getTime())
+}
+
 export default function ReminderLog() {
   const { goBack } = useNav()
-  const [entries, setEntries] = useState<ReminderScheduleEntry[]>([])
+  const [entries, setEntries] = useState<ReminderScheduleEntry[]>(() => getValidEntries())
+  const [now, setNow] = useState(() => Date.now())
 
   const reload = useCallback(() => {
-    const all = loadReminderScheduleForUI()
-
-    const valid = all
-      .filter((e) => {
-        const timestamp = e.trigger?.getTime()
-        return e.enabled === true && typeof timestamp === "number" && !Number.isNaN(timestamp)
-      })
-      .sort((a, b) => a.trigger.getTime() - b.trigger.getTime())
-
-    setEntries(valid)
+    setEntries(getValidEntries())
   }, [])
 
   useEffect(() => {
-    reload()
-
     const onStorageChange = (e: StorageEvent) => {
       if (e.key === REMINDER_SCHEDULE_STORAGE_KEY) {
         reload()
@@ -66,19 +67,25 @@ export default function ReminderLog() {
     }
   }, [reload])
 
-  const { upcoming, expired } = useMemo(() => {
-    const now = Date.now()
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNow(Date.now())
+    }, 60000)
 
+    return () => {
+      window.clearInterval(intervalId)
+    }
+  }, [])
+
+  const { upcoming, expired } = useMemo(() => {
     const upcomingList = entries.filter((e) => e.trigger.getTime() >= now)
-    const expiredList = entries
-      .filter((e) => e.trigger.getTime() < now)
-      .sort((a, b) => b.trigger.getTime() - a.trigger.getTime())
+    const expiredList = entries.filter((e) => e.trigger.getTime() < now)
 
     return {
       upcoming: upcomingList,
       expired: expiredList,
     }
-  }, [entries])
+  }, [entries, now])
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-[#F7F9FC] p-6 text-[#08194A]">
@@ -107,6 +114,7 @@ export default function ReminderLog() {
               key={`${entry.type}-${entry.trigger.toISOString()}`}
               entry={entry}
               isExpired={false}
+              now={now}
             />
           ))}
         </section>
@@ -122,6 +130,7 @@ export default function ReminderLog() {
                 key={`${entry.type}-${entry.trigger.toISOString()}`}
                 entry={entry}
                 isExpired={true}
+                now={now}
               />
             ))}
           </section>
@@ -149,8 +158,8 @@ function formatDate(d: Date) {
   })
 }
 
-function getUrgencyClass(trigger: Date) {
-  const diffDays = (trigger.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+function getUrgencyClass(trigger: Date, now: number) {
+  const diffDays = (trigger.getTime() - now) / (1000 * 60 * 60 * 24)
 
   if (diffDays < 3) return "border-red-200 bg-red-50 text-red-800"
   if (diffDays < 7) return "border-yellow-200 bg-yellow-50 text-yellow-800"
@@ -167,12 +176,13 @@ function getLabel(type: ReminderScheduleEntry["type"]) {
 type ReminderCardProps = {
   entry: ReminderScheduleEntry
   isExpired: boolean
+  now: number
 }
 
-function ReminderCard({ entry, isExpired }: ReminderCardProps) {
+function ReminderCard({ entry, isExpired, now }: ReminderCardProps) {
   const colorClass = isExpired
     ? "border-gray-200 bg-gray-100 text-gray-500"
-    : getUrgencyClass(entry.trigger)
+    : getUrgencyClass(entry.trigger, now)
 
   const message = entry.message?.trim() || "No reminder message available."
 

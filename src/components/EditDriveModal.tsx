@@ -62,17 +62,14 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
   const endErrorId = useId()
   const milesErrorId = useId()
 
-  const [startInput, setStartInput] = useState(toLocalInputValue(entry.startTime))
-  const [endInput, setEndInput] = useState(toLocalInputValue(entry.endTime))
-  const [miles, setMiles] = useState(String(entry.miles ?? ""))
+  // ⭐ Lazy initializers derive from `entry` on mount. Parent must render
+  // this component with key={entry.id} so a different drive forces a
+  // fresh mount (and thus fresh initial values) instead of relying on
+  // an effect to resync state after the fact.
+  const [startInput, setStartInput] = useState(() => toLocalInputValue(entry.startTime))
+  const [endInput, setEndInput] = useState(() => toLocalInputValue(entry.endTime))
+  const [miles, setMiles] = useState(() => String(entry.miles ?? ""))
   const [errors, setErrors] = useState<ValidationErrors>({})
-
-  useEffect(() => {
-    setStartInput(toLocalInputValue(entry.startTime))
-    setEndInput(toLocalInputValue(entry.endTime))
-    setMiles(String(entry.miles ?? ""))
-    setErrors({})
-  }, [entry])
 
   useEffect(() => {
     if (!open) return
@@ -217,10 +214,9 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
 
   return (
     <div
-  className="fixed inset-0 z-50 flex items-center justify-center bg-[#08194A]/40 px-4 py-4 backdrop-blur-[2px]"
-  onClick={onClose}
->
-
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#08194A]/40 px-4 py-4 backdrop-blur-[2px]"
+      onClick={onClose}
+    >
       <div
         ref={dialogRef}
         role="dialog"
@@ -229,7 +225,6 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
         aria-describedby={`${descriptionId}${errors.form ? ` ${formErrorId}` : ""}`}
         tabIndex={-1}
         className="w-full max-w-lg rounded-3xl border border-[#08194A]/10 bg-white p-5 text-[#08194A] shadow-[0_12px_30px_rgba(0,0,0,0.06)] outline-none sm:p-6 max-h-[85vh] overflow-y-auto"
-
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -363,50 +358,48 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
         </div>
 
         <div className="mt-5 rounded-2xl border border-[#08194A]/8 bg-[#F7F9FC] px-4 py-3">
-  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
-    Calculated Duration
-  </p>
-  <p className="mt-1 text-sm font-semibold text-[#08194A]">
-    {computedDuration !== null
-      ? `${computedDuration.toFixed(2)} hrs`
-      : "Invalid time range"}
-  </p>
-</div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
+            Calculated Duration
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#08194A]">
+            {computedDuration !== null
+              ? `${computedDuration.toFixed(2)} hrs`
+              : "Invalid time range"}
+          </p>
+        </div>
 
-<div className="mt-4 rounded-xl bg-[#FFF7DB] border border-[#f9c80e]/40 p-3 text-sm text-[#8A6500]">
-  <strong>Note:</strong> Editing the start or end time updates the drive details only.
+        <div className="mt-4 rounded-xl bg-[#FFF7DB] border border-[#f9c80e]/40 p-3 text-sm text-[#8A6500]">
+          <strong>Note:</strong> Editing the start or end time updates the drive details only.
 
-  <details className="mt-2">
-    <summary className="cursor-pointer text-[#8A6500]/80 underline">
-      More info
-    </summary>
-    <p className="mt-2 text-[#8A6500]">
-      The original day/night classification and solar data are preserved and are not recalculated.
-      This ensures the solar engine snapshot remains accurate to the original drive conditions.
-    </p>
-  </details>
-</div>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-[#8A6500]/80 underline">
+              More info
+            </summary>
+            <p className="mt-2 text-[#8A6500]">
+              The original day/night classification and solar data are preserved and are not recalculated.
+              This ensures the solar engine snapshot remains accurate to the original drive conditions.
+            </p>
+          </details>
+        </div>
 
-<div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-  <button
-    type="button"
-    onClick={onClose}
-    className="min-h-[48px] rounded-xl border border-[#08194A]/10 bg-white px-5 py-3 text-sm font-semibold text-[#08194A]/75 transition hover:bg-[#F7F9FC] hover:text-[#08194A]"
-  >
-    Cancel
-  </button>
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="min-h-[48px] rounded-xl border border-[#08194A]/10 bg-white px-5 py-3 text-sm font-semibold text-[#08194A]/75 transition hover:bg-[#F7F9FC] hover:text-[#08194A]"
+          >
+            Cancel
+          </button>
 
-  <button
-    type="button"
-    onClick={handleSave}
-    className="min-h-[48px] rounded-xl bg-[#08194A] px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
-  >
-    Save Changes
-  </button>
-</div>
-</div>
-</div>
-)
+          <button
+            type="button"
+            onClick={handleSave}
+            className="min-h-[48px] rounded-xl bg-[#08194A] px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 }
-
-

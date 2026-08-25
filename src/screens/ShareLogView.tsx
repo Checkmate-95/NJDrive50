@@ -16,6 +16,11 @@ type SharedLogPayload = {
   drives: SharedDrive[]
 }
 
+type ShareLogState = {
+  data: SharedLogPayload | null
+  error: string | null
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
@@ -61,40 +66,53 @@ function formatDateTime(value: string): string {
   return date.toLocaleString()
 }
 
+function parseSharedLogFromHash(): ShareLogState {
+  try {
+    const rawHash = window.location.hash.slice(1)
+
+    if (!rawHash) {
+      return {
+        data: null,
+        error: "Invalid or expired share link.",
+      }
+    }
+
+    const decodedHash = decodeURIComponent(rawHash)
+    const json = decodeBase64Url(decodedHash)
+    const parsed: unknown = JSON.parse(json)
+
+    if (!isSharedLogPayload(parsed)) {
+      return {
+        data: null,
+        error: "This share link contains invalid driving log data.",
+      }
+    }
+
+    return {
+      data: parsed,
+      error: null,
+    }
+  } catch (err) {
+    console.error("Invalid share link", err)
+    return {
+      data: null,
+      error: "Invalid or expired share link.",
+    }
+  }
+}
+
 export default function ShareLogView() {
-  const [data, setData] = useState<SharedLogPayload | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [{ data, error }] = useState<ShareLogState>(() => parseSharedLogFromHash())
 
   useEffect(() => {
-    try {
-      const rawHash = window.location.hash.slice(1)
+    if (!data) return
 
-      if (!rawHash) {
-        setError("Invalid or expired share link.")
-        return
-      }
-
-      const decodedHash = decodeURIComponent(rawHash)
-      const json = decodeBase64Url(decodedHash)
-      const parsed: unknown = JSON.parse(json)
-
-      if (!isSharedLogPayload(parsed)) {
-        setError("This share link contains invalid driving log data.")
-        return
-      }
-
-      setData(parsed)
-
-      window.history.replaceState(
-        null,
-        document.title,
-        window.location.pathname + window.location.search,
-      )
-    } catch (err) {
-      console.error("Invalid share link", err)
-      setError("Invalid or expired share link.")
-    }
-  }, [])
+    window.history.replaceState(
+      null,
+      document.title,
+      window.location.pathname + window.location.search
+    )
+  }, [data])
 
   if (error || !data) {
     return (

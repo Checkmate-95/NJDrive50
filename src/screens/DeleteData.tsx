@@ -83,44 +83,58 @@ export default function DeleteData() {
   };
 
   const handleDeleteSelectedData = async () => {
-    const user = auth.currentUser;
+  const user = auth.currentUser;
 
-    if (!user) {
-      setErrorMessage("You must be signed in to manage your app data.");
-      return;
+  if (!user) {
+    setErrorMessage("You must be signed in to manage your app data.");
+    return;
+  }
+
+  if (!canSubmit || step === "working") return;
+
+  setErrorMessage("");
+  setSuccessMessage("");
+  setStep("working");
+
+  try {
+    const result = await requestDeleteData({
+      deleteDriveLogs,
+      deletePracticeSessions,
+      deleteUploadedDocuments,
+    });
+
+    // 🔥 LOCAL CLEARING — selective, based on checkboxes
+    if (deleteDriveLogs) {
+      clearDriveHistory({ removePersistedData: true });
+      // If you store drive logs in Preferences:
+      // await Preferences.remove({ key: "driveLogsCache" });
     }
 
-    if (!canSubmit || step === "working") return;
-
-    setErrorMessage("");
-    setSuccessMessage("");
-    setStep("working");
-
-    try {
-      const result = await requestDeleteData({
-        deleteDriveLogs,
-        deletePracticeSessions,
-        deleteUploadedDocuments,
-      });
-
-      if (deleteDriveLogs) {
-        clearDriveHistory({ removePersistedData: true });
-      }
-
-      if (deletePracticeSessions) {
-        resetActiveDriveStore();
-      }
-
-      setSuccessMessage(
-        result.data?.message || "Your selected data has been deleted."
-      );
-      setStep("success");
-      setScreen("dataClearedPartial");
-    } catch (error) {
-      setStep("idle");
-      setErrorMessage(getErrorMessage(error));
+    if (deletePracticeSessions) {
+      resetActiveDriveStore();
+      // await Preferences.remove({ key: "practiceSessionCache" });
+      // await Preferences.remove({ key: "milestoneCache" });
     }
-  };
+
+    if (deleteUploadedDocuments) {
+      // await Preferences.remove({ key: "uploadedDocsCache" });
+      // await Preferences.remove({ key: "exportMetadata" });
+    }
+
+    setSuccessMessage(
+      result.data?.message || "Your selected data has been deleted."
+    );
+    setStep("success");
+
+    // Stay on partial-cleared screen
+    setScreen("dataClearedPartial");
+  } catch (error) {
+    console.error("deleteMyData failed:", error);
+    setStep("idle");
+    setErrorMessage(getErrorMessage(error));
+  }
+};
+
 
   return (
     <main className="min-h-screen bg-[#F7F9FC] px-3 pb-20 pt-3 text-[#08194A]">

@@ -1,9 +1,10 @@
 // src/screens/Settings.tsx
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { useNav } from "../state/navStore"
 import { useSettingsStore } from "../state/settingsStore"
 import { devResetAll } from "../utils/devReset"
-import { getAuth, signOut } from "firebase/auth"
+import { auth } from "../firebase"
+import { signOut } from "firebase/auth"
 
 export default function Settings() {
   const { setScreen, goBack } = useNav()
@@ -17,17 +18,26 @@ export default function Settings() {
 
   const isDev = import.meta.env.DEV
 
+  const [signOutError, setSignOutError] = useState("")
+  const [signingOut, setSigningOut] = useState(false)
+
   const handleDevReset = async () => {
     await devResetAll()
     setScreen("login")
   }
 
   const handleSignOut = async () => {
+    if (signingOut) return
+    setSignOutError("")
+    setSigningOut(true)
     try {
-      const auth = getAuth()
       await signOut(auth)
+      setScreen("login")
     } catch (err) {
       console.error("Sign out failed:", err)
+      setSignOutError("Could not sign out. Please check your connection and try again.")
+    } finally {
+      setSigningOut(false)
     }
   }
 
@@ -126,10 +136,15 @@ export default function Settings() {
                 onClick={() => setScreen("forgotPassword")}
               />
               <ActionButton
-                label="Sign Out"
+                label={signingOut ? "Signing Out..." : "Sign Out"}
                 tone="secondary"
                 onClick={handleSignOut}
               />
+              {signOutError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                  {signOutError}
+                </div>
+              )}
               <ActionButton
                 label="Delete Account"
                 tone="danger"

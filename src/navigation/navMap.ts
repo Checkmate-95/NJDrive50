@@ -32,13 +32,11 @@ export const NAV = {
 
   active: {
     confirm: "todaysDrive",
-    summary: "summary",
     startNew: "active",
   },
 
   activeDrive: {
     confirm: "todaysDrive",
-    summary: "summary",
     startNew: "activeDrive",
   },
 

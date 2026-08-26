@@ -16,7 +16,7 @@ type Coord = {
 }
 
 type TodaysDriveProps = {
-  drive: (DriveEntry & { isPreview?: boolean }) | null
+  drive: DriveEntry | null
 }
 
 const EPSILON = 0.01
@@ -112,8 +112,6 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
   }
 
   const totalDurationHours = drive.totalDurationHours ?? 0
-  const isPreview =
-    (drive as DriveEntry & { isPreview?: boolean }).isPreview
 
   /*
    * FIX: dayHours/nightHours now come directly from the frozen values
@@ -184,31 +182,12 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
 
   return (
     <div className="flex w-full flex-col items-center px-3 pb-24 pt-3 text-[#0A1E5E] sm:px-4">
-      {isPreview && (
-        <div className="mb-4 w-full max-w-md rounded-xl border-2 border-amber-400 bg-amber-50 px-4 py-3 text-left shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-amber-700">
-            Preview Only — Not Saved
-          </p>
-          <p className="mt-1 text-sm leading-snug text-amber-800">
-            This drive has <strong>not been saved</strong> yet. It will not
-            appear in your History, Summary totals, or any exports. Return to
-            the Active Drive screen and tap <strong>Stop Drive</strong> to
-            save it permanently.
-          </p>
-        </div>
-      )}
-
       <section className="w-full max-w-md rounded-[24px] border border-white/30 bg-white/95 px-6 py-7 text-left shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md">
         <div className="mb-1 flex items-center justify-between gap-3">
           <h2 className="text-xl font-semibold tracking-tight">
-            {isPreview ? "Drive Preview" : "Today's Drive"}
+            Today's Drive
           </h2>
           <div className="flex items-center gap-2">
-            {isPreview && (
-              <span className="rounded-full border border-amber-400 bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-700">
-                Not Saved
-              </span>
-            )}
             {isVerified ? <VerifiedBadge /> : <EstimatedBadge />}
           </div>
         </div>
@@ -223,9 +202,7 @@ export default function TodaysDrive({ drive }: TodaysDriveProps) {
         )}
 
         <p className="mb-5 text-sm text-[#1b2755]">
-          {isPreview
-            ? "This is a live snapshot. Save the drive to make it permanent."
-            : "Great job today — here's what you completed."}
+              Great job today — here's what you completed.
         </p>
 
         <div className="mb-4 space-y-2 text-sm text-[#1b2755]">

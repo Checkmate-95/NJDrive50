@@ -43,9 +43,7 @@ type ActiveDriveContentProps = {
   setCurrentDrive: Dispatch<SetStateAction<DriveEntry | null>>
 }
 
-type DriveSnapshot = DriveEntry & {
-  isPreview?: boolean
-}
+
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "")
 const ROUTE_TIMEOUT_MS = 8_000
@@ -310,13 +308,12 @@ function ActiveDriveContent({
   const [isPreparingStop, setIsPreparingStop] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
-  const [isPreviewing, setIsPreviewing] = useState(false)
 
   const [showDisclosure, setShowDisclosure] = useState(false)
 
   const mountedRef = useRef(true)
   const watchIdRef = useRef<string | null>(null)
-  const frozenSnapshotRef = useRef<Promise<DriveSnapshot | null> | null>(null)
+  const frozenSnapshotRef = useRef<Promise<DriveEntry | null> | null>(null)
   const snapshotAbortRef = useRef<AbortController | null>(null)
   const wasRunningBeforeStopRef = useRef(false)
   const locationRequestRef = useRef<Promise<RouteCoord | null> | null>(null)
@@ -508,9 +505,9 @@ return locationPromise
 
   const buildDriveSnapshot = useCallback(
   async (options?: {
-    isPreview?: boolean
     signal?: AbortSignal
-  }): Promise<DriveSnapshot | null> => {
+  }): Promise<DriveEntry | null> => {
+
     const snapshotTime = Date.now()
     const stateBeforeSnapshot = useActiveDriveStore.getState()
 
@@ -676,30 +673,20 @@ return locationPromise
       routeCoords,
       startLatitude: fresh.startCoord?.lat ?? null,
       startLongitude: fresh.startCoord?.lng ?? null,
-      isPreview: options?.isPreview ?? false,
+      
     }
   },
   [getCurrentLocation]
 )
 
-const createFrozenSnapshot = useCallback(
-  (options?: { isPreview?: boolean }) => {
-    snapshotAbortRef.current?.abort()
-
-    const controller = new AbortController()
-    snapshotAbortRef.current = controller
-
-    const snapshotPromise = buildDriveSnapshot({
-      isPreview: options?.isPreview,
-      signal: controller.signal,
-    })
-
-    frozenSnapshotRef.current = snapshotPromise
-
-    return snapshotPromise
-  },
-  [buildDriveSnapshot]
-)
+const createFrozenSnapshot = useCallback(() => {
+  snapshotAbortRef.current?.abort()
+  const controller = new AbortController()
+  snapshotAbortRef.current = controller
+  const snapshotPromise = buildDriveSnapshot({ signal: controller.signal })
+  frozenSnapshotRef.current = snapshotPromise
+  return snapshotPromise
+}, [buildDriveSnapshot])
 
   const [displayedMs, setDisplayedMs] = useState(() => getTotalActiveMs())
 
@@ -993,14 +980,6 @@ const saveDisabled =
   isSaving ||
   isPreparingStop
 
-const previewDisabled =
-  !hasActiveDrive ||
-  displayedMs < 10_000 ||
-  isSaving ||
-  isPreparingStop ||
-  isPreviewing
-
-
 
   const startNewDrive = async () => {
   if (Capacitor.isNativePlatform()) {
@@ -1068,7 +1047,7 @@ const previewDisabled =
   }
 
   const handlePrimaryAction = () => {
-    if (isSaving || isPreparingStop || isPreviewing) return
+  if (isSaving || isPreparingStop) return
 
     if (isRunning) {
       pauseCurrentDrive()
@@ -1104,7 +1083,7 @@ const previewDisabled =
     )
   }
 
-  void createFrozenSnapshot({ isPreview: false }).finally(() => {
+  void createFrozenSnapshot().finally(() => {
     if (mountedRef.current) {
       setIsPreparingStop(false)
     }
@@ -1135,8 +1114,8 @@ const previewDisabled =
       clearRuntimeLoops()
 
       const finalizedDrive = frozenSnapshotRef.current
-        ? await frozenSnapshotRef.current
-        : await createFrozenSnapshot({ isPreview: false })
+  ? await frozenSnapshotRef.current
+  : await createFrozenSnapshot()
 
       if (!finalizedDrive) {
         setLocationError(
@@ -1145,10 +1124,8 @@ const previewDisabled =
         return
       }
 
-      const { isPreview: _isPreview, ...driveToSave } = finalizedDrive
-
-      saveDrive(driveToSave)
-      setCurrentDrive(driveToSave)
+      saveDrive(finalizedDrive)
+      setCurrentDrive(finalizedDrive)
 
       void stopForegroundService()
 
@@ -1170,31 +1147,6 @@ const previewDisabled =
       snapshotAbortRef.current = null
       wasRunningBeforeStopRef.current = false
     }
-  }
-
-  const handlePreviewSummary = async () => {
-    if (previewDisabled) return
-
-    try {
-      setIsPreviewing(true)
-
-      const previewDrive = await createFrozenSnapshot({
-        isPreview: true,
-      })
-
-      if (!mountedRef.current || !previewDrive) return
-
-      setCurrentDrive(previewDrive)
-      setScreen("summary")
-    } finally {
-      frozenSnapshotRef.current = null
-      snapshotAbortRef.current = null
-
-      if (mountedRef.current) {
-        setIsPreviewing(false)
-  }
-}
-
   }
 
   const solarVerificationText =
@@ -1325,12 +1277,11 @@ const previewDisabled =
               <button
                 type="button"
                 onClick={handlePrimaryAction}
-                disabled={
-                  isSaving ||
-                  isPreparingStop ||
-                  isPreviewing ||
-                  cappedAndUnresumable
-                }
+              disabled={
+                 isSaving ||
+                 isPreparingStop ||
+                 cappedAndUnresumable
+               }
                 aria-label={
                   isRunning
                     ? "Pause drive timer"
@@ -1513,12 +1464,11 @@ const previewDisabled =
                 <button
                   type="button"
                   onClick={handlePrimaryAction}
-                  disabled={
-                    isSaving ||
-                    isPreparingStop ||
-                    isPreviewing ||
-                    cappedAndUnresumable
-                  }
+              disabled={
+                isSaving ||
+                isPreparingStop ||
+                cappedAndUnresumable
+              }
                   className={`min-h-[48px] touch-manipulation select-none rounded-xl py-3.5 text-sm font-bold text-white shadow-md transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-600 ${
                     isRunning
                       ? "bg-red-600 active:bg-red-700"
@@ -1589,15 +1539,6 @@ const previewDisabled =
                   </div>
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={handlePreviewSummary}
-                disabled={previewDisabled}
-                className="mt-3 min-h-[48px] w-full touch-manipulation select-none rounded-xl border-2 border-[#0A1E5E]/50 bg-white py-3.5 text-sm font-bold text-[#08194A] shadow-sm transition active:scale-[0.98] active:bg-[#f9c80e]/10 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-500"
-              >
-                {isPreviewing ? "Opening Preview..." : "Preview Summary — Not Saved"}
-              </button>
             </div>
           </section>
 

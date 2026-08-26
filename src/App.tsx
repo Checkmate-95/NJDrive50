@@ -64,7 +64,7 @@ import { useNav } from "./state/navStore"
 import { MapProvider } from "./components/map/MapProvider"
 import type { DriveEntry } from "./state/driveStore"
 import { setActiveDriveUser, resetDriveStore } from "./state/driveStore"
-import { resetActiveDriveStore } from "./state/activeDriveStore"
+import { resetActiveDriveStore, useActiveDriveStore } from "./state/activeDriveStore"
 import {
   setActiveProfileUser,
   resetProfileStore,
@@ -156,7 +156,7 @@ export default function App() {
   }, [setScreen])
 
   // ─── Safe Screen Fallback ───────────────────────────────────────────────────
-  const safeScreen: Screen = screen ?? "home"
+  const safeScreen: Screen = screen ?? (authUser ? "home" : "login")
 
   // ─── setScreen Compat Wrapper ───────────────────────────────────────────────
   const setScreenCompat = useCallback(
@@ -238,10 +238,26 @@ export default function App() {
         )
 
       case "todaysDrive":
-        return <TodaysDrive drive={currentDrive} />
+        return currentDrive ? (
+          <TodaysDrive drive={currentDrive} />
+        ) : (
+          <HomeDashboardContent
+            setScreen={setScreenCompat}
+            setLocationPermissionGranted={setLocationPermissionGranted}
+          />
+        )
 
-      case "summary":
-        return <DriveSummary setScreen={setScreenCompat} />
+      case "summary": {
+        const activeSession = useActiveDriveStore.getState().session
+        return activeSession?.isActive ? (
+          <ActiveDrive
+            setScreen={setScreenCompat}
+            setCurrentDrive={setCurrentDrive}
+          />
+        ) : (
+          <DriveSummary setScreen={setScreenCompat} />
+        )
+      }
 
       case "driveHistory":
         return <DriveHistoryContent />
@@ -308,11 +324,13 @@ export default function App() {
         return <Settings />
 
       default:
-        return (
+        return authUser ? (
           <HomeDashboardContent
             setScreen={setScreenCompat}
             setLocationPermissionGranted={setLocationPermissionGranted}
           />
+        ) : (
+          <Login />
         )
     }
   }

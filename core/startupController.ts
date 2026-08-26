@@ -1,5 +1,6 @@
 import { useNav } from "../src/state/navStore"
 import { getProfile, hasProfile } from "../src/state/profileStore"
+import { useActiveDriveStore } from "../src/state/activeDriveStore"
 import type { User } from "firebase/auth"
 
 function getViteEnvVar(key: string): string | undefined {
@@ -19,8 +20,9 @@ export async function startupController(authUser: User | null) {
     return
   }
 
+  const isDevBuild = import.meta.env.DEV
   const shouldBypassEntitlement =
-    getViteEnvVar("VITE_BYPASS_ENTITLEMENT") === "true"
+  isDevBuild && getViteEnvVar("VITE_BYPASS_ENTITLEMENT") === "true"
 
   if (shouldBypassEntitlement) {
     nav.resetTo("home")
@@ -37,6 +39,13 @@ export async function startupController(authUser: User | null) {
 
     if (!profile.isOnboarded) {
       nav.resetTo("intro")
+      return
+    }
+
+    const activeSession = useActiveDriveStore.getState().session
+
+    if (activeSession?.isActive) {
+      nav.resetTo("active")
       return
     }
 

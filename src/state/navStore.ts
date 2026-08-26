@@ -1,7 +1,9 @@
 import { create } from "zustand"
+import { createJSONStorage, persist } from "zustand/middleware"
 import type { Screen } from "../App"
 
 const MAX_STACK_SIZE = 20
+const STORAGE_KEY = "njdrive50_nav"
 
 type NavState = {
   screen: Screen
@@ -11,69 +13,84 @@ type NavState = {
   setScreen: (s: Screen) => void
   goBack: (fallback?: Screen) => void
   resetTo: (s: Screen) => void
-  resetAll: () => void // 🧹 Added reset method
+  resetAll: () => void
 }
 
-export const useNav = create<NavState>()((set, get) => ({
-  // ⭐ App now starts in a neutral loading state
-  screen: "loading",
-  stack: [],
-  previousScreen: null,
+const initialNavState = {
+  screen: "loading" as Screen,
+  stack: [] as Screen[],
+  previousScreen: null as Screen | null,
+}
 
-  setScreen: (nextScreen: Screen) => {
-    const { screen, stack } = get()
+export const useNav = create<NavState>()(
+  persist(
+    (set, get) => ({
+      ...initialNavState,
 
-    if (nextScreen === screen) return
+      setScreen: (nextScreen: Screen) => {
+        const { screen, stack } = get()
 
-    const nextStack = [...stack, screen].slice(-MAX_STACK_SIZE)
+        if (nextScreen === screen) return
 
-    set({
-      screen: nextScreen,
-      stack: nextStack,
-      previousScreen: screen,
-    })
-  },
+        const nextStack = [...stack, screen].slice(-MAX_STACK_SIZE)
 
-  goBack: (fallback: Screen = "home") => {
-    const { stack } = get()
+        set({
+          screen: nextScreen,
+          stack: nextStack,
+          previousScreen: screen,
+        })
+      },
 
-    if (stack.length === 0) {
-      set({
-        screen: fallback,
-        stack: [],
-        previousScreen: null,
-      })
-      return
+      goBack: (fallback: Screen = "home") => {
+        const { stack } = get()
+
+        if (stack.length === 0) {
+          set({
+            screen: fallback,
+            stack: [],
+            previousScreen: null,
+          })
+          return
+        }
+
+        const nextStack = [...stack]
+        const destination = nextStack.pop() ?? fallback
+        const previousScreen =
+          nextStack.length > 0 ? nextStack[nextStack.length - 1] : null
+
+        set({
+          screen: destination,
+          stack: nextStack,
+          previousScreen,
+        })
+      },
+
+      resetTo: (screen: Screen) => {
+        set({
+          screen,
+          stack: [],
+          previousScreen: null,
+        })
+      },
+
+      resetAll: () => {
+        set({
+          screen: "loading",
+          stack: [],
+          previousScreen: null,
+        })
+      },
+    }),
+    {
+      name: STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        screen: state.screen,
+        stack: state.stack,
+        previousScreen: state.previousScreen,
+      }),
     }
-
-    const nextStack = [...stack]
-    const destination = nextStack.pop() ?? fallback
-    const previousScreen =
-      nextStack.length > 0 ? nextStack[nextStack.length - 1] : null
-
-    set({
-      screen: destination,
-      stack: nextStack,
-      previousScreen,
-    })
-  },
-
-  resetTo: (screen: Screen) => {
-    set({
-      screen,
-      stack: [],
-      previousScreen: null,
-    })
-  },
-
-  // 🧩 New method to fully reset navigation state
-  resetAll: () => {
-    set({
-      screen: "onboarding", // or "loading" if you prefer a neutral start
-      stack: [],
-      previousScreen: null,
-    })
-  },
-}))
+  )
+)
 
 export const useNavPreviousScreen = () => useNav((s) => s.previousScreen)

@@ -21,8 +21,8 @@ android {
         applicationId = "com.njdrive50.app"
         minSdk = rootProject.ext.minSdkVersion
         targetSdk = rootProject.ext.targetSdkVersion
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,10 +33,12 @@ android {
     signingConfigs {
         if (keystorePropsFile.exists()) {
             release {
-                keyAlias = keystoreProperties['keyAlias']
-                keyPassword = keystoreProperties['keyPassword']
-                storeFile = file(keystoreProperties['storeFile'])
-                storePassword = keystoreProperties['storePassword']
+                keyAlias = keystoreProperties["keyAlias"]
+                keyPassword = keystoreProperties["keyPassword"]
+                storeFile = file(keystoreProperties["storeFile"])
+                storePassword = keystoreProperties["storePassword"]
+                v1SigningEnabled true
+                v2SigningEnabled true
             }
         }
     }
@@ -50,10 +52,13 @@ android {
             if (keystorePropsFile.exists()) {
                 signingConfig = signingConfigs.release
             }
+
             minifyEnabled = false
+            shrinkResources = false
+
             proguardFiles(
-                getDefaultProguardFile('proguard-android-optimize.txt'),
-                'proguard-rules.pro'
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
             )
         }
     }
@@ -74,7 +79,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.3.0"
     implementation "androidx.core:core-splashscreen:1.2.0"
 
-    implementation project(':capacitor-android')
+    implementation project(":capacitor-android")
 
     implementation "com.google.android.gms:play-services-location:21.4.0"
 
@@ -87,12 +92,14 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-core:3.6.1"
 }
 
-apply from: 'capacitor.build.gradle'
+apply from: "capacitor.build.gradle"
 
 try {
-    def servicesJSON = file('google-services.json')
+    def servicesJSON = file("google-services.json")
     if (servicesJSON.exists() && servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
+        apply plugin: "com.google.gms.google-services"
+    } else {
+        logger.info("google-services.json not found or empty, google-services plugin not applied.")
     }
 } catch (Exception ignored) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")

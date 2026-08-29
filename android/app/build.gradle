@@ -31,17 +31,17 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropsFile.exists()) {
-            release {
-                keyAlias = keystoreProperties["keyAlias"]
-                keyPassword = keystoreProperties["keyPassword"]
-                storeFile = file(keystoreProperties["storeFile"])
-                storePassword = keystoreProperties["storePassword"]
-                v1SigningEnabled true
-                v2SigningEnabled true
-            }
+    if (keystorePropsFile.exists()) {
+        release {
+            keyAlias = keystoreProperties["keyAlias"]
+            keyPassword = keystoreProperties["keyPassword"]
+            storeFile = file(keystoreProperties["storeFile"])
+            storePassword = keystoreProperties["storePassword"]
+            v1SigningEnabled = true
+            v2SigningEnabled = true
         }
     }
+}
 
     buildTypes {
         debug {
@@ -87,10 +87,14 @@ dependencies {
     implementation "androidx.room:room-ktx:2.8.4"
     ksp "androidx.room:room-compiler:2.8.4"
 
+    // ⭐ Add this line for Google Play Billing
+    implementation "com.android.billingclient:billing:9.1.0"
+
     testImplementation "junit:junit:4.13.2"
     androidTestImplementation "androidx.test.ext:junit:1.2.1"
     androidTestImplementation "androidx.test.espresso:espresso-core:3.6.1"
 }
+
 
 apply from: "capacitor.build.gradle"
 

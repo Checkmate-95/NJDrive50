@@ -20,6 +20,8 @@ dist-ssr
 .env.*.local
 .env.production
 
+.env*
+
 # Capacitor Android build artifacts
 android/app/build/
 android/.gradle/

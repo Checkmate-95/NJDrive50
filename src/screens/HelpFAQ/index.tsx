@@ -18,8 +18,17 @@ type HighlightedTextProps = {
   query: string
 }
 
-const AI_URL =
-  import.meta.env.VITE_AI_HELPER_API_URL || "/api/njdrive50-ai"
+type FilteredFAQItem = FAQItem & {
+  matches: boolean
+}
+
+type FilteredFAQSection = FAQSection & {
+  titleMatches: boolean
+  items: FilteredFAQItem[]
+}
+
+const AI_URL = import.meta.env.VITE_AI_HELPER_API_URL?.trim() || "/api/njdrive50-ai"
+const MAX_AI_QUESTION_LENGTH = 2000
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -61,6 +70,8 @@ export default function HelpFaq() {
   const abortRef = useRef<AbortController | null>(null)
 
   const q = query.trim().toLowerCase()
+  const trimmedAiQuestion = aiQuestion.trim()
+  const canAskAI = Boolean(trimmedAiQuestion) && !loading
 
   const sections = useMemo<FAQSection[]>(
     () => [
@@ -209,7 +220,7 @@ export default function HelpFaq() {
     []
   )
 
-  const filteredSections = useMemo(() => {
+  const filteredSections = useMemo<FilteredFAQSection[]>(() => {
     return sections
       .map((section) => {
         const titleMatches = section.title.toLowerCase().includes(q)
@@ -225,15 +236,15 @@ export default function HelpFaq() {
           }
         }
 
-        const items = section.items
-          .map((item) => {
-            const haystack = `${item.question} ${item.answer}`.toLowerCase()
-            return {
-              ...item,
-              matches: titleMatches || haystack.includes(q),
-            }
-          })
-          .filter((item) => titleMatches || item.matches)
+        const items: FilteredFAQItem[] = section.items
+  .map((item) => {
+    const haystack = `${item.question} ${item.answer}`.toLowerCase()
+    return {
+      ...item,
+      matches: titleMatches || haystack.includes(q),
+    }
+  })
+  .filter((item) => titleMatches || item.matches)
 
         if (titleMatches) {
           return {
@@ -256,7 +267,7 @@ export default function HelpFaq() {
   }, [sections, q])
 
   async function handleAskAI() {
-    const prompt = aiQuestion.trim()
+    const prompt = trimmedAiQuestion
     if (!prompt || loading) return
 
     abortRef.current?.abort()
@@ -269,19 +280,25 @@ export default function HelpFaq() {
     try {
       const res = await fetch(AI_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify({ prompt, mode: "faq" }),
         signal: controller.signal,
       })
 
-      const data = await res.json().catch(() => null)
+      const contentType = res.headers.get("content-type") ?? ""
+      const data = contentType.includes("application/json")
+        ? await res.json().catch(() => null)
+        : null
 
       const output =
         typeof data === "object" &&
         data !== null &&
         "output" in data &&
         typeof (data as { output?: unknown }).output === "string"
-          ? (data as { output: string }).output
+          ? (data as { output: string }).output.trim()
           : null
 
       const errorMessage =
@@ -298,12 +315,14 @@ export default function HelpFaq() {
 
       setAiAnswer(output || "I couldn't find an answer, but I'm here to help.")
     } catch (error) {
-      if ((error as Error)?.name === "AbortError") return
+      if (error instanceof Error && error.name === "AbortError") return
 
       setAiAnswer(
-        error instanceof Error && error.message
-          ? error.message
-          : "Something went wrong. Please try again."
+        error instanceof TypeError && error.message === "Failed to fetch"
+          ? "Could not connect to NJDrive50 AI. Please check your internet connection and try again."
+          : error instanceof Error && error.message
+            ? error.message
+            : "Something went wrong. Please try again."
       )
     } finally {
       if (abortRef.current === controller) {
@@ -371,7 +390,7 @@ export default function HelpFaq() {
               <input
                 id="help-search"
                 type="text"
-                placeholder="Search help topics…"
+                placeholder="Search help topics..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="min-h-[48px] w-full rounded-2xl border border-[#08194A]/10 bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:border-[#08194A]/20 focus:bg-white focus:ring-2 focus:ring-[#08194A]/8"
@@ -391,18 +410,18 @@ export default function HelpFaq() {
         </header>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="space-y-4" aria-label="Help topics">
-            {filteredSections.map((section) => (
-              <FilteredCollapse
-                key={section.title}
-                title={section.title}
-                query={q}
-                autoOpen={Boolean(
-                  q &&
-                    (section.titleMatches ||
-                      section.items.some((item) => item.matches))
-                )}
-              >
+  <section className="space-y-4" aria-label="Help topics">
+    {filteredSections.map((section: FilteredFAQSection) => (
+      <FilteredCollapse
+        key={section.title}
+        title={section.title}
+        query={q}
+        autoOpen={Boolean(
+          q &&
+            (section.titleMatches ||
+              section.items.some((item: FilteredFAQItem) => item.matches))
+        )}
+      >
                 <div className="space-y-3">
                   {section.items.map((item) => (
                     <FAQ
@@ -422,7 +441,7 @@ export default function HelpFaq() {
                   No matching help topics found.
                 </p>
                 <p className="mt-2 text-sm text-[#08194A]/60">
-                  Try a different keyword like “night hours”, “export”, or “road test”.
+                  Try a different keyword like "night hours", "export", or "road test".
                 </p>
               </div>
             )}
@@ -450,35 +469,42 @@ export default function HelpFaq() {
                 <input
                   id="ai-question"
                   type="text"
-                  placeholder="Type your question…"
+                  placeholder="Type your question..."
                   value={aiQuestion}
+                  maxLength={MAX_AI_QUESTION_LENGTH}
                   onChange={(e) => setAiQuestion(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && !loading && aiQuestion.trim()) {
+                    if (e.key === "Enter" && canAskAI) {
                       e.preventDefault()
                       void handleAskAI()
                     }
                   }}
                   className="min-h-[48px] w-full rounded-2xl border border-[#08194A]/10 bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:border-[#08194A]/20 focus:bg-white focus:ring-2 focus:ring-[#08194A]/8"
                 />
+                <div className="mt-2 flex items-center justify-between gap-3 text-xs text-[#08194A]/50">
+                  <span>Short, specific questions work best.</span>
+                  <span>
+                    {aiQuestion.length} / {MAX_AI_QUESTION_LENGTH}
+                  </span>
+                </div>
               </div>
 
               <button
                 type="button"
-                disabled={loading || !aiQuestion.trim()}
+                disabled={!canAskAI}
                 className={`mt-3 min-h-[48px] w-full rounded-xl px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition ${
-                  loading || !aiQuestion.trim()
-                    ? "cursor-not-allowed bg-[#08194A] opacity-50"
-                    : "bg-[#08194A] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
+                  canAskAI
+                    ? "bg-[#08194A] hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
+                    : "cursor-not-allowed bg-[#08194A] opacity-50"
                 }`}
                 onClick={() => {
                   void handleAskAI()
                 }}
               >
-                {loading ? "Thinking…" : "Ask NJDrive50 AI"}
+                {loading ? "Thinking..." : "Ask NJDrive50 AI"}
               </button>
 
-              <div role="status" aria-live="polite" className="mt-4">
+              <div role="status" aria-live="polite" aria-atomic="true" className="mt-4">
                 <div className="min-h-[96px] whitespace-pre-wrap rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] p-4 text-sm leading-6 text-[#08194A]">
                   {loading
                     ? "Preparing your answer..."

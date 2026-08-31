@@ -14,12 +14,8 @@ const QUICK_PROMPTS = [
   "What counts as night driving in New Jersey?",
 ];
 
-const API_URL = import.meta.env.VITE_AI_HELPER_API_URL?.trim();
-
-if (!API_URL) {
-  throw new Error("Missing VITE_AI_HELPER_API_URL");
-}
-
+const API_URL = import.meta.env.VITE_AI_HELPER_API_URL?.trim() ?? "";
+const MAX_PROMPT_LENGTH = 2000;
 
 export default function AIHelperScreen() {
   const { goBack } = useNav();
@@ -34,8 +30,8 @@ export default function AIHelperScreen() {
   const abortRef = useRef<AbortController | null>(null);
 
   const trimmedPrompt = prompt.trim();
-  const canSend = !!trimmedPrompt && !loading;
-  const canClear = (!!prompt || !!response) && !loading;
+  const canSend = Boolean(API_URL && trimmedPrompt && !loading);
+  const canClear = Boolean(prompt || response || loading);
 
   const cardStyle: CSSProperties = {
     background: "#FFFFFF",
@@ -46,65 +42,88 @@ export default function AIHelperScreen() {
   };
 
   const sendPrompt = async () => {
-  if (!canSend) return;
+    if (loading) return;
 
-  abortRef.current?.abort();
-  const controller = new AbortController();
-  abortRef.current = controller;
-
-  setLoading(true);
-  setResponse("");
-
-  try {
-    console.log("AI Helper request URL:", API_URL);
-
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: trimmedPrompt, mode: "faq" }),
-      signal: controller.signal,
-    });
-
-    const contentType = res.headers.get("content-type") ?? "";
-    const data = contentType.includes("application/json")
-      ? await res.json().catch(() => null)
-      : null;
-
-    if (!res.ok) {
-      throw new Error(
-        data?.error ||
-          data?.message ||
-          `AI Helper server error (${res.status}).`
+    if (!API_URL) {
+      setResponse(
+        "AI Helper is not configured right now. Please try again later."
       );
+      return;
     }
 
-    const output =
-      typeof data?.output === "string"
-        ? data.output.trim()
-        : typeof data?.answer === "string"
-          ? data.answer.trim()
-          : "";
-
-    setResponse(output || "No response received. Please try again.");
-  } catch (error) {
-    if ((error as Error)?.name === "AbortError") return;
-
-    const message =
-      error instanceof TypeError && error.message === "Failed to fetch"
-        ? "Could not connect to the AI Helper. Please check your internet connection and try again."
-        : error instanceof Error && error.message
-          ? error.message
-          : "We couldn't reach the AI Helper right now. Please try again in a moment.";
-
-    setResponse(message);
-  } finally {
-    if (abortRef.current === controller) {
-      abortRef.current = null;
-      setLoading(false);
+    if (!trimmedPrompt) {
+      setResponse("Please enter a question before asking AI.");
+      promptRef.current?.focus();
+      return;
     }
-  }
-};
 
+    abortRef.current?.abort();
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setLoading(true);
+    setResponse("");
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          prompt: trimmedPrompt,
+          mode: "faq",
+        }),
+        signal: controller.signal,
+      });
+
+      const contentType = res.headers.get("content-type") ?? "";
+      const data = contentType.includes("application/json")
+        ? await res.json().catch(() => null)
+        : null;
+
+      if (!res.ok) {
+        throw new Error(
+          data?.error ||
+            data?.message ||
+            `AI Helper server error (${res.status}).`
+        );
+      }
+
+      const output =
+        typeof data?.output === "string"
+          ? data.output.trim()
+          : typeof data?.answer === "string"
+            ? data.answer.trim()
+            : "";
+
+      setResponse(output || "No response received. Please try again.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
+      const message =
+        error instanceof TypeError && error.message === "Failed to fetch"
+          ? "Could not connect to the AI Helper. Please check your internet connection and try again."
+          : error instanceof Error && error.message
+            ? error.message
+            : "We couldn't reach the AI Helper right now. Please try again in a moment.";
+
+      setResponse(message);
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setLoading(false);
+      }
+    }
+  };
 
   const clearAll = () => {
     if (!canClear) return;
@@ -119,14 +138,14 @@ export default function AIHelperScreen() {
     promptRef.current?.focus();
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     void sendPrompt();
   };
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
+  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
       void sendPrompt();
     }
   };
@@ -165,22 +184,22 @@ export default function AIHelperScreen() {
         }}
       >
         <button
-          type="button"
-          onClick={() => goBack()}
-          style={{
-            alignSelf: "flex-start",
-            background: "#FFFFFF",
-            color: "#08194A",
-            border: "1px solid #D7E0EA",
-            borderRadius: 12,
-            padding: "10px 14px",
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          ← Close
-        </button>
+  type="button"
+  onClick={() => goBack()}
+  style={{
+    alignSelf: "flex-start",
+    background: "#FFFFFF",
+    color: "#08194A",
+    border: "1px solid #D7E0EA",
+    borderRadius: 12,
+    padding: "10px 14px",
+    fontSize: 14,
+    fontWeight: 700,
+    cursor: "pointer",
+  }}
+>
+  ← Close
+</button>
 
         <div style={cardStyle}>
           <div
@@ -260,7 +279,7 @@ export default function AIHelperScreen() {
             }}
           >
             You can ask about practice hours, parent rules, night driving,
-            appointments, or road test preparation.
+            appointments, or road-test preparation.
           </div>
 
           <div
@@ -297,11 +316,12 @@ export default function AIHelperScreen() {
               ref={promptRef}
               id="ai-helper-prompt"
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(event) => setPrompt(event.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={() => setIsPromptFocused(true)}
               onBlur={() => setIsPromptFocused(false)}
-              maxLength={3000}
+              maxLength={MAX_PROMPT_LENGTH}
+              disabled={loading}
               placeholder="Example: My teen is getting close to the road test. What should I check before we schedule it, and what paperwork should we bring?"
               style={{
                 width: "100%",
@@ -311,7 +331,7 @@ export default function AIHelperScreen() {
                 border: isPromptFocused
                   ? "2px solid #08194A"
                   : "2px solid #7C93B3",
-                background: "#FFFFFF",
+                background: loading ? "#F8FAFC" : "#FFFFFF",
                 color: "#0F172A",
                 fontSize: 16,
                 lineHeight: 1.65,
@@ -319,6 +339,7 @@ export default function AIHelperScreen() {
                 resize: "vertical",
                 outline: "none",
                 boxShadow: "inset 0 1px 3px rgba(15, 23, 42, 0.06)",
+                opacity: loading ? 0.75 : 1,
                 transition:
                   "border-color 180ms ease, box-shadow 180ms ease, background 180ms ease",
               }}
@@ -339,7 +360,7 @@ export default function AIHelperScreen() {
               </div>
 
               <div style={{ fontSize: 12, color: "#64748B", fontWeight: 700 }}>
-                {trimmedPrompt.length} / 3000 characters
+                {prompt.length} / {MAX_PROMPT_LENGTH} characters
               </div>
             </div>
           </div>
@@ -442,12 +463,28 @@ export default function AIHelperScreen() {
               </button>
             </div>
           </div>
+
+          {!API_URL && (
+            <p
+              role="alert"
+              style={{
+                marginTop: 14,
+                marginBottom: 0,
+                fontSize: 13,
+                color: "#B91C1C",
+                fontWeight: 700,
+              }}
+            >
+              AI Helper is not configured in this build.
+            </p>
+          )}
         </form>
 
         <div
           ref={responseRef}
           role="status"
           aria-live="polite"
+          aria-atomic="true"
           style={{
             background: "#FFFFFF",
             border: "1px solid #C9D7E6",

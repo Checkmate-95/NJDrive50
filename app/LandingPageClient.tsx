@@ -512,64 +512,63 @@ export default function LandingPageClient({
         </section>
 
         <section
-          id="giveaway"
-          className="scroll-mt-24 border-b border-white/10"
-        >
-          <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
-            <div className="grid gap-8 rounded-3xl border border-[#38BDF8]/20 bg-[#38BDF8]/5 p-5 sm:p-8 md:grid-cols-[1.05fr_0.95fr] md:items-center">
-              <div>
-                <div className="inline-flex items-center rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#38BDF8]">
-                  Launch bonus
-                </div>
+  id="giveaway"
+  className="scroll-mt-24 border-b border-white/10"
+>
+  <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
+    <div className="grid gap-8 rounded-3xl border border-[#38BDF8]/20 bg-[#38BDF8]/5 p-5 sm:p-8 md:grid-cols-[1.05fr_0.95fr] md:items-center">
+      <div>
+        <div className="inline-flex items-center rounded-full border border-[#38BDF8]/25 bg-[#38BDF8]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-[#38BDF8]">
+          Launch bonus
+        </div>
 
-                <h2 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  Free ZyroPro dashboard mount for the first 50 yearly subscribers
-                </h2>
+        <h2 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">
+          Free ZyroPro dashboard mount for the first 50 yearly subscribers
+        </h2>
 
-                <p className="mt-4 text-base leading-7 text-white/72">
-                  The first 50 users who start a yearly NJDrive50 subscription in
-                  the Android app through Google Play are eligible to receive one
-                  free ZyroPro dashboard mount while supplies last.
-                </p>
+        <p className="mt-4 text-base leading-7 text-white/72">
+          The first 50 users who start a yearly NJDrive50 subscription in the
+          Android app through Google Play are eligible to receive one free
+          ZyroPro dashboard mount while supplies last.
+        </p>
 
-                <p className="mt-4 text-sm leading-7 text-white/60">
-                  NJDrive50 premium features remain the primary value of the
-                  yearly subscription. The ZyroPro mount is a limited launch
-                  promotion fulfilled separately after an eligible subscription
-                  is confirmed.
-                </p>
+        <p className="mt-4 text-sm leading-7 text-white/60">
+          NJDrive50 premium features remain the primary value of the yearly
+          subscription. The ZyroPro mount is a limited launch promotion
+          fulfilled separately after an eligible subscription is confirmed.
+        </p>
 
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                  <Link href="/pricing" className={ctaLinkClass}>
-                    See yearly plan
-                  </Link>
-                  <a href="#pricing-preview" className={secondaryLinkClass}>
-                    Compare plans
-                  </a>
-                </div>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+          <Link href="/pricing" className={ctaLinkClass}>
+            See yearly plan
+          </Link>
+          <a href="#pricing-preview" className={secondaryLinkClass}>
+            Compare plans
+          </a>
+        </div>
 
-                <p className="mt-4 text-xs leading-6 text-white/45">
-                  Eligibility, availability, and shipping details are provided in
-                  the app for qualifying yearly subscribers.
-                </p>
-              </div>
+        <p className="mt-4 text-xs leading-6 text-white/45">
+          Eligibility, availability, and claim details are provided in the app
+          for qualifying yearly subscribers.
+        </p>
+      </div>
 
-              <div className="flex justify-center md:justify-end">
-  <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-[#061121] p-3 shadow-[0_24px_60px_rgba(2,6,23,0.45)]">
-    <img
-      src="/zyropro.png"
-      alt="ZyroPro Dashboard Mount"
-      width="720"
-      height="405"
-      loading="lazy"
-      decoding="async"
-      className="h-auto w-full rounded-xl object-cover"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
+      <div className="flex justify-center md:justify-end">
+        <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-[#061121] p-3 shadow-[0_24px_60px_rgba(2,6,23,0.45)]">
+          <img
+            src="/zyropro.png"
+            alt="ZyroPro Dashboard Mount"
+            width="720"
+            height="405"
+            loading="lazy"
+            decoding="async"
+            className="h-auto w-full rounded-xl object-cover"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
         <section
           id="nj-requirements"

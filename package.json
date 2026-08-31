@@ -11,7 +11,7 @@
     "dev:web": "next dev",
     "lint": "eslint .",
     "preview": "vite preview",
-    "ai-server": "node server/index.cjs",
+    "ai-server": "node --env-file=.env.local api/index.cjs",
     "routes-proxy": "tsx routesProxy.ts"
   },
   "dependencies": {
@@ -34,6 +34,7 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.3",
     "autoprefixer": "^10.5.4",
+    "axios": "^1.20.0",
     "compression": "^1.8.1",
     "cors": "^2.8.6",
     "esbuild": "^0.28.1",
@@ -59,6 +60,7 @@
   "devDependencies": {
     "@capacitor/cli": "^8.3.1",
     "@eslint/js": "^9.39.4",
+    "@types/axios": "^0.9.36",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^24.13.3",

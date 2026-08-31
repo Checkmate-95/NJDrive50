@@ -1,4 +1,5 @@
-// C:\Dev\NJDRIVE50\api\index.js
+// C:\Dev\NJDRIVE50\api\index.cjs
+
 // NJDRIVE50 — AI API SERVER (Vercel Serverless Function)
 // Converted from server/index.cjs
 // - Helmet, compression, structured logs, request IDs
@@ -400,3 +401,12 @@ process.on("SIGTERM", () => {
 });
 
 module.exports = app;
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`NJDrive50 AI server running on http://localhost:${PORT}`);
+  });
+}
+
+

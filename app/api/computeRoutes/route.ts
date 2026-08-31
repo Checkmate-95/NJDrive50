@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import axios from "axios";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,14 +15,33 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { origin, destination } = body;
 
-  // Example placeholder logic — replace with your real route computation
-  const data = {
-    origin,
-    destination,
-    distance: "12.4 mi",
-    duration: "22 min",
-  };
+  try {
+    const response = await axios.get("https://maps.googleapis.com/maps/api/directions/json", {
+      params: {
+        origin,
+        destination,
+        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+      },
+    });
 
-  return NextResponse.json(data, { headers: corsHeaders });
+    const route = response.data.routes[0];
+    const leg = route.legs[0];
+
+    const data = {
+      origin,
+      destination,
+      distance: leg.distance.text,
+      duration: leg.duration.text,
+    };
+
+    return NextResponse.json(data, { headers: corsHeaders });
+  } catch (error: unknown) {
+    console.error("Route computation failed:", error);
+    const message =
+      error instanceof Error ? error.message : "Unknown error occurred";
+    return NextResponse.json(
+      { error: "Route computation failed", details: message },
+      { status: 500, headers: corsHeaders }
+    );
+  }
 }
-

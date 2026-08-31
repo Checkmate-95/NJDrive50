@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
 export const runtime = "nodejs";
@@ -15,25 +14,26 @@ const ALLOWED_ORIGINS = new Set([
   "https://localhost",
 ]);
 
-function corsHeaders(origin?: string | null) {
+function getCorsHeaders(origin?: string | null) {
+  const headers = new Headers();
   const allowedOrigin =
     origin && ALLOWED_ORIGINS.has(origin)
       ? origin
       : "https://www.njdrive50.com";
 
-  return {
-    "Access-Control-Allow-Origin": allowedOrigin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    Vary: "Origin",
-  };
+  headers.set("Access-Control-Allow-Origin", allowedOrigin);
+  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  headers.set("Vary", "Origin");
+
+  return headers;
 }
 
 export async function OPTIONS(req: Request) {
   const origin = req.headers.get("origin");
-  return new NextResponse(null, {
+  return new Response(null, {
     status: 204,
-    headers: corsHeaders(origin),
+    headers: getCorsHeaders(origin),
   });
 }
 
@@ -46,23 +46,23 @@ export async function POST(req: Request) {
     const cleanPrompt = typeof prompt === "string" ? prompt.trim() : "";
 
     if (!cleanPrompt) {
-      return NextResponse.json(
+      return Response.json(
         { error: "Missing or empty prompt." },
-        { status: 400, headers: corsHeaders(origin) }
+        { status: 400, headers: getCorsHeaders(origin) }
       );
     }
 
     if (cleanPrompt.length > MAX_PROMPT_LENGTH) {
-      return NextResponse.json(
+      return Response.json(
         { error: `Prompt exceeds ${MAX_PROMPT_LENGTH} characters.` },
-        { status: 400, headers: corsHeaders(origin) }
+        { status: 400, headers: getCorsHeaders(origin) }
       );
     }
 
     if (!mode || !ALLOWED_MODES.has(mode)) {
-      return NextResponse.json(
+      return Response.json(
         { error: `Invalid mode. Allowed: ${[...ALLOWED_MODES].join(", ")}` },
-        { status: 400, headers: corsHeaders(origin) }
+        { status: 400, headers: getCorsHeaders(origin) }
       );
     }
 
@@ -91,15 +91,15 @@ export async function POST(req: Request) {
 
     const answer = completion.choices?.[0]?.message?.content ?? "";
 
-    return NextResponse.json(
+    return Response.json(
       { output: answer || "No response received." },
-      { headers: corsHeaders(origin) }
+      { headers: getCorsHeaders(origin) }
     );
-  } catch (err: any) {
+  } catch (err) {
     console.error("njdrive50-ai error:", err);
-    return NextResponse.json(
+    return Response.json(
       { error: "Internal Server Error" },
-      { status: 500, headers: corsHeaders(origin) }
+      { status: 500, headers: getCorsHeaders(origin) }
     );
   }
 }

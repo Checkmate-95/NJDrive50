@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-
 import { Preferences } from "@capacitor/preferences";
 
 type FeatureRow = {
@@ -86,7 +85,7 @@ function GooglePlayButton({
     <button
       type="button"
       onClick={onClick}
-      aria-label="Install NJDrive50 from Google Play"
+      aria-label="Get NJDrive50 on Google Play"
       className={`group w-full overflow-hidden rounded-2xl border text-left shadow-sm transition duration-200 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-offset-2 ${
         dark
           ? "border-white/15 bg-white/[0.09] text-white hover:bg-white/[0.14] focus-visible:ring-offset-[#08194A]"
@@ -106,7 +105,7 @@ function GooglePlayButton({
 
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-extrabold tracking-tight">
-            Install from Google Play
+            Get NJDrive50 on Google Play
           </span>
 
           <span
@@ -114,7 +113,7 @@ function GooglePlayButton({
               dark ? "text-white/68" : "text-[#08194A]/62"
             }`}
           >
-            Start your 7-day free trial with Google Play in-app billing
+            Choose monthly or yearly access securely inside the Android app
           </span>
         </span>
 
@@ -254,8 +253,6 @@ export default function PricingPageClient({
 }: {
   pricingFaqs: Faq[];
 }) {
- 
-
   const includedRows: FeatureRow[] = [
     { label: "New Jersey 50-hour driving log tracking", available: true },
     { label: "Automatic night-hours tracking", available: true },
@@ -291,21 +288,19 @@ export default function PricingPageClient({
               </p>
 
               <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
-                NJDrive50 subscription options
+                Simple NJDrive50 subscription options
               </h1>
 
               <p className="mt-3 max-w-3xl text-sm leading-6 text-[#08194A]/65 sm:text-base">
-                Install NJDrive50 from Google Play and start with a 7-day free
-                trial using Google Play in-app billing. After the trial, continue
-                with monthly or yearly access.
+                Choose the NJDrive50 plan that fits your family&apos;s driving
+                journey. Subscriptions are purchased securely through Google
+                Play inside the NJDrive50 Android app.
               </p>
 
               <p className="mt-2 max-w-3xl text-xs leading-5 text-[#08194A]/55">
-                7-day free trial, then $4.99/month or $39.99/year. A valid
-                payment method may be required to begin the trial. Subscriptions
-                renew automatically each billing period unless canceled through
-                Google Play before renewal or before the trial ends to avoid the
-                next charge.
+                Monthly and yearly subscriptions renew automatically unless
+                canceled through Google Play before the next billing date. A
+                valid payment method may be required to begin a subscription.
               </p>
             </div>
 
@@ -315,7 +310,7 @@ export default function PricingPageClient({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2"
-                aria-label="Install NJDrive50 from Google Play"
+                aria-label="Get NJDrive50 on Google Play"
               >
                 <img
                   src={GOOGLE_PLAY_BADGE_SRC}
@@ -348,10 +343,9 @@ export default function PricingPageClient({
                 <button
                   type="button"
                   onClick={async () => {
-  await Preferences.set({ key: "testMode", value: "true" });
-  window.location.reload();
-}}
-
+                    await Preferences.set({ key: "testMode", value: "true" });
+                    window.location.reload();
+                  }}
                   className="min-h-[48px] rounded-2xl bg-sky-400 px-6 py-3 text-sm font-extrabold text-slate-900 shadow-sm transition hover:bg-sky-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#08194A] focus-visible:ring-offset-2"
                 >
                   Continue in test mode
@@ -364,10 +358,10 @@ export default function PricingPageClient({
             <PlanCard
               title="Monthly"
               badge="Flexible"
-              description="Full NJDrive50 access with a 7-day free trial, then monthly billing through Google Play."
+              description="Full NJDrive50 premium access with monthly billing through Google Play."
               price="$4.99 per month"
-              helperText="Start free for 7 days. Cancel through Google Play before the trial ends to avoid the first monthly charge."
-              trustText="Auto-renews every month unless canceled in Google Play. A valid payment method may be required to start the trial."
+              helperText="A flexible option for families who need help tracking supervised driving progress month to month."
+              trustText="Auto-renews every month unless canceled through Google Play before your next billing date."
               features={[
                 "Track supervised driving hours in New Jersey",
                 "Monitor required night driving hours",
@@ -380,10 +374,10 @@ export default function PricingPageClient({
             <PlanCard
               title="Yearly"
               badge="Best value"
-              description="Full NJDrive50 access with a 7-day free trial, then yearly billing through Google Play."
-              price="$39.99 per year"
-              helperText="Start free for 7 days. Cancel through Google Play before the trial ends to avoid the first yearly charge."
-              trustText="Auto-renews every year unless canceled in Google Play. A valid payment method may be required to start the trial."
+              description="Full NJDrive50 premium access with annual billing through Google Play."
+              price="$29.99 per year"
+              helperText="One year of premium support for less than $2.50 per month, billed annually."
+              trustText="Auto-renews every year unless canceled through Google Play before your next billing date."
               features={[
                 "Everything in the monthly plan",
                 "One year of driving-log access",
@@ -395,7 +389,74 @@ export default function PricingPageClient({
             />
           </section>
 
-          <section className="rounded-[28px] border border-[#08194A]/10 bg-white px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:px-6 sm:py-6">
+          <section className="overflow-hidden rounded-[28px] border border-[#38BDF8]/25 bg-[#08194A] text-white shadow-[0_16px_40px_rgba(8,25,74,0.22)]">
+            <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
+              <div className="px-5 py-7 sm:px-7 sm:py-8">
+                <div className="inline-flex rounded-full bg-[#F9C80E] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#08194A]">
+                  Limited launch bonus
+                </div>
+
+                <h2 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-3xl">
+                  Free ZyroPro dashboard mount for the first 50 yearly
+                  subscribers
+                </h2>
+
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/76 sm:text-base">
+                  The first 50 users who start a yearly NJDrive50 subscription
+                  through Google Play in the Android app are eligible to
+                  receive one free ZyroPro dashboard mount while supplies last.
+                </p>
+
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/62">
+                  NJDrive50 premium features are the primary value of the
+                  yearly subscription. The ZyroPro mount is a limited launch
+                  promotion fulfilled separately after an eligible yearly
+                  subscription is confirmed.
+                </p>
+
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={handleGoToStore}
+                    className="min-h-[48px] rounded-2xl bg-[#F9C80E] px-5 py-3 text-sm font-extrabold text-[#08194A] shadow-sm transition hover:bg-[#FFD84A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
+                  >
+                    Get yearly access on Google Play
+                  </button>
+
+                  <a
+                    href="#subscription-details"
+                    className="inline-flex min-h-[48px] items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9C80E] focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
+                  >
+                    View subscription details
+                  </a>
+                </div>
+
+                <p className="mt-4 text-xs leading-5 text-white/48">
+                  Eligibility, availability, and claim details are provided in
+                  the app for qualifying yearly subscribers.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center bg-[#061121] p-5 sm:p-7">
+                <div className="w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 shadow-[0_24px_60px_rgba(2,6,23,0.45)]">
+                  <img
+                    src="/zyropro.png"
+                    alt="ZyroPro dashboard mount"
+                    width="720"
+                    height="405"
+                    loading="lazy"
+                    decoding="async"
+                    className="h-auto w-full rounded-xl object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            id="subscription-details"
+            className="rounded-[28px] border border-[#08194A]/10 bg-white px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:px-6 sm:py-6"
+          >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
@@ -403,7 +464,7 @@ export default function PricingPageClient({
                 </p>
 
                 <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
-                  Core app features
+                  Core premium features
                 </h2>
               </div>
 
@@ -470,23 +531,13 @@ export default function PricingPageClient({
 
                 <div className="rounded-2xl bg-[#F7F9FC] px-4 py-4">
                   <h3 className="text-sm font-bold text-[#08194A]">
-                    How do I avoid being charged after the free trial?
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-[#08194A]/68">
-                    Cancel the subscription in Google Play before the 7-day trial
-                    ends. If you do not cancel before the trial ends, the first
-                    billing period begins automatically.
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-[#F7F9FC] px-4 py-4">
-                  <h3 className="text-sm font-bold text-[#08194A]">
                     Does uninstalling the app cancel my subscription?
                   </h3>
+
                   <p className="mt-2 text-sm leading-6 text-[#08194A]/68">
                     No. Uninstalling NJDrive50 does not cancel an active Google
-                    Play subscription. Manage or cancel subscriptions in Google
-                    Play.
+                    Play subscription. Manage or cancel your subscription
+                    through Google Play.
                   </p>
                 </div>
 
@@ -494,9 +545,23 @@ export default function PricingPageClient({
                   <h3 className="text-sm font-bold text-[#08194A]">
                     Where do I manage or cancel my subscription?
                   </h3>
+
                   <p className="mt-2 text-sm leading-6 text-[#08194A]/68">
-                    You can manage or cancel your subscription through your
+                    You can manage, change, or cancel your subscription in your
                     Google Play account subscription settings.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-[#F7F9FC] px-4 py-4">
+                  <h3 className="text-sm font-bold text-[#08194A]">
+                    How does the ZyroPro launch bonus work?
+                  </h3>
+
+                  <p className="mt-2 text-sm leading-6 text-[#08194A]/68">
+                    The first 50 qualifying yearly subscribers may claim one
+                    free ZyroPro dashboard mount while supplies last. Eligibility
+                    and claim instructions are provided inside NJDrive50 after
+                    an eligible yearly subscription is confirmed.
                   </p>
                 </div>
               </div>
@@ -509,31 +574,29 @@ export default function PricingPageClient({
                 </div>
 
                 <h2 className="mt-3 text-2xl font-extrabold tracking-tight">
-                  Install and start your free trial
+                  Get started in the Android app
                 </h2>
 
                 <p className="mt-3 text-sm leading-6 text-white/72">
-                  Install NJDrive50 from Google Play and start your 7-day free
-                  trial using Google Play in-app billing. A valid payment method
-                  may be required to begin the trial.
+                  Install NJDrive50 from Google Play to choose a subscription
+                  plan, manage premium access, and track supervised driving
+                  progress.
                 </p>
 
                 <div className="mt-5 rounded-2xl bg-white/8 p-4">
-  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
-    Subscription options
-  </p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
+                    Best value
+                  </p>
 
-  <p className="mt-2 text-2xl font-extrabold tracking-tight">
-    $39.99 / year
-  </p>
+                  <p className="mt-2 text-2xl font-extrabold tracking-tight">
+                    $29.99 / year
+                  </p>
 
-  <p className="mt-1 text-sm text-white/62">
-    Equivalent to $3.33/month, billed annually after a 7-day free trial.
-    Monthly billing also available at $4.99/month. Uninstalling the app
-    does not cancel your subscription.
-  </p>
-</div>
-
+                  <p className="mt-1 text-sm text-white/62">
+                    Equivalent to about $2.50 per month, billed annually.
+                    Monthly access is also available for $4.99/month.
+                  </p>
+                </div>
 
                 <GooglePlayButton
                   onClick={handleGoToStore}
@@ -543,9 +606,8 @@ export default function PricingPageClient({
 
                 <p className="mt-3 text-xs leading-5 text-white/56">
                   Google Play handles subscription signup, billing, renewals,
-                  cancellations, and subscription management for NJDrive50.
-                  Refund eligibility follows Google Play policies and applicable
-                  law.
+                  cancellations, and subscription management. Refund eligibility
+                  follows Google Play policies and applicable law.
                 </p>
 
                 <a

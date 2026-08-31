@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const MAX_PROMPT_LENGTH = 2000;

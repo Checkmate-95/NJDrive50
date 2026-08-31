@@ -4,16 +4,18 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "build:web": "next build",
-    "start:web": "next start",
-    "dev:web": "next dev",
-    "lint": "eslint .",
-    "preview": "vite preview",
-    "ai-server": "node --env-file=.env.local api/index.cjs",
-    "routes-proxy": "tsx routesProxy.ts"
-  },
+  "dev": "vite",
+  "build": "tsc -b && vite build",
+  "build:web": "next build",
+  "start:web": "next start",
+  "dev:web": "next dev",
+  "lint": "eslint .",
+  "preview": "vite preview",
+  "ai-server": "node --env-file=.env.local api/index.cjs",
+  "dev:api": "node api/index.cjs",
+  "start:api": "node api/index.cjs",
+  "routes-proxy": "tsx routesProxy.ts"
+},
   "dependencies": {
     "@capacitor-community/background-geolocation": "^1.2.26",
     "@capacitor-community/keep-awake": "^8.0.1",

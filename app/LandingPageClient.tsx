@@ -555,15 +555,15 @@ export default function LandingPageClient({
               </div>
 
               <div className="flex justify-center md:justify-end">
-                <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-[#061121] p-3 shadow-[0_24px_60px_rgba(2,6,23,0.45)]">
-                  <img
-                    src="/images/zyropro.png"
-                    alt="ZyroPro Dashboard Mount"
-                    width="720"
-                    height="405"
-                    loading="lazy"
-                    decoding="async"
-                    className="h-auto w-full rounded-xl object-cover"
+  <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-[#061121] p-3 shadow-[0_24px_60px_rgba(2,6,23,0.45)]">
+    <img
+      src="/zyropro.png"
+      alt="ZyroPro Dashboard Mount"
+      width="720"
+      height="405"
+      loading="lazy"
+      decoding="async"
+      className="h-auto w-full rounded-xl object-cover"
                   />
                 </div>
               </div>

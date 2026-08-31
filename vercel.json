@@ -1,5 +1,13 @@
 {
+  "functions": {
+    "api/index.cjs": {
+      "runtime": "nodejs24.x"
+    }
+  },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.cjs" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.cjs"
+    }
   ]
 }

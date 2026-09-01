@@ -3,20 +3,20 @@ import { useNav } from "../state/navStore"
 import { clearProfile, clearTeenPhoto } from "../state/profileStore"
 
 export default function RestartOnboarding() {
-  const { setScreen, goBack } = useNav()
+  const { resetTo, goBack } = useNav()
 
   const handleRestart = () => {
     clearProfile()
     clearTeenPhoto()
-    setScreen("intro")
+    resetTo("login")
   }
 
   return (
-    <main className="min-h-screen bg-white text-[#08194A] flex flex-col items-center justify-center p-6 gap-6">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-white p-6 text-[#08194A]">
       <h1 className="text-2xl font-extrabold">Restart Onboarding</h1>
 
       <p className="max-w-sm text-center text-sm text-[#08194A]/70">
-        This will reset your onboarding information and return you to the setup screen.
+        This will reset your onboarding information and return you to the login screen.
       </p>
 
       <button

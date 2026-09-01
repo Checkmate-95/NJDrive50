@@ -128,32 +128,41 @@ export default function App() {
 
   // ─── Firebase Auth + User-Scoped Store Hydration ───────────────────────────
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setAuthUser(user)
+  const callIdRef = { current: 0 }
 
-      if (!user) {
-        resetProfileStore()
-        resetDriveStore()
-        resetActiveDriveStore()
-      } else {
-        setActiveProfileUser(user.uid)
-        await setActiveDriveUser(user.uid)
-      }
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const myCallId = ++callIdRef.current
+    setAuthUser(user)
 
-      const { value: testMode } = await Preferences.get({ key: "testMode" })
+    if (!user) {
+      resetProfileStore()
+      resetDriveStore()
+      resetActiveDriveStore()
+    } else {
+      setActiveProfileUser(user.uid)
+      await setActiveDriveUser(user.uid)
+    }
 
-      if (testMode === "true") {
-        setAuthReady(true)
-        setScreen("home")
-        return
-      }
+    // Bail if a newer auth event fired while we were awaiting above
+    if (myCallId !== callIdRef.current) return
 
-      startupController(user)
+    const { value: testMode } = await Preferences.get({ key: "testMode" })
+
+    // Bail again — a newer event may have resolved during this await too
+    if (myCallId !== callIdRef.current) return
+
+    if (testMode === "true") {
       setAuthReady(true)
-    })
+      setScreen("home")
+      return
+    }
 
-    return () => unsubscribe()
-  }, [setScreen])
+    startupController(user)
+    setAuthReady(true)
+  })
+
+  return () => unsubscribe()
+}, [setScreen])
 
   // ─── Safe Screen Fallback ───────────────────────────────────────────────────
   const safeScreen: Screen = screen ?? (authUser ? "home" : "login")

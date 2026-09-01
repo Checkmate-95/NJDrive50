@@ -114,39 +114,45 @@ export default function App() {
   )
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      const myCallId = ++authCallIdRef.current
-      setAuthUser(user)
+  const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const myCallId = ++authCallIdRef.current
+    setAuthUser(user)
 
-      if (myCallId !== authCallIdRef.current) return
+    if (myCallId !== authCallIdRef.current) return
 
-      if (!user) {
-        resetProfileStore()
-        resetDriveStore()
-        resetActiveDriveStore()
-        if (myCallId !== authCallIdRef.current) return
-      } else {
-        setActiveProfileUser(user.uid)
-        if (myCallId !== authCallIdRef.current) return
-        await setActiveDriveUser(user.uid)
-        if (myCallId !== authCallIdRef.current) return
-      }
-
-      const { value: testMode } = await Preferences.get({ key: "testMode" })
-      if (myCallId !== authCallIdRef.current) return
-
-      if (testMode === "true") {
-        setAuthReady(true)
-        setScreen("home")
-        return
-      }
-
-      startupController(user)
+    if (!user) {
+      resetProfileStore()
+      resetDriveStore()
+      resetActiveDriveStore()
+      useNav.getState().resetTo("login")
       setAuthReady(true)
-    })
+      return
+    }
 
-    return () => unsubscribe()
-  }, [setScreen])
+    setActiveProfileUser(user.uid)
+
+    if (myCallId !== authCallIdRef.current) return
+
+    await setActiveDriveUser(user.uid)
+
+    if (myCallId !== authCallIdRef.current) return
+
+    const { value: testMode } = await Preferences.get({ key: "testMode" })
+
+    if (myCallId !== authCallIdRef.current) return
+
+    if (testMode === "true") {
+      setAuthReady(true)
+      setScreen("home")
+      return
+    }
+
+    startupController(user)
+    setAuthReady(true)
+  })
+
+  return () => unsubscribe()
+}, [setScreen])
 
   const safeScreen: Screen = screen ?? (authUser ? "home" : "login")
 

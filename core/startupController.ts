@@ -16,9 +16,11 @@ export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
 
   if (!authUser) {
-    nav.resetTo("login")
-    return
-  }
+  nav.resetTo("login")
+  return
+}
+
+
 
   const isDevBuild = import.meta.env.DEV
   const shouldBypassEntitlement =

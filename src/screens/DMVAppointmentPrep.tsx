@@ -2,6 +2,7 @@
 import type { ReactNode } from "react"
 import { loadOnboardingData } from "../../core/ReminderEngine"
 import { useNav } from "../state/navStore"
+import { auth } from "../firebase"
 
 type PrepCardProps = {
   title: string
@@ -38,7 +39,8 @@ function PrepList({ items }: { items: ReactNode[] }) {
 
 export default function DMVAppointmentPrep() {
   const { goBack } = useNav()
-  const onboarding = loadOnboardingData()
+  const userId = auth.currentUser?.uid ?? null
+  const onboarding = loadOnboardingData(userId)
   const teenName = onboarding?.teenName || "Teen Driver"
 
   return (

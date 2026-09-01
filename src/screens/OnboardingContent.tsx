@@ -9,6 +9,8 @@ import {
   type SetStateAction,
 } from "react"
 
+import { auth } from "../firebase"
+
 
 import type { Screen } from "../App"
 import BottomPanel from "../components/meters/BottomPanel"
@@ -380,9 +382,12 @@ const ParentPanelContent = memo(function ParentPanelContent({
 export default function OnboardingContent({
   setScreen,
 }: OnboardingContentProps) {
-  const [saved, setSaved] = useState<OnboardingData>(() => loadOnboardingData())
-
+  const userId = auth.currentUser?.uid ?? null
   const { isLoaded } = useMapContext()
+
+  const [saved, setSaved] = useState<OnboardingData>(() =>
+    loadOnboardingData(userId)
+  )
 
   const photoInputRef = useRef<HTMLInputElement | null>(null)
   const addressSelectedFromAutocompleteRef = useRef(false)
@@ -401,6 +406,7 @@ export default function OnboardingContent({
   const [homeCounty, setHomeCounty] = useState(saved.homeCounty ?? "")
   const [homeLat, setHomeLat] = useState<number | null>(saved.homeLat ?? null)
   const [homeLng, setHomeLng] = useState<number | null>(saved.homeLng ?? null)
+
   const hasAddressResolution = Boolean(
     homeTown || homeZip || homeCounty || homeLat !== null || homeLng !== null
   )
@@ -472,12 +478,12 @@ export default function OnboardingContent({
   ])
 
   const persistOnboarding = (overrides: Partial<OnboardingData> = {}) => {
-    const updated = { ...latestDataRef.current, ...overrides }
-    latestDataRef.current = updated
-    setSaved(updated)
-    saveOnboardingData(updated)
-  }
+  const updated = { ...latestDataRef.current, ...overrides }
 
+  latestDataRef.current = updated
+  setSaved(updated)
+  saveOnboardingData(userId, updated)
+}
   const clearResolvedAddressState = () => {
     setHomeTown("")
     setHomeZip("")

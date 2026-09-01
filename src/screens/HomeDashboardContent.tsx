@@ -14,6 +14,7 @@ import { loadOnboardingData } from "../../core/ReminderEngine"
 import { navigate } from "../navigation/navMap"
 import { useActiveDriveStore } from "../state/activeDriveStore"
 import { Capacitor } from '@capacitor/core'
+import { auth } from "../firebase"
 
 
 type HomeDashboardContentProps = {
@@ -128,7 +129,8 @@ export default function HomeDashboardContent({
 }, [showLocationDisclosure]);
 
 
-  const onboarding = useMemo(() => loadOnboardingData(), [])
+  const userId = auth.currentUser?.uid ?? null
+  const onboarding = useMemo(() => loadOnboardingData(userId), [userId])
 
   const totalRequired = 50
   const nightRequired = 10
@@ -512,7 +514,7 @@ if (permissionGranted) {
                   </p>
                   <h3 className="mt-1 text-lg font-bold sm:text-xl">
                     {hasActiveDrive
-                      ? `Continue ${onboarding.teenName?.trim() || "Teen"}'s current drive`
+                      ? `Continue ${onboarding?.teenName?.trim() || "Teen"}'s current drive`
                       : "Start a new drive"}
                   </h3>
                   <p className="mt-1 max-w-[34rem] text-sm leading-relaxed text-white/72">

@@ -1,5 +1,6 @@
 // src/core/ReminderEngine.ts
 
+
 export type ReminderPreferences = {
   weeklyHoursReminder: boolean
   permitExpiryReminder: boolean
@@ -33,7 +34,7 @@ export type CalculatedMilestones = {
 export type ReminderType = keyof ReminderPreferences
 
 const REMINDER_PREFS_KEY = "njdrive50_reminder_prefs"
-const ONBOARDING_DATA_KEY = "njdrive50_onboarding_data"
+const ONBOARDING_DATA_KEY_PREFIX = "njdrive50_onboarding_data"
 const REMINDER_SCHEDULE_KEY = "njdrive50_reminder_schedule"
 const REMINDER_SCHEDULE_EVENT = "njdrive50-reminder-schedule-change"
 
@@ -83,7 +84,10 @@ type ReminderSchedule = {
 }
 
 function isDevMode(): boolean {
-  if (typeof process !== "undefined" && process.env?.NODE_ENV === "development") {
+  if (
+    typeof process !== "undefined" &&
+    process.env?.NODE_ENV === "development"
+  ) {
     return true
   }
   try {
@@ -112,6 +116,20 @@ function safeSetItem(key: string, value: string): boolean {
   } catch {
     return false
   }
+}
+
+function safeRemoveItem(key: string): boolean {
+  try {
+    localStorage.removeItem(key)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function getOnboardingDataKey(userId: string | null): string | null {
+  if (!userId) return null
+  return `${ONBOARDING_DATA_KEY_PREFIX}:${userId}`
 }
 
 function emitReminderScheduleChange() {
@@ -146,9 +164,15 @@ function parseDateParts(
   }
 
   if (
-    !Number.isFinite(year) || year < 1900 || year > 2100 ||
-    !Number.isFinite(month) || month < 1 || month > 12 ||
-    !Number.isFinite(day) || day < 1 || day > 31
+    !Number.isFinite(year) ||
+    year < 1900 ||
+    year > 2100 ||
+    !Number.isFinite(month) ||
+    month < 1 ||
+    month > 12 ||
+    !Number.isFinite(day) ||
+    day < 1 ||
+    day > 31
   ) {
     return null
   }
@@ -185,7 +209,11 @@ function addMonthsClamped(date: Date, months: number): Date {
   const targetYear = year + Math.floor(targetMonthIndex / 12)
   const normalizedMonth = ((targetMonthIndex % 12) + 12) % 12
 
-  const lastDayOfTargetMonth = new Date(targetYear, normalizedMonth + 1, 0).getDate()
+  const lastDayOfTargetMonth = new Date(
+    targetYear,
+    normalizedMonth + 1,
+    0
+  ).getDate()
   const clampedDay = Math.min(day, lastDayOfTargetMonth)
 
   return new Date(
@@ -233,31 +261,45 @@ export function loadReminderPreferences(): ReminderPreferences {
 
     return {
       weeklyHoursReminder:
-        parsed.weeklyHoursReminder === true ? true
-        : parsed.weeklyHoursReminder === false ? false
-        : defaultReminderPreferences.weeklyHoursReminder,
+        parsed.weeklyHoursReminder === true
+          ? true
+          : parsed.weeklyHoursReminder === false
+            ? false
+            : defaultReminderPreferences.weeklyHoursReminder,
 
       permitExpiryReminder:
-        parsed.permitExpiryReminder === true ? true
-        : parsed.permitExpiryReminder === false ? false
-        : defaultReminderPreferences.permitExpiryReminder,
+        parsed.permitExpiryReminder === true
+          ? true
+          : parsed.permitExpiryReminder === false
+            ? false
+            : defaultReminderPreferences.permitExpiryReminder,
 
       roadTestReminder:
-        parsed.roadTestReminder === true ? true
-        : parsed.roadTestReminder === false ? false
-        : defaultReminderPreferences.roadTestReminder,
+        parsed.roadTestReminder === true
+          ? true
+          : parsed.roadTestReminder === false
+            ? false
+            : defaultReminderPreferences.roadTestReminder,
     }
   } catch {
     return { ...defaultReminderPreferences }
   }
 }
 
-export function saveOnboardingData(data: OnboardingData): boolean {
-  return safeSetItem(ONBOARDING_DATA_KEY, JSON.stringify(data))
+export function saveOnboardingData(
+  userId: string | null,
+  data: OnboardingData
+): boolean {
+  const key = getOnboardingDataKey(userId)
+  if (!key) return false
+  return safeSetItem(key, JSON.stringify(data))
 }
 
-export function loadOnboardingData(): OnboardingData {
-  const raw = safeGetItem(ONBOARDING_DATA_KEY)
+export function loadOnboardingData(userId: string | null): OnboardingData {
+  const key = getOnboardingDataKey(userId)
+  if (!key) return { ...defaultOnboardingData }
+
+  const raw = safeGetItem(key)
   if (!raw) return { ...defaultOnboardingData }
 
   try {
@@ -265,26 +307,39 @@ export function loadOnboardingData(): OnboardingData {
 
     return {
       teenName: typeof parsed.teenName === "string" ? parsed.teenName : "",
-      teenBirthday: typeof parsed.teenBirthday === "string" ? parsed.teenBirthday : "",
+      teenBirthday:
+        typeof parsed.teenBirthday === "string" ? parsed.teenBirthday : "",
       teenPhone: typeof parsed.teenPhone === "string" ? parsed.teenPhone : "",
-      permitIssueDate: typeof parsed.permitIssueDate === "string" ? parsed.permitIssueDate : "",
+      permitIssueDate:
+        typeof parsed.permitIssueDate === "string" ? parsed.permitIssueDate : "",
       state: typeof parsed.state === "string" ? parsed.state : "New Jersey",
       parentName: typeof parsed.parentName === "string" ? parsed.parentName : "",
-      parentEmail: typeof parsed.parentEmail === "string" ? parsed.parentEmail : "",
-      parentPhone: typeof parsed.parentPhone === "string" ? parsed.parentPhone : "",
-      relationship: typeof parsed.relationship === "string" ? parsed.relationship : "",
+      parentEmail:
+        typeof parsed.parentEmail === "string" ? parsed.parentEmail : "",
+      parentPhone:
+        typeof parsed.parentPhone === "string" ? parsed.parentPhone : "",
+      relationship:
+        typeof parsed.relationship === "string" ? parsed.relationship : "",
       teenPhoto: typeof parsed.teenPhoto === "string" ? parsed.teenPhoto : null,
       address: typeof parsed.address === "string" ? parsed.address : "",
-      permitNumber: typeof parsed.permitNumber === "string" ? parsed.permitNumber : "",
+      permitNumber:
+        typeof parsed.permitNumber === "string" ? parsed.permitNumber : "",
       homeTown: typeof parsed.homeTown === "string" ? parsed.homeTown : "",
       homeZip: typeof parsed.homeZip === "string" ? parsed.homeZip : "",
-      homeCounty: typeof parsed.homeCounty === "string" ? parsed.homeCounty : "",
+      homeCounty:
+        typeof parsed.homeCounty === "string" ? parsed.homeCounty : "",
       homeLat: Number.isFinite(parsed.homeLat) ? (parsed.homeLat as number) : null,
       homeLng: Number.isFinite(parsed.homeLng) ? (parsed.homeLng as number) : null,
     }
   } catch {
     return { ...defaultOnboardingData }
   }
+}
+
+export function clearOnboardingData(userId: string | null): boolean {
+  const key = getOnboardingDataKey(userId)
+  if (!key) return false
+  return safeRemoveItem(key)
 }
 
 function loadReminderSchedule(): ReminderSchedule {
@@ -392,35 +447,42 @@ export function computeReminderTriggers(
   return triggers
 }
 
-export function initializeReminders(prefs: ReminderPreferences): boolean {
-  const onboarding = loadOnboardingData()
+export function initializeReminders(
+  userId: string | null,
+  prefs: ReminderPreferences
+): boolean {
+  const onboarding = loadOnboardingData(userId)
   const triggers = computeReminderTriggers(onboarding, prefs)
 
   let allSucceeded = true
 
-  ;(Object.entries(prefs) as [ReminderType, boolean][]).forEach(([key, enabled]) => {
-    if (!enabled) return
+  ;(Object.entries(prefs) as [ReminderType, boolean][]).forEach(
+    ([key, enabled]) => {
+      if (!enabled) return
 
-    const trigger = triggers[key]
-    if (!trigger) return
+      const trigger = triggers[key]
+      if (!trigger) return
 
-    let message = ""
+      let message = ""
 
-    if (key === "roadTestReminder") {
-      message = ROAD_TEST_WARNING_MESSAGE
+      if (key === "roadTestReminder") {
+        message = ROAD_TEST_WARNING_MESSAGE
+      }
+
+      if (key === "weeklyHoursReminder") {
+        message =
+          "Weekly reminder: Log your supervised driving hours in NJDrive50."
+      }
+
+      if (key === "permitExpiryReminder") {
+        message =
+          "Your permit expires in 30 days. Make sure all requirements are complete."
+      }
+
+      const success = scheduleReminder(key, trigger, message)
+      if (!success) allSucceeded = false
     }
-
-    if (key === "weeklyHoursReminder") {
-      message = "Weekly reminder: Log your supervised driving hours in NJDrive50."
-    }
-
-    if (key === "permitExpiryReminder") {
-      message = "Your permit expires in 30 days. Make sure all requirements are complete."
-    }
-
-    const success = scheduleReminder(key, trigger, message)
-    if (!success) allSucceeded = false
-  })
+  )
 
   return allSucceeded
 }

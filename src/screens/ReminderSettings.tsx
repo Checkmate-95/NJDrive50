@@ -1,5 +1,6 @@
 // src/screens/ReminderSettings.tsx
 import { useEffect, useState } from "react"
+import { auth } from "../firebase"
 import {
   loadReminderPreferences,
   saveReminderPreferences,
@@ -9,7 +10,10 @@ import {
   loadOnboardingData,
   ROAD_TEST_WARNING_MESSAGE,
 } from "../../core/ReminderEngine"
-import type { ReminderPreferences, ReminderType } from "../../core/ReminderEngine"
+import type {
+  ReminderPreferences,
+  ReminderType,
+} from "../../core/ReminderEngine"
 import { useNav } from "../state/navStore"
 
 // ---------------------------------------------------------
@@ -74,7 +78,8 @@ function PreviewModal({
         </div>
 
         <p className="mt-3 text-xs leading-relaxed text-[#0A1E5E]/55">
-          This is a preview only. It does not send or schedule a real notification.
+          This is a preview only. It does not send or schedule a real
+          notification.
         </p>
 
         <button
@@ -114,8 +119,12 @@ function SettingItem({
       <div className="flex items-center justify-between gap-4">
         <label htmlFor={id} className="flex-1 cursor-pointer">
           <p className="font-semibold text-[#0A1E5E]">{title}</p>
-          <p className="text-sm leading-relaxed text-[#0A1E5E]/70">{description}</p>
-          <p className="mt-1 text-xs font-medium text-[#0A1E5E]/55">{timing}</p>
+          <p className="text-sm leading-relaxed text-[#0A1E5E]/70">
+            {description}
+          </p>
+          <p className="mt-1 text-xs font-medium text-[#0A1E5E]/55">
+            {timing}
+          </p>
         </label>
 
         <div className="relative shrink-0">
@@ -202,7 +211,8 @@ const reminderContent: Record<
     timing: "Sends on your scheduled weekly reminder time.",
     message: "Weekly reminder: Log your supervised driving hours in NJDrive50.",
     previewTitle: "Weekly Driving Hours",
-    previewBody: "Weekly reminder: Log your supervised driving hours in NJDrive50.",
+    previewBody:
+      "Weekly reminder: Log your supervised driving hours in NJDrive50.",
   },
   permitExpiryReminder: {
     id: "permit-expiry-reminder",
@@ -231,12 +241,16 @@ const reminderContent: Record<
 // ---------------------------------------------------------
 export default function ReminderSettings() {
   const { setScreen, goBack } = useNav()
+  const userId = auth.currentUser?.uid ?? null
 
   const [prefs, setPrefs] = useState<ReminderPreferences>(() =>
     loadReminderPreferences()
   )
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
-  const [flash, setFlash] = useState<{ type: "saved" | "restored" | null; message: string }>({
+  const [flash, setFlash] = useState<{
+    type: "saved" | "restored" | null
+    message: string
+  }>({
     type: null,
     message: "Changes save automatically.",
   })
@@ -264,7 +278,9 @@ export default function ReminderSettings() {
     return () => window.clearTimeout(timer)
   }, [flash.type, lastSavedAt, now])
 
-  const lastSavedText = flash.type ? flash.message : formatLastSaved(lastSavedAt, now)
+  const lastSavedText = flash.type
+    ? flash.message
+    : formatLastSaved(lastSavedAt, now)
 
   function markSaved(timestamp: number, message = "Saved just now.") {
     setLastSavedAt(timestamp)
@@ -281,7 +297,7 @@ export default function ReminderSettings() {
     markSaved(now)
 
     if (value) {
-      const onboarding = loadOnboardingData()
+      const onboarding = loadOnboardingData(userId)
       if (!onboarding) return
 
       const triggers = computeReminderTriggers(onboarding, updated)
@@ -298,7 +314,7 @@ export default function ReminderSettings() {
     setPrefs(defaultPrefs)
     saveReminderPreferences(defaultPrefs)
 
-    const onboarding = loadOnboardingData()
+    const onboarding = loadOnboardingData(userId)
 
     ;(Object.keys(defaultPrefs) as ReminderType[]).forEach((key) => {
       cancelReminder(key)
@@ -369,7 +385,9 @@ export default function ReminderSettings() {
             <div className="flex items-center justify-between gap-3">
               <p
                 className={`text-sm transition-colors ${
-                  flash.type ? "font-semibold text-[#0A1E5E]" : "text-[#0A1E5E]/65"
+                  flash.type
+                    ? "font-semibold text-[#0A1E5E]"
+                    : "text-[#0A1E5E]/65"
                 }`}
               >
                 {lastSavedText}
@@ -394,7 +412,8 @@ export default function ReminderSettings() {
           </button>
 
           <p className="mt-2 text-center text-xs leading-relaxed text-[#0A1E5E]/55">
-            Review recent reminder activity and confirm which notifications have been logged.
+            Review recent reminder activity and confirm which notifications have
+            been logged.
           </p>
 
           <button

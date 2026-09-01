@@ -32,7 +32,6 @@ export default function Settings() {
     setSigningOut(true)
     try {
       await signOut(auth)
-      setScreen("login")
     } catch (err) {
       console.error("Sign out failed:", err)
       setSignOutError("Could not sign out. Please check your connection and try again.")

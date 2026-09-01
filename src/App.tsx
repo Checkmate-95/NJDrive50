@@ -10,36 +10,32 @@ import type { User } from "firebase/auth"
 import { onAuthStateChanged } from "firebase/auth"
 import { auth } from "./firebase"
 import { startupController } from "../core/startupController"
-
-// ─── Layout & Core Components ─────────────────────────────────────────────────
 import AppShell from "./layout/AppShell"
 import ErrorBoundary from "./components/ErrorBoundary"
-
-// ─── Eager Screens ────────────────────────────────────────────────────────────
 import HomeDashboardContent from "./screens/HomeDashboardContent"
 import ActiveDrive from "./screens/ActiveDriveContent"
 import Onboarding from "./screens/OnboardingContent"
 import HomeIntro from "./screens/HomeIntroContent"
-
-// ─── Auth Screens ─────────────────────────────────────────────────────────────
 import Login from "./Login"
 import Register from "./Register"
 import ForgotPassword from "./ForgotPassword"
-
 import { Preferences } from "@capacitor/preferences"
-
-// ─── Legal ────────────────────────────────────────────────────────────────────
 import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
 import DeleteAccount from "./screens/DeleteAccount"
 import DeleteData from "./screens/DeleteData"
-
-// ─── Capacitor ────────────────────────────────────────────────────────────────
 import { Capacitor } from "@capacitor/core"
-
 import PracticeTestPanel from "./screens/PracticeTestPanel"
+import { useNav } from "./state/navStore"
+import { MapProvider } from "./components/map/MapProvider"
+import type { DriveEntry } from "./state/driveStore"
+import { setActiveDriveUser, resetDriveStore } from "./state/driveStore"
+import { resetActiveDriveStore, useActiveDriveStore } from "./state/activeDriveStore"
+import {
+  setActiveProfileUser,
+  resetProfileStore,
+} from "./state/profileStore"
 
-// ─── Lazy Screens ─────────────────────────────────────────────────────────────
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
 const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"))
 const MilestonesContent = lazy(() => import("./screens/MilestonesContent"))
@@ -59,16 +55,7 @@ const DataCleared = lazy(() => import("./screens/DataCleared"))
 const DataClearedFull = lazy(() => import("./screens/DataClearedFull"))
 const DataClearedPartial = lazy(() => import("./screens/DataClearedPartial"))
 
-// ─── State ────────────────────────────────────────────────────────────────────
-import { useNav } from "./state/navStore"
-import { MapProvider } from "./components/map/MapProvider"
-import type { DriveEntry } from "./state/driveStore"
-import { setActiveDriveUser, resetDriveStore } from "./state/driveStore"
-import { resetActiveDriveStore, useActiveDriveStore } from "./state/activeDriveStore"
-import {
-  setActiveProfileUser,
-  resetProfileStore,
-} from "./state/profileStore"
+const authCallIdRef = { current: 0 }
 
 export type Screen =
   | "loading"
@@ -126,48 +113,43 @@ export default function App() {
     () => !Capacitor.isNativePlatform()
   )
 
-  // ─── Firebase Auth + User-Scoped Store Hydration ───────────────────────────
   useEffect(() => {
-  const callIdRef = { current: 0 }
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      const myCallId = ++authCallIdRef.current
+      setAuthUser(user)
 
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
-    const myCallId = ++callIdRef.current
-    setAuthUser(user)
+      if (myCallId !== authCallIdRef.current) return
 
-    if (!user) {
-      resetProfileStore()
-      resetDriveStore()
-      resetActiveDriveStore()
-    } else {
-      setActiveProfileUser(user.uid)
-      await setActiveDriveUser(user.uid)
-    }
+      if (!user) {
+        resetProfileStore()
+        resetDriveStore()
+        resetActiveDriveStore()
+        if (myCallId !== authCallIdRef.current) return
+      } else {
+        setActiveProfileUser(user.uid)
+        if (myCallId !== authCallIdRef.current) return
+        await setActiveDriveUser(user.uid)
+        if (myCallId !== authCallIdRef.current) return
+      }
 
-    // Bail if a newer auth event fired while we were awaiting above
-    if (myCallId !== callIdRef.current) return
+      const { value: testMode } = await Preferences.get({ key: "testMode" })
+      if (myCallId !== authCallIdRef.current) return
 
-    const { value: testMode } = await Preferences.get({ key: "testMode" })
+      if (testMode === "true") {
+        setAuthReady(true)
+        setScreen("home")
+        return
+      }
 
-    // Bail again — a newer event may have resolved during this await too
-    if (myCallId !== callIdRef.current) return
-
-    if (testMode === "true") {
+      startupController(user)
       setAuthReady(true)
-      setScreen("home")
-      return
-    }
+    })
 
-    startupController(user)
-    setAuthReady(true)
-  })
+    return () => unsubscribe()
+  }, [setScreen])
 
-  return () => unsubscribe()
-}, [setScreen])
-
-  // ─── Safe Screen Fallback ───────────────────────────────────────────────────
   const safeScreen: Screen = screen ?? (authUser ? "home" : "login")
 
-  // ─── setScreen Compat Wrapper ───────────────────────────────────────────────
   const setScreenCompat = useCallback(
     (nextScreen: Screen | ((prev: Screen) => Screen)) => {
       const next =
@@ -177,7 +159,6 @@ export default function App() {
     [safeScreen, setScreen]
   )
 
-  // ─── Scroll Reset ───────────────────────────────────────────────────────────
   useEffect(() => {
     const wasGoBack = stack.length < prevStackLengthRef.current
     prevStackLengthRef.current = stack.length
@@ -189,7 +170,6 @@ export default function App() {
     }
   }, [safeScreen, stack.length])
 
-  // ─── Loading Screen ─────────────────────────────────────────────────────────
   if (!authReady || safeScreen === "loading") {
     return (
       <div className="flex min-h-dvh w-full items-center justify-center bg-[#08194A]">
@@ -204,31 +184,22 @@ export default function App() {
     switch (safeScreen) {
       case "intro":
         return <HomeIntro setScreen={setScreenCompat} />
-
       case "login":
         return <Login />
-
       case "register":
         return <Register />
-
       case "forgotPassword":
         return <ForgotPassword />
-
       case "onboarding":
         return <Onboarding setScreen={setScreenCompat} />
-
       case "restartOnboarding":
         return <RestartOnboarding />
-
       case "dataCleared":
         return <DataCleared />
-
       case "dataClearedFull":
         return <DataClearedFull />
-
       case "dataClearedPartial":
         return <DataClearedPartial />
-
       case "home":
         return (
           <HomeDashboardContent
@@ -236,7 +207,6 @@ export default function App() {
             setLocationPermissionGranted={setLocationPermissionGranted}
           />
         )
-
       case "active":
       case "activeDrive":
         return (
@@ -245,7 +215,6 @@ export default function App() {
             setCurrentDrive={setCurrentDrive}
           />
         )
-
       case "todaysDrive":
         return currentDrive ? (
           <TodaysDrive drive={currentDrive} />
@@ -255,7 +224,6 @@ export default function App() {
             setLocationPermissionGranted={setLocationPermissionGranted}
           />
         )
-
       case "summary": {
         const activeSession = useActiveDriveStore.getState().session
         return activeSession?.isActive ? (
@@ -267,71 +235,50 @@ export default function App() {
           <DriveSummary setScreen={setScreenCompat} />
         )
       }
-
       case "driveHistory":
         return <DriveHistoryContent />
-
       case "export":
       case "exportLogs":
         return <ExportLog setScreen={setScreenCompat} />
-
       case "settings":
         return <Settings />
-
       case "teenDriverRules":
         return <TeenDriverRules />
-
       case "reminderSettings":
         return <ReminderSettings />
-
       case "reminderLog":
         return <ReminderLog />
-
       case "milestones":
         return <MilestonesContent />
-
       case "practiceTest":
         return <PracticeTestPanel />
-
       case "deleteAccount":
         return <DeleteAccount />
-
       case "deleteData":
         return <DeleteData />
-
       case "teenInfo":
       case "parentInfo":
       case "manageProfile":
         return <Onboarding setScreen={setScreenCompat} />
-
       case "dmv":
         return <DMVBundle />
-
       case "dmvPrep":
         return <DMVAppointmentPrep />
-
       case "paperwork":
         return <DMVBundle />
-
       case "share":
         return <ShareLogView />
-
       case "helpFaq":
         return <HelpFaq />
-
       case "aiHelper":
       case "aiFaq":
         return <AIHelperScreen />
-
       case "privacy":
         return <PrivacyPolicy />
-
       case "terms":
         return <TermsOfUse />
-
       case "about":
         return <Settings />
-
       default:
         return authUser ? (
           <HomeDashboardContent
@@ -344,7 +291,6 @@ export default function App() {
     }
   }
 
-  // ─── Main Render ────────────────────────────────────────────────────────────
   return (
     <AppShell
       user={authUser}

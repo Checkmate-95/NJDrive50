@@ -223,14 +223,6 @@ async function startForegroundService(body: string): Promise<void> {
   if (!Capacitor.isNativePlatform()) return
 
   try {
-    const allowed = await ensureForegroundServicePermission()
-
-    if (!allowed) {
-      console.warn("[ForegroundService] Notification permission not granted")
-      foregroundServiceStarted = false
-      return
-    }
-
     await ensureForegroundServiceChannel()
 
     const { ForegroundService } = await import(
@@ -971,23 +963,32 @@ function ActiveDriveContent({
   }, [getCurrentLocation, isStartingDrive, startDrive, tick])
 
   const startNewDrive = async () => {
-    if (isStartingDrive) return
+  if (isStartingDrive) return
 
-    if (Capacitor.isNativePlatform()) {
-      const permission = await Geolocation.checkPermissions()
+  if (Capacitor.isNativePlatform()) {
+    const permission = await Geolocation.checkPermissions()
 
-      const needsPermission =
-        permission.location !== "granted" &&
-        permission.coarseLocation !== "granted"
+    const needsPermission =
+      permission.location !== "granted" &&
+      permission.coarseLocation !== "granted"
 
-      if (needsPermission) {
-        setShowDisclosure(true)
-        return
-      }
+    if (needsPermission) {
+      setShowDisclosure(true)
+      return
     }
 
-    await beginDriveSession()
+    const notificationsAllowed = await ensureForegroundServicePermission()
+    if (!notificationsAllowed) {
+      setLocationError(
+        "Notification permission is needed to show active drive tracking on Android."
+      )
+      return
+    }
   }
+
+  await beginDriveSession()
+}
+
 
   const resumeCurrentDrive = async () => {
     if (isStartingDrive) return
@@ -1543,13 +1544,21 @@ function ActiveDriveContent({
                   requested.coarseLocation === "granted"
 
                 if (!granted) {
-                  setLocationError(
-                    "Location access is needed to start and verify a drive."
-                  )
-                  return
-                }
+  setLocationError(
+    "Location access is needed to start and verify a drive."
+  )
+  return
+}
 
-                await beginDriveSession()
+const notificationsAllowed = await ensureForegroundServicePermission()
+if (!notificationsAllowed) {
+  setLocationError(
+    "Notification permission is needed to show active drive tracking on Android."
+  )
+  return
+}
+
+await beginDriveSession()
               }}
               onCancel={() => {
                 setShowDisclosure(false)

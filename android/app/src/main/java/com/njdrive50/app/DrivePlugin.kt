@@ -2,8 +2,6 @@
 package com.njdrive50.app
 
 import android.Manifest
-import android.content.Intent
-import androidx.core.content.ContextCompat
 import com.getcapacitor.JSObject
 import com.getcapacitor.PermissionState
 import com.getcapacitor.Plugin
@@ -14,7 +12,6 @@ import com.getcapacitor.annotation.PermissionCallback
 import com.getcapacitor.PluginMethod
 import com.njdrive50.app.db.DriveDao
 import com.njdrive50.app.db.DriveDatabase
-import com.njdrive50.app.DriveTrackingService
 import com.njdrive50.app.db.FinalizedDriveEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -74,18 +71,12 @@ class DrivePlugin : Plugin() {
     }
 
     private fun launchDriveService(call: PluginCall, driveId: String) {
-        val intent = Intent(context, DriveTrackingService::class.java).apply {
-            action = DriveTrackingService.ACTION_START
-            putExtra(DriveTrackingService.EXTRA_DRIVE_ID, driveId)
-        }
-        ContextCompat.startForegroundService(context, intent)
-
-        val result = JSObject().apply {
-            put("driveId", driveId)
-            put("status", "ACTIVE")
-        }
-        call.resolve(result)
+    val result = JSObject().apply {
+        put("driveId", driveId)
+        put("status", "ACTIVE")
     }
+    call.resolve(result)
+}
 
     // -----------------------------
     // STOP DRIVE
@@ -98,15 +89,8 @@ class DrivePlugin : Plugin() {
             return
         }
 
-        val ctx = context
-        val intent = Intent(ctx, DriveTrackingService::class.java).apply {
-            action = DriveTrackingService.ACTION_STOP
-            putExtra(DriveTrackingService.EXTRA_DRIVE_ID, driveId)
-        }
-        ContextCompat.startForegroundService(ctx, intent)
-
         scope.launch {
-            val dao = DriveDatabase.getInstance(ctx).driveDao()
+            val dao = DriveDatabase.getInstance(context).driveDao()
             val entity = waitForFinalizedDrive(dao, driveId)
 
             if (entity == null) {

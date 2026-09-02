@@ -10,12 +10,28 @@ export default function BackgroundLocationDisclosure({
       <h2 className="mb-3 text-xl font-semibold">
         Allow Location for Active Drive Tracking
       </h2>
-      <p className="mb-4 text-sm leading-6">
-        NJDrive50 collects location data to record active drives, calculate
-        mileage, save route history, and verify day and night driving. During
-        an active drive, location may continue to be collected even when the
-        app is minimized or not in use so your driving log stays accurate.
+
+      <p className="mb-3 text-sm leading-6">
+        NJDrive50 uses your precise location only while you have an active
+        drive running, to record your route, calculate mileage, and verify
+        day and night driving hours for your supervised driving log.
       </p>
+
+      <p className="mb-3 text-sm leading-6">
+        Once you tap <span className="font-semibold">Start Drive</span>,
+        location continues recording even if you switch apps, lock your
+        screen, or minimize NJDrive50 — this keeps your drive log accurate
+        if your phone goes idle mid-trip. Recording stops automatically when
+        you tap <span className="font-semibold">Stop Drive</span> or end the
+        active drive from the app.
+      </p>
+
+      <p className="mb-4 text-sm leading-6">
+        NJDrive50 does not collect your location at any other time. You can
+        review, export, or delete your drive history anytime from{" "}
+        <span className="font-semibold">Settings</span>.
+      </p>
+
       <div className="flex justify-end gap-3">
         <button
           type="button"

@@ -233,7 +233,7 @@ async function startForegroundService(body: string): Promise<void> {
       id: FS_NOTIFICATION_ID,
       title: "NJDrive50 — Drive Active",
       body,
-      smallIcon: "ic_launcher_foreground",
+      smallIcon: "ic_stat_drive",
       silent: true,
       notificationChannelId: FS_CHANNEL_ID,
       serviceType: 8,
@@ -258,7 +258,7 @@ async function updateForegroundService(body: string): Promise<void> {
       id: FS_NOTIFICATION_ID,
       title: "NJDrive50 — Drive Active",
       body,
-      smallIcon: "ic_launcher_foreground",
+      smallIcon: "ic_stat_drive",
       notificationChannelId: FS_CHANNEL_ID,
     })
   } catch (error) {

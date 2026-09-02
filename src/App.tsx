@@ -97,6 +97,8 @@ export type Screen =
   | "login"
   | "register"
   | "forgotPassword"
+  | "forgotIdentifier"
+
 
 export default function App() {
   const viteMode = import.meta.env?.MODE

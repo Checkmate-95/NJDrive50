@@ -104,8 +104,8 @@ export const NAV = {
 
   restartOnboarding: {},
   dataCleared: {},
-  dataClearedFull: {},        // ← add this
-  dataClearedPartial: {},     // ← add this
+  dataClearedFull: {},
+  dataClearedPartial: {},
 
   dmv: {
     next: "dmvPrep",
@@ -147,6 +147,7 @@ export const NAV = {
   login: {
     continue: "home",
     forgotPassword: "forgotPassword",
+    forgotIdentifier: "forgotIdentifier",
     register: "register",
   },
 
@@ -157,6 +158,13 @@ export const NAV = {
 
   forgotPassword: {
     continue: "login",
+    back: "login",
+  },
+
+  forgotIdentifier: {
+    forgotPassword: "forgotPassword",
+    back: "login",
+    login: "login",
   },
 
   privacy: {

@@ -5,12 +5,13 @@ import type { FirebaseError } from "firebase/app";
 import { auth } from "./firebase";
 import { useNav } from "./state/navStore";
 
+// NOTE: auth/user-not-found is intentionally NOT surfaced as a distinct
+// error. Showing it would leak whether an email is registered
+// (email enumeration attack). We treat it as a silent success instead.
 function getFriendlyError(code: string): string {
   switch (code) {
     case "auth/invalid-email":
       return "Please enter a valid email address.";
-    case "auth/user-not-found":
-      return "No account found with that email.";
     case "auth/too-many-requests":
       return "Too many attempts. Please wait a moment and try again.";
     case "auth/network-request-failed":
@@ -40,11 +41,17 @@ export default function ForgotPassword() {
     setLoading(true);
 
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email.trim());
       setSent(true);
     } catch (err: unknown) {
       const firebaseErr = err as FirebaseError;
-      setError(getFriendlyError(firebaseErr.code));
+
+      // Never reveal that an account doesn't exist — show success instead.
+      if (firebaseErr.code === "auth/user-not-found") {
+        setSent(true);
+      } else {
+        setError(getFriendlyError(firebaseErr.code));
+      }
     } finally {
       setLoading(false);
     }
@@ -63,10 +70,10 @@ export default function ForgotPassword() {
               Reset link sent
             </h1>
             <p className="mt-2 text-sm text-[#08194A]/60">
-              We sent a password reset link to{" "}
-              <span className="font-semibold text-[#08194A]">{email}</span>.
-              Follow the instructions in the email, then sign in with your new
-              password.
+              If an account exists for{" "}
+              <span className="font-semibold text-[#08194A]">{email}</span>,
+              we sent a password reset link. Follow the instructions in the
+              email, then sign in with your new password.
             </p>
           </div>
 
@@ -148,6 +155,8 @@ export default function ForgotPassword() {
                 inputMode="email"
                 autoComplete="email"
                 required
+                aria-invalid={!!error}
+                aria-describedby={error ? "reset-error" : undefined}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -158,7 +167,9 @@ export default function ForgotPassword() {
             {/* Error */}
             {error && (
               <div
+                id="reset-error"
                 role="alert"
+                aria-live="assertive"
                 className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
               >
                 {error}

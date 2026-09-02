@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { Preferences } from "@capacitor/preferences";
 
@@ -7,7 +7,7 @@ import { useNav } from "./state/navStore";
 
 const REMEMBER_EMAIL_KEY = "njdrive50_remembered_email";
 
-// ⭐ Cross-platform storage helpers — Capacitor's web implementation
+// Cross-platform storage helpers — Capacitor's web implementation
 // already falls back to localStorage on desktop/browser, so no manual fallback needed.
 async function getRememberedEmail(): Promise<string | null> {
   try {
@@ -46,6 +46,9 @@ function getFirebaseErrorCode(err: unknown): string {
   return "";
 }
 
+// NOTE: user-not-found / wrong-password / invalid-credential are intentionally
+// collapsed into one generic message to avoid leaking account existence
+// (matches Firebase's default email-enumeration protection).
 function getFriendlyError(code: string): string {
   switch (code) {
     case "auth/invalid-email":
@@ -75,7 +78,10 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // ⭐ Load remembered email on mount
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  // Load remembered email on mount
   useEffect(() => {
     let isMounted = true;
     getRememberedEmail().then((value) => {
@@ -89,6 +95,14 @@ export default function Login() {
     };
   }, []);
 
+  // Move focus to the error message whenever it changes, so screen readers
+  // announce it and keyboard users notice the failure immediately.
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.focus();
+    }
+  }, [error]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -101,18 +115,19 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, email.trim(), password);
 
-      // ⭐ Save or clear remembered email based on checkbox
+      // Save or clear remembered email based on checkbox
       if (rememberMe) {
         await setRememberedEmail(email.trim());
       } else {
         await removeRememberedEmail();
       }
 
-      // ✅ Do nothing — startupController handles navigation via onAuthStateChanged
+      // Do nothing — startupController handles navigation via onAuthStateChanged
     } catch (err: unknown) {
       setError(getFriendlyError(getFirebaseErrorCode(err)));
+      passwordRef.current?.focus();
     } finally {
       setLoading(false);
     }
@@ -151,6 +166,8 @@ export default function Login() {
                 inputMode="email"
                 autoComplete="email"
                 required
+                aria-invalid={!!error}
+                aria-describedby={error ? "login-error" : undefined}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -178,9 +195,12 @@ export default function Login() {
               <div className="relative mt-2">
                 <input
                   id="password"
+                  ref={passwordRef}
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
+                  aria-invalid={!!error}
+                  aria-describedby={error ? "login-error" : undefined}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -208,7 +228,7 @@ export default function Login() {
               </div>
             </div>
 
-            {/* ⭐ Remember Me */}
+            {/* Remember Me */}
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -244,8 +264,12 @@ export default function Login() {
             {/* Error */}
             {error && (
               <div
+                id="login-error"
+                ref={errorRef}
                 role="alert"
-                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
+                aria-live="assertive"
+                tabIndex={-1}
+                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 outline-none"
               >
                 {error}
               </div>
@@ -264,6 +288,13 @@ export default function Login() {
 
         {/* Footer links */}
         <div className="mt-6 flex flex-col items-center gap-3 text-center text-sm text-[#08194A]/50">
+          <button
+            type="button"
+            onClick={() => setScreen("forgotIdentifier")}
+            className="font-semibold text-[#08194A]/70 underline-offset-2 hover:underline"
+          >
+            Forgot your email?
+          </button>
           <button
             type="button"
             onClick={() => setScreen("register")}

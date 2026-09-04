@@ -24,8 +24,20 @@ export interface StartDriveResult {
   status: 'ACTIVE'
 }
 
+export interface PauseDriveResult {
+  driveId: string
+  status: 'PAUSED'
+}
+
+export interface ResumeDriveResult {
+  driveId: string
+  status: 'ACTIVE'
+}
+
 export interface NativeDrivePlugin {
   startDrive(options: { driveId: string }): Promise<StartDriveResult>
+  pauseDrive(options: { driveId: string }): Promise<PauseDriveResult>
+  resumeDrive(options: { driveId: string }): Promise<ResumeDriveResult>
   stopDrive(options: { driveId: string }): Promise<FinalizedDrive>
   getDriveById(options: { driveId: string }): Promise<FinalizedDrive>
 }

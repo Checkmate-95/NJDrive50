@@ -12,6 +12,8 @@ import { Geolocation } from "@capacitor/geolocation"
 
 import BackgroundLocationDisclosure from "../components/BackgroundLocationDisclosure"
 import { fetchWeather } from "../services/weather"
+import Drive from "../native/drive"
+import type { FinalizedDrive } from "../native/drive"
 
 import {
   useActiveDriveStore,
@@ -40,6 +42,14 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, ""
 const ROUTE_TIMEOUT_MS = 8_000
 const FS_NOTIFICATION_ID = 1001
 const FS_CHANNEL_ID = "njdrive50_drive"
+
+// Live-UI-only GPS poll interval. This does NOT feed the saved drive record —
+// that comes from the native Drive plugin (DriveTrackingService.kt), which
+// records continuously and survives backgrounding/the 5-minute JS-GPS kill.
+// This poll exists purely so the on-screen timer/day-night/speed/mileage
+// numbers update while the drive is running, before the native finalize
+// result is available at stopDrive().
+const LIVE_POLL_INTERVAL_MS = 8_000
 
 let foregroundServiceStarted = false
 
@@ -282,6 +292,77 @@ async function stopForegroundService(): Promise<void> {
   }
 }
 
+// -----------------------------------------------------------------
+// Native FinalizedDrive -> DriveEntry mapping.
+// Native is the source of truth for duration/day-night/distance
+// (it survives backgrounding and the JS GPS kill); fields it doesn't
+// carry (weather, route trail, photo) come from the JS-tracked session.
+// -----------------------------------------------------------------
+function mapFinalizedDriveToEntry(
+  finalized: FinalizedDrive,
+  fallback: {
+    weather: string | null
+    startCoord: RouteCoord | null
+    routeCoords: RouteCoord[]
+    liveMiles: number
+  }
+): DriveEntry {
+  const totalDurationHours = finalized.durationMs / 3_600_000
+  const dayDurationHours = finalized.dayDurationMs / 3_600_000
+  const nightDurationHours = finalized.nightDurationMs / 3_600_000
+
+  const miles =
+    finalized.distanceMeters !== null
+      ? finalized.distanceMeters / 1609.34
+      : safeNumber(fallback.liveMiles)
+
+  let nightCalcMode: NightCalcMode
+  let isVerifiedDay = false
+  let needsReview = false
+
+  switch (finalized.verificationStatus) {
+    case "VERIFIED":
+      nightCalcMode = "solar"
+      isVerifiedDay = finalized.driveType === "DAY_ONLY"
+      break
+    case "ESTIMATED":
+      nightCalcMode = "estimated"
+      break
+    case "INCOMPLETE":
+    default:
+      nightCalcMode = "unverified"
+      needsReview = true
+      break
+  }
+
+  return {
+    id: finalized.driveId,
+    startTime: new Date(finalized.startedAtMs).toISOString(),
+    endTime: new Date(finalized.endedAtMs).toISOString(),
+
+    totalDurationHours,
+    dayDurationHours,
+    nightDurationHours,
+
+    verifiedNightDurationHours: nightDurationHours,
+    nightCalcMode,
+    isVerifiedDay,
+    needsReview,
+
+    locationEstimated: !fallback.startCoord,
+
+    source: "timer",
+    miles: safeNumber(miles),
+    milesSource: "gps-accumulated",
+
+    weather: fallback.weather,
+    routeCoords: fallback.routeCoords,
+
+    startLatitude: fallback.startCoord?.lat ?? null,
+    startLongitude: fallback.startCoord?.lng ?? null,
+  }
+}
+
 function ActiveDriveContent({
   setScreen,
   setCurrentDrive,
@@ -294,7 +375,7 @@ function ActiveDriveContent({
   const [isStartingDrive, setIsStartingDrive] = useState(false)
 
   const mountedRef = useRef(true)
-  const watchIdRef = useRef<string | null>(null)
+  const livePollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const frozenSnapshotRef = useRef<Promise<DriveEntry | null> | null>(null)
   const snapshotAbortRef = useRef<AbortController | null>(null)
   const wasRunningBeforeStopRef = useRef(false)
@@ -316,16 +397,16 @@ function ActiveDriveContent({
     setOutsideTemp,
   } = useActiveDriveStore()
 
-  const clearGpsWatch = useCallback(async () => {
-    const watchId = watchIdRef.current
-    if (!watchId) return
+  // driveId now lives in the persisted store (session.driveId), not a
+  // component ref — it must survive unmount/remount (e.g. navigating to
+  // Home and back via the "Drive Active — tap to resume" banner) or
+  // pause/resume/stop would silently lose their target driveId.
+  const driveId = session.driveId
 
-    watchIdRef.current = null
-
-    try {
-      await Geolocation.clearWatch({ id: watchId })
-    } catch {
-      // Ignore watch cleanup errors.
+  const clearLivePoll = useCallback(() => {
+    if (livePollIntervalRef.current !== null) {
+      globalThis.clearInterval(livePollIntervalRef.current)
+      livePollIntervalRef.current = null
     }
   }, [])
 
@@ -338,9 +419,9 @@ function ActiveDriveContent({
 
   const clearRuntimeLoops = useCallback(() => {
     driveActionTokenRef.current += 1
-    void clearGpsWatch()
+    clearLivePoll()
     clearNotificationInterval()
-  }, [clearGpsWatch, clearNotificationInterval])
+  }, [clearLivePoll, clearNotificationInterval])
 
   const getCurrentLocation = useCallback(async (): Promise<RouteCoord | null> => {
     if (locationRequestRef.current) {
@@ -695,14 +776,18 @@ function ActiveDriveContent({
     }
   }, [clearNotificationInterval, session.isRunning])
 
+  // Live-UI-only GPS poll. Replaces the old continuous Geolocation.watchPosition().
+  // The native Drive plugin (DriveTrackingService.kt) is the actual source of
+  // truth for the saved drive — this poll exists solely so the on-screen
+  // timer/day-night/speed/mileage numbers update while the drive is running.
   useEffect(() => {
-    void clearGpsWatch()
+    clearLivePoll()
 
     if (!session.isRunning) return
 
-    let active = true
+    let cancelled = false
 
-    const startWatch = async () => {
+    const poll = async () => {
       try {
         if (Capacitor.isNativePlatform()) {
           const permission = await Geolocation.checkPermissions()
@@ -712,138 +797,83 @@ function ActiveDriveContent({
             permission.coarseLocation === "granted"
 
           if (!granted) {
-            setLocationError(
-              "Location access is needed to verify sunlight and darkness hours."
-            )
+            if (!cancelled && mountedRef.current) {
+              setLocationError(
+                "Location access is needed to verify sunlight and darkness hours."
+              )
+            }
             return
           }
         }
 
-        const id = await Geolocation.watchPosition(
-          {
-            enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0,
-            interval: 1000,
-            minimumUpdateInterval: 1000,
-          },
-          (position) => {
-            if (!mountedRef.current || !active) return
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 8_000,
+          maximumAge: 5_000,
+        })
 
-            if (!position) {
-              setLocationError(
-                "Location updates are unavailable. Time will remain unverified until location returns."
-              )
-              return
-            }
+        if (cancelled || !mountedRef.current) return
 
-            const { latitude: lat, longitude: lng, accuracy, heading, speed } =
-              position.coords
+        const { latitude: lat, longitude: lng, accuracy, heading, speed } =
+          position.coords
 
-            if (
-              !Number.isFinite(lat) ||
-              !Number.isFinite(lng) ||
-              lat < -90 ||
-              lat > 90 ||
-              lng < -180 ||
-              lng > 180
-            ) {
-              return
-            }
-
-            setLocationError(null)
-
-            tick(
-              {
-                lat,
-                lng,
-                at:
-                  typeof position.timestamp === "number" &&
-                  Number.isFinite(position.timestamp)
-                    ? position.timestamp
-                    : Date.now(),
-                accuracy:
-                  typeof accuracy === "number" && Number.isFinite(accuracy)
-                    ? accuracy
-                    : null,
-                heading:
-                  typeof heading === "number" && Number.isFinite(heading)
-                    ? heading
-                    : null,
-                gpsSpeedMps:
-                  typeof speed === "number" && Number.isFinite(speed)
-                    ? speed
-                    : null,
-              },
-              Date.now()
-            )
-          }
-        )
-
-        if (active) {
-          watchIdRef.current = id
-        } else {
-          await Geolocation.clearWatch({ id })
+        if (
+          !Number.isFinite(lat) ||
+          !Number.isFinite(lng) ||
+          lat < -90 ||
+          lat > 90 ||
+          lng < -180 ||
+          lng > 180
+        ) {
+          return
         }
-      } catch {
-        setLocationError(
-          "Location access is needed to verify sunlight and darkness hours."
-        )
-      }
-    }
 
-    void startWatch()
+        setLocationError(null)
 
-    return () => {
-      active = false
-      void clearGpsWatch()
-    }
-  }, [clearGpsWatch, session.isRunning, tick])
-
-  useEffect(() => {
-    if (!session.isRunning) return
-
-    const HEARTBEAT_MS = 60_000
-
-    const heartbeatId = setInterval(() => {
-      Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 15_000,
-        maximumAge: 5_000,
-      })
-        .then((position) => {
-          const coord: RouteCoord = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
+        tick(
+          {
+            lat,
+            lng,
             at:
               typeof position.timestamp === "number" &&
               Number.isFinite(position.timestamp)
                 ? position.timestamp
                 : Date.now(),
             accuracy:
-              typeof position.coords.accuracy === "number" &&
-              Number.isFinite(position.coords.accuracy)
-                ? position.coords.accuracy
+              typeof accuracy === "number" && Number.isFinite(accuracy)
+                ? accuracy
                 : null,
             heading:
-              typeof position.coords.heading === "number" &&
-              Number.isFinite(position.coords.heading)
-                ? position.coords.heading
+              typeof heading === "number" && Number.isFinite(heading)
+                ? heading
                 : null,
             gpsSpeedMps:
-              typeof position.coords.speed === "number" &&
-              Number.isFinite(position.coords.speed)
-                ? position.coords.speed
+              typeof speed === "number" && Number.isFinite(speed)
+                ? speed
                 : null,
-          }
+          },
+          Date.now()
+        )
+      } catch {
+        if (!cancelled && mountedRef.current) {
+          setLocationError(
+            "Location updates are unavailable. Time will remain unverified until location returns."
+          )
+        }
+      }
+    }
 
-          useActiveDriveStore.getState().tick(coord, Date.now())
-        })
-        .catch(() => {})
-    }, HEARTBEAT_MS)
+    void poll()
+    livePollIntervalRef.current = globalThis.setInterval(
+      () => void poll(),
+      LIVE_POLL_INTERVAL_MS
+    )
 
-    return () => clearInterval(heartbeatId)
-  }, [session.isRunning])
+    return () => {
+      cancelled = true
+      clearLivePoll()
+    }
+  }, [clearLivePoll, session.isRunning, tick])
 
   useEffect(() => {
     if (!session.isRunning) return
@@ -927,12 +957,20 @@ function ActiveDriveContent({
 
     try {
       const now = Date.now()
-
-      startDrive(now, null)
+      const newDriveId = makeDriveId()
+      startDrive(now, null, { driveId: newDriveId })
       setLocationError(null)
       setShowStopConfirm(false)
 
       void startForegroundService("Drive started — tracking time and location")
+
+      // Native tracking is fire-and-forget from the UI's perspective — it
+      // runs independently of whatever happens to this JS poll below.
+      try {
+        await Drive.startDrive({ driveId: newDriveId })
+      } catch (error) {
+        console.warn("[Drive] Native startDrive failed:", error)
+      }
 
       const coord = await getCurrentLocation()
 
@@ -963,32 +1001,31 @@ function ActiveDriveContent({
   }, [getCurrentLocation, isStartingDrive, startDrive, tick])
 
   const startNewDrive = async () => {
-  if (isStartingDrive) return
+    if (isStartingDrive) return
 
-  if (Capacitor.isNativePlatform()) {
-    const permission = await Geolocation.checkPermissions()
+    if (Capacitor.isNativePlatform()) {
+      const permission = await Geolocation.checkPermissions()
 
-    const needsPermission =
-      permission.location !== "granted" &&
-      permission.coarseLocation !== "granted"
+      const needsPermission =
+        permission.location !== "granted" &&
+        permission.coarseLocation !== "granted"
 
-    if (needsPermission) {
-      setShowDisclosure(true)
-      return
+      if (needsPermission) {
+        setShowDisclosure(true)
+        return
+      }
+
+      const notificationsAllowed = await ensureForegroundServicePermission()
+      if (!notificationsAllowed) {
+        setLocationError(
+          "Notification permission is needed to show active drive tracking on Android."
+        )
+        return
+      }
     }
 
-    const notificationsAllowed = await ensureForegroundServicePermission()
-    if (!notificationsAllowed) {
-      setLocationError(
-        "Notification permission is needed to show active drive tracking on Android."
-      )
-      return
-    }
+    await beginDriveSession()
   }
-
-  await beginDriveSession()
-}
-
 
   const resumeCurrentDrive = async () => {
     if (isStartingDrive) return
@@ -1003,6 +1040,14 @@ function ActiveDriveContent({
       setShowStopConfirm(false)
 
       void startForegroundService("Drive resumed — tracking active")
+
+      if (driveId) {
+        try {
+          await Drive.resumeDrive({ driveId })
+        } catch (error) {
+          console.warn("[Drive] Native resumeDrive failed:", error)
+        }
+      }
 
       const coord = await getCurrentLocation()
 
@@ -1036,6 +1081,12 @@ function ActiveDriveContent({
 
     void updateForegroundService("Drive paused — tap Resume to continue")
     setShowStopConfirm(false)
+
+    if (driveId) {
+      Drive.pauseDrive({ driveId }).catch((error) => {
+        console.warn("[Drive] Native pauseDrive failed:", error)
+      })
+    }
   }
 
   const handlePrimaryAction = () => {
@@ -1075,6 +1126,12 @@ function ActiveDriveContent({
       void updateForegroundService(
         "Drive paused — confirm Save and End to finish"
       )
+
+      if (driveId) {
+        Drive.pauseDrive({ driveId }).catch((error) => {
+          console.warn("[Drive] Native pauseDrive failed:", error)
+        })
+      }
     }
 
     void createFrozenSnapshot().finally(() => {
@@ -1109,19 +1166,43 @@ function ActiveDriveContent({
     try {
       clearRuntimeLoops()
 
-      const finalizedDrive = frozenSnapshotRef.current
+      const fallbackSnapshot = frozenSnapshotRef.current
         ? await frozenSnapshotRef.current
         : await createFrozenSnapshot()
 
-      if (!finalizedDrive) {
+      let finalizedDrive: DriveEntry | null = null
+
+      if (driveId) {
+        try {
+          const nativeResult = await Drive.stopDrive({ driveId })
+
+          const freshSession = useActiveDriveStore.getState().session
+
+          finalizedDrive = mapFinalizedDriveToEntry(nativeResult, {
+            weather: freshSession.weather,
+            startCoord: freshSession.startCoord,
+            routeCoords: fallbackSnapshot?.routeCoords ?? [],
+            liveMiles: freshSession.liveMiles,
+          })
+        } catch (error) {
+          console.warn(
+            "[Drive] Native stopDrive failed, falling back to JS snapshot:",
+            error
+          )
+        }
+      }
+
+      const driveToSave = finalizedDrive ?? fallbackSnapshot
+
+      if (!driveToSave) {
         setLocationError(
           "This drive could not be saved because it has no recorded active time."
         )
         return
       }
 
-      saveDrive(finalizedDrive)
-      setCurrentDrive(finalizedDrive)
+      saveDrive(driveToSave)
+      setCurrentDrive(driveToSave)
 
       void stopForegroundService()
 
@@ -1544,21 +1625,21 @@ function ActiveDriveContent({
                   requested.coarseLocation === "granted"
 
                 if (!granted) {
-  setLocationError(
-    "Location access is needed to start and verify a drive."
-  )
-  return
-}
+                  setLocationError(
+                    "Location access is needed to start and verify a drive."
+                  )
+                  return
+                }
 
-const notificationsAllowed = await ensureForegroundServicePermission()
-if (!notificationsAllowed) {
-  setLocationError(
-    "Notification permission is needed to show active drive tracking on Android."
-  )
-  return
-}
+                const notificationsAllowed = await ensureForegroundServicePermission()
+                if (!notificationsAllowed) {
+                  setLocationError(
+                    "Notification permission is needed to show active drive tracking on Android."
+                  )
+                  return
+                }
 
-await beginDriveSession()
+                await beginDriveSession()
               }}
               onCancel={() => {
                 setShowDisclosure(false)

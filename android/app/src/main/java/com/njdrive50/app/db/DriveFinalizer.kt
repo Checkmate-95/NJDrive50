@@ -1,6 +1,7 @@
 package com.njdrive50.app.db
 
 import android.content.Context
+import java.util.Date
 import kotlin.math.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -59,34 +60,35 @@ object DriveFinalizer {
             totalDistanceMeters += haversine(p1.latitude, p1.longitude, p2.latitude, p2.longitude)
         }
 
-        var dayMs = 0L
-        var nightMs = 0L
+        // Max gap between consecutive points — still needs the raw point
+        // sequence, kept separate from the day/night calculation below.
         var maxGapMs = 0L
-
         for (i in 0 until points.size - 1) {
-            val p1 = points[i]
-            val p2 = points[i + 1]
-
-            val segmentDuration = p2.timestampMs - p1.timestampMs
-            if (segmentDuration <= 0) continue
-
+            val segmentDuration = points[i + 1].timestampMs - points[i].timestampMs
             if (segmentDuration > maxGapMs) maxGapMs = segmentDuration
-
-            val isNight = SolarEngine.isNight(
-                context,
-                p1.latitude,
-                p1.longitude,
-                p1.timestampMs
-            )
-
-            if (isNight) nightMs += segmentDuration
-            else dayMs += segmentDuration
         }
+
+        // Day/night split now delegates to the segment-based engine — the
+        // same one the JS side uses (SolarEngine.computeDayNightSplit mirrors
+        // src/engine/solarEngine.ts's computeDayNightSplit). This replaces
+        // the old per-point isNight() summation, which had no "unverified"
+        // concept and no protection against multi-day misclassification.
+        // Solar lookup is anchored to the drive's starting coordinates,
+        // matching how ActiveDriveContent.tsx picks a single rangeCoord
+        // for the whole drive rather than per-point coordinates.
+        val split = SolarEngine.computeDayNightSplit(
+            Date(startedAtMs),
+            Date(endedAtMs)
+        ) { date -> SolarEngine.getSolarWindowForDate(first.latitude, first.longitude, date) }
+
+        val dayMs = (split.dayHours * 3_600_000.0).toLong()
+        val nightMs = (split.nightHours * 3_600_000.0).toLong()
 
         val driveType = when {
             dayMs > 0 && nightMs > 0 -> "MIXED"
             nightMs > 0 -> "NIGHT_ONLY"
-            else -> "DAY_ONLY"
+            dayMs > 0 -> "DAY_ONLY"
+            else -> "UNKNOWN"
         }
 
         val verificationStatus = when {
@@ -94,6 +96,7 @@ object DriveFinalizer {
             points.size < MIN_POINT_COUNT -> "ESTIMATED"
             totalDistanceMeters < MIN_DISTANCE_METERS -> "ESTIMATED"
             maxGapMs > MAX_ALLOWED_GAP_MS -> "ESTIMATED"
+            split.mode == "unverified" -> "ESTIMATED"
             else -> "VERIFIED"
         }
 

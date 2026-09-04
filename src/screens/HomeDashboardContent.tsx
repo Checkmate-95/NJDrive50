@@ -1,11 +1,5 @@
 // src/screens/HomeDashboardContent.tsx
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type Dispatch,
-  type SetStateAction,
-} from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { Screen } from "../App"
 import { useDriveHistory } from "../state/driveStore"
 import { loadOnboardingData } from "../../core/ReminderEngine"
@@ -15,9 +9,10 @@ import { auth } from "../firebase"
 
 
 type HomeDashboardContentProps = {
-  setScreen: Dispatch<SetStateAction<Screen>>
-  setLocationPermissionGranted: (v: boolean) => void
+  setScreen: (s: Screen) => void
 }
+
+
 
 
 function safeNumber(val: unknown): number {
@@ -201,7 +196,8 @@ export default function HomeDashboardContent({
             {hasActiveDrive && (
               <button
                 type="button"
-                onClick={() => setScreen("active")}
+                onClick={() => setScreen("activeDrive")}
+
                 className={`mb-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-[15px] font-semibold text-white shadow-md transition-all hover:brightness-110 ${
                   activeSession?.isRunning
                     ? "animate-[pulseGreen_2s_infinite] border border-[#00C851]/40 bg-[#00C851] shadow-[0_4px_12px_rgba(0,200,81,0.35)]"

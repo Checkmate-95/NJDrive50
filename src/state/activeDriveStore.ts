@@ -30,6 +30,7 @@ export type ActiveDriveSession = {
   isRunning: boolean
   exceededMaxDuration: boolean
 
+  driveId: string | null
 
   startTime: number | null
   stopTime: number | null
@@ -80,7 +81,7 @@ type ActiveDriveStore = {
   startDrive: (
     now?: number,
     coord?: RouteCoord | null,
-    options?: StartDriveOptions
+    options?: StartDriveOptions & { driveId?: string }
   ) => void
 
 
@@ -168,6 +169,7 @@ function createInitialSession(): ActiveDriveSession {
     isRunning: false,
     exceededMaxDuration: false,
 
+    driveId: null,
 
     startTime: null,
     stopTime: null,
@@ -311,6 +313,8 @@ function normalizeSession(value: unknown): ActiveDriveSession {
     isActive: raw.isActive === true,
     isRunning: raw.isRunning === true,
     exceededMaxDuration: raw.exceededMaxDuration === true,
+
+    driveId: typeof raw.driveId === "string" ? raw.driveId : null,
 
 
     startTime: normalizeNumber(raw.startTime),
@@ -643,6 +647,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             ...createInitialSession(),
             isActive: true,
             isRunning: true,
+            driveId: options?.driveId ?? null,
             exceededMaxDuration: false,
             startTime: now,
             stopTime: null,
@@ -1189,7 +1194,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
       storage: createJSONStorage(() =>
         isBrowser() ? localStorage : noopStorage
       ),
-      version: 13,
+      version: 14,
       partialize: (state) => ({
         session: {
           ...state.session,
@@ -1198,9 +1203,9 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
           // localStorage between app sessions is a real privacy exposure
           // for a minor's driving data, and it isn't needed for resume —
           // DriveTrackingService.kt already writes the durable, final
-          // point history to the encrypted app database via
-          // DrivePointEntity. Only the single lastCoord/startCoord (needed
-          // to resume solar-mode calculations) are kept.
+          // point history to the app database via DrivePointEntity. Only
+          // the single lastCoord/startCoord (needed to resume solar-mode
+          // calculations) are kept.
           routeTrail: [],
         },
       }),

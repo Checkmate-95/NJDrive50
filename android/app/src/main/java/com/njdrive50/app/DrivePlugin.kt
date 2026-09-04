@@ -2,6 +2,8 @@
 package com.njdrive50.app
 
 import android.Manifest
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import com.getcapacitor.JSObject
 import com.getcapacitor.PermissionState
 import com.getcapacitor.Plugin
@@ -16,6 +18,7 @@ import com.njdrive50.app.db.FinalizedDriveEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -31,8 +34,9 @@ import org.json.JSONObject
 )
 class DrivePlugin : Plugin() {
 
-    private val job = Job()
+    private val job = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.IO + job)
+
 
     // -----------------------------
     // START DRIVE
@@ -71,12 +75,19 @@ class DrivePlugin : Plugin() {
     }
 
     private fun launchDriveService(call: PluginCall, driveId: String) {
-    val result = JSObject().apply {
-        put("driveId", driveId)
-        put("status", "ACTIVE")
+        // ✅ Starting: must use startForegroundService
+        val intent = Intent(context, DriveTrackingService::class.java).apply {
+            action = DriveTrackingService.ACTION_START
+            putExtra(DriveTrackingService.EXTRA_DRIVE_ID, driveId)
+        }
+        ContextCompat.startForegroundService(context, intent)
+
+        val result = JSObject().apply {
+            put("driveId", driveId)
+            put("status", "ACTIVE")
+        }
+        call.resolve(result)
     }
-    call.resolve(result)
-}
 
     // -----------------------------
     // STOP DRIVE
@@ -88,6 +99,13 @@ class DrivePlugin : Plugin() {
             call.reject("driveId is required")
             return
         }
+
+        // ✅ Stopping: plain startService, not startForegroundService
+        val stopIntent = Intent(context, DriveTrackingService::class.java).apply {
+            action = DriveTrackingService.ACTION_STOP
+            putExtra(DriveTrackingService.EXTRA_DRIVE_ID, driveId)
+        }
+        context.startService(stopIntent)
 
         scope.launch {
             val dao = DriveDatabase.getInstance(context).driveDao()

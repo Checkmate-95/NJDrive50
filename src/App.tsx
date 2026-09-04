@@ -24,7 +24,6 @@ import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
 import DeleteAccount from "./screens/DeleteAccount"
 import DeleteData from "./screens/DeleteData"
-import { Capacitor } from "@capacitor/core"
 import PracticeTestPanel from "./screens/PracticeTestPanel"
 import { useNav } from "./state/navStore"
 import { MapProvider } from "./components/map/MapProvider"
@@ -111,9 +110,8 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false)
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const prevStackLengthRef = useRef(stack.length)
-  const [locationPermissionGranted, setLocationPermissionGranted] = useState(
-    () => !Capacitor.isNativePlatform()
-  )
+  
+
 
   useEffect(() => {
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -209,12 +207,8 @@ export default function App() {
       case "dataClearedPartial":
         return <DataClearedPartial />
       case "home":
-        return (
-          <HomeDashboardContent
-            setScreen={setScreenCompat}
-            setLocationPermissionGranted={setLocationPermissionGranted}
-          />
-        )
+        return <HomeDashboardContent setScreen={setScreenCompat} />
+
       case "active":
       case "activeDrive":
         return (
@@ -227,10 +221,8 @@ export default function App() {
         return currentDrive ? (
           <TodaysDrive drive={currentDrive} />
         ) : (
-          <HomeDashboardContent
-            setScreen={setScreenCompat}
-            setLocationPermissionGranted={setLocationPermissionGranted}
-          />
+          <HomeDashboardContent setScreen={setScreenCompat} />
+
         )
       case "summary": {
         const activeSession = useActiveDriveStore.getState().session
@@ -289,10 +281,8 @@ export default function App() {
         return <Settings />
       default:
         return authUser ? (
-          <HomeDashboardContent
-            setScreen={setScreenCompat}
-            setLocationPermissionGranted={setLocationPermissionGranted}
-          />
+          <HomeDashboardContent setScreen={setScreenCompat} />
+
         ) : (
           <Login />
         )
@@ -300,19 +290,19 @@ export default function App() {
   }
 
   return (
-    <AppShell
-      user={authUser}
-      setScreen={setScreenCompat}
-      active={safeScreen}
-      locationPermissionGranted={locationPermissionGranted}
-    >
-      <MapProvider>
-        <ErrorBoundary key={safeScreen}>
-          <Suspense fallback={<div>Loading…</div>}>
-            {renderScreen()}
-          </Suspense>
-        </ErrorBoundary>
-      </MapProvider>
-    </AppShell>
-  )
+  <AppShell
+    user={authUser}
+    setScreen={setScreenCompat}
+    active={safeScreen}
+  >
+    <MapProvider>
+      <ErrorBoundary key={safeScreen}>
+        <Suspense fallback={<div>Loading…</div>}>
+          {renderScreen()}
+        </Suspense>
+      </ErrorBoundary>
+    </MapProvider>
+  </AppShell>
+)
+
 }

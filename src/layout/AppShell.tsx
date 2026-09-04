@@ -10,7 +10,6 @@ type AppShellProps = PropsWithChildren<{
   user: User | null
   setScreen: (s: Screen | ((prev: Screen) => Screen)) => void
   active: Screen
-  locationPermissionGranted: boolean
 }>
 
 const CHROMELESS_SCREENS: Screen[] = [
@@ -87,7 +86,6 @@ export default function AppShell({
   user: _user,
   setScreen,
   active,
-  locationPermissionGranted,
 }: AppShellProps) {
   const [showMore, setShowMore] = useState(false)
   const [logoutError, setLogoutError] = useState<string | null>(null)
@@ -95,7 +93,7 @@ export default function AppShell({
   const chromeHidden = CHROMELESS_SCREENS.includes(active)
   const isLegal = active === "privacy" || active === "terms"
   const moreIsActive = MORE_SCREENS.includes(active)
-  const shouldShowFloatingUi = locationPermissionGranted && !chromeHidden
+  const shouldShowFloatingUi = !chromeHidden
 
   const go = (screen: Screen) => {
     setScreen(screen)
@@ -254,47 +252,47 @@ export default function AppShell({
           <div className="mx-auto w-full max-w-[42rem] px-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-2 sm:px-3 sm:pt-3">
             <div className="grid grid-cols-5 gap-1 sm:gap-2">
               <button
-  type="button"
-  className={itemClasses("home")}
-  onClick={() => go("home")}
->
-  <span className="block truncate">Home</span>
-</button>
+                type="button"
+                className={itemClasses("home")}
+                onClick={() => go("home")}
+              >
+                <span className="block truncate">Home</span>
+              </button>
 
-<button
-  type="button"
-  className={itemClasses("driveHistory")}
-  onClick={() => go("driveHistory")}
->
-  <span className="block truncate sm:hidden">Logs</span>
-  <span className="hidden truncate sm:block">Logs</span>
-</button>
+              <button
+                type="button"
+                className={itemClasses("driveHistory")}
+                onClick={() => go("driveHistory")}
+              >
+                <span className="block truncate sm:hidden">Logs</span>
+                <span className="hidden truncate sm:block">Logs</span>
+              </button>
 
-<button
-  type="button"
-  className={itemClasses("activeDrive")}
-  onClick={() => go("activeDrive")}
->
-  <span className="block truncate sm:hidden">Drive</span>
-  <span className="hidden truncate sm:block">Start Drive</span>
-</button>
+              <button
+                type="button"
+                className={itemClasses("activeDrive")}
+                onClick={() => go("activeDrive")}
+              >
+                <span className="block truncate sm:hidden">Drive</span>
+                <span className="hidden truncate sm:block">Start Drive</span>
+              </button>
 
-<button
-  type="button"
-  className={itemClasses("practiceTest")}
-  onClick={() => go("practiceTest")}
->
-  <span className="block truncate sm:hidden">Test</span>
-  <span className="hidden truncate sm:block">Practice Test</span>
-</button>
+              <button
+                type="button"
+                className={itemClasses("practiceTest")}
+                onClick={() => go("practiceTest")}
+              >
+                <span className="block truncate sm:hidden">Test</span>
+                <span className="hidden truncate sm:block">Practice Test</span>
+              </button>
 
-<button
-  type="button"
-  className={itemClasses("more")}
-  onClick={() => setShowMore((prev) => !prev)}
->
-  <span className="block truncate">More</span>
-</button>
+              <button
+                type="button"
+                className={itemClasses("more")}
+                onClick={() => setShowMore((prev) => !prev)}
+              >
+                <span className="block truncate">More</span>
+              </button>
             </div>
           </div>
         </nav>

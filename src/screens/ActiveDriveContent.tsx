@@ -1700,11 +1700,11 @@ function ActiveDriveContent({
                 await beginDriveSession()
               }}
               onCancel={() => {
-                setShowDisclosure(false)
-                setLocationError(
-                  "Location access is needed to start and verify a drive."
-                )
-              }}
+  setShowDisclosure(false)
+  setLocationError(
+    "Location access is needed to start and verify a drive."
+  )
+}}
             />
           </div>
         )}

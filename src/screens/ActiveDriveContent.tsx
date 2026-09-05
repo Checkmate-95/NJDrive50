@@ -1046,6 +1046,23 @@ function ActiveDriveContent({
           await Drive.resumeDrive({ driveId })
         } catch (error) {
           console.warn("[Drive] Native resumeDrive failed:", error)
+
+          // Native tracking never actually resumed — roll the JS store
+          // back to paused rather than showing a "running" UI that
+          // doesn't match what's actually being recorded.
+          if (
+            mountedRef.current &&
+            driveActionTokenRef.current === actionToken
+          ) {
+            pauseDrive(Date.now())
+            void updateForegroundService(
+              "Drive paused — tap Resume to continue"
+            )
+            setLocationError(
+              "Resume could not be confirmed with the tracking service. Please try again."
+            )
+          }
+          return
         }
       }
 
@@ -1070,22 +1087,54 @@ function ActiveDriveContent({
     }
   }
 
-  const pauseCurrentDrive = () => {
-    driveActionTokenRef.current += 1
-    setIsStartingDrive(false)
+  const pauseCurrentDrive = async () => {
+    if (isStartingDrive) return
 
-    const now = Date.now()
+    const actionToken = driveActionTokenRef.current + 1
+    driveActionTokenRef.current = actionToken
+    setIsStartingDrive(true)
 
-    tick(undefined, now)
-    pauseDrive(now)
+    try {
+      const now = Date.now()
 
-    void updateForegroundService("Drive paused — tap Resume to continue")
-    setShowStopConfirm(false)
+      tick(undefined, now)
+      pauseDrive(now)
 
-    if (driveId) {
-      Drive.pauseDrive({ driveId }).catch((error) => {
-        console.warn("[Drive] Native pauseDrive failed:", error)
-      })
+      void updateForegroundService("Drive paused — tap Resume to continue")
+      setShowStopConfirm(false)
+
+      if (driveId) {
+        try {
+          await Drive.pauseDrive({ driveId })
+        } catch (error) {
+          console.warn("[Drive] Native pauseDrive failed:", error)
+
+          // Native tracking never actually paused — roll the JS store
+          // back to running rather than showing a "paused" UI that
+          // doesn't match what's actually being recorded. This slightly
+          // inflates the JS-side pausedMs by the round-trip time, but
+          // that's harmless: the saved drive's duration comes from the
+          // native FinalizedDrive result at stopDrive(), not from this
+          // local approximation.
+          if (
+            mountedRef.current &&
+            driveActionTokenRef.current === actionToken
+          ) {
+            resumeDrive(Date.now())
+            void updateForegroundService("Drive resumed — tracking active")
+            setLocationError(
+              "Pause could not be confirmed with the tracking service. Drive is still recording."
+            )
+          }
+        }
+      }
+    } finally {
+      if (
+        mountedRef.current &&
+        driveActionTokenRef.current === actionToken
+      ) {
+        setIsStartingDrive(false)
+      }
     }
   }
 
@@ -1093,7 +1142,7 @@ function ActiveDriveContent({
     if (isSaving || isPreparingStop || isStartingDrive) return
 
     if (isRunning) {
-      pauseCurrentDrive()
+      void pauseCurrentDrive()
       return
     }
 
@@ -1128,8 +1177,17 @@ function ActiveDriveContent({
       )
 
       if (driveId) {
+        // Not rolled back on failure here — handleSaveDrive() below sends
+        // ACTION_STOP directly regardless of whether this pause succeeded,
+        // so native recording still terminates correctly. Just surface
+        // that the pause confirmation itself didn't reach the service.
         Drive.pauseDrive({ driveId }).catch((error) => {
           console.warn("[Drive] Native pauseDrive failed:", error)
+          if (mountedRef.current) {
+            setLocationError(
+              "Pause could not be confirmed with the tracking service, but the drive is still being recorded."
+            )
+          }
         })
       }
     }

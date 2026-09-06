@@ -90,6 +90,54 @@ class DrivePlugin : Plugin() {
     }
 
     // -----------------------------
+    // PAUSE DRIVE
+    // -----------------------------
+    @PluginMethod
+    fun pauseDrive(call: PluginCall) {
+        val driveId = call.getString("driveId")
+        if (driveId.isNullOrBlank()) {
+            call.reject("driveId is required")
+            return
+        }
+
+        val intent = Intent(context, DriveTrackingService::class.java).apply {
+            action = DriveTrackingService.ACTION_PAUSE
+            putExtra(DriveTrackingService.EXTRA_DRIVE_ID, driveId)
+        }
+        context.startService(intent)
+
+        val result = JSObject().apply {
+            put("driveId", driveId)
+            put("status", "PAUSED")
+        }
+        call.resolve(result)
+    }
+
+    // -----------------------------
+    // RESUME DRIVE
+    // -----------------------------
+    @PluginMethod
+    fun resumeDrive(call: PluginCall) {
+        val driveId = call.getString("driveId")
+        if (driveId.isNullOrBlank()) {
+            call.reject("driveId is required")
+            return
+        }
+
+        val intent = Intent(context, DriveTrackingService::class.java).apply {
+            action = DriveTrackingService.ACTION_RESUME
+            putExtra(DriveTrackingService.EXTRA_DRIVE_ID, driveId)
+        }
+        context.startService(intent)
+
+        val result = JSObject().apply {
+            put("driveId", driveId)
+            put("status", "ACTIVE")
+        }
+        call.resolve(result)
+    }
+
+    // -----------------------------
     // STOP DRIVE
     // -----------------------------
     @PluginMethod
@@ -117,6 +165,38 @@ class DrivePlugin : Plugin() {
             }
 
             call.resolve(entity.toJSObject())
+        }
+    }
+
+    // -----------------------------
+    // DELETE ALL LOCAL DATA (wipes drive_points, drive_sessions, finalized_drives)
+    // Rejects if a drive is currently ACTIVE, to avoid deleting rows out from
+    // under a running DriveTrackingService mid-recording.
+    // -----------------------------
+    @PluginMethod
+    fun deleteAllLocalData(call: PluginCall) {
+        scope.launch {
+            try {
+                val dao = DriveDatabase.getInstance(context).driveDao()
+
+                val active = dao.getActiveSession()
+                if (active != null) {
+                    call.reject("Cannot delete data while a drive is actively recording.")
+                    return@launch
+                }
+
+                dao.deleteAllPoints()
+                dao.deleteAllSessions()
+                dao.deleteAllFinalizedDrives()
+
+                val result = JSObject().apply {
+                    put("success", true)
+                }
+                call.resolve(result)
+            } catch (e: Exception) {
+                android.util.Log.e("DrivePlugin", "deleteAllLocalData failed", e)
+                call.reject("Failed to delete local drive data: ${e.message}")
+            }
         }
     }
 

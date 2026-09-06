@@ -25,6 +25,12 @@ interface DriveDao {
     """)
     suspend fun getPointsForDrive(driveId: String): List<DrivePointEntity>
 
+    @Query("DELETE FROM drive_points WHERE driveId = :driveId")
+    suspend fun deletePointsForDrive(driveId: String)
+
+    @Query("DELETE FROM drive_points")
+    suspend fun deleteAllPoints()
+
 
     // -----------------------------
     // Drive Session (active/in-progress)
@@ -49,6 +55,12 @@ interface DriveDao {
     """)
     suspend fun getActiveSession(): DriveSessionEntity?
 
+    @Query("DELETE FROM drive_sessions WHERE driveId = :driveId")
+    suspend fun deleteSession(driveId: String)
+
+    @Query("DELETE FROM drive_sessions")
+    suspend fun deleteAllSessions()
+
 
     // -----------------------------
     // Finalized Drive (immutable truth)
@@ -69,4 +81,10 @@ interface DriveDao {
         ORDER BY startedAtMs DESC
     """)
     suspend fun getFinalizedDrivesInRange(fromMs: Long, toMs: Long): List<FinalizedDriveEntity>
+
+    @Query("DELETE FROM finalized_drives WHERE driveId = :driveId")
+    suspend fun deleteFinalizedDrive(driveId: String)
+
+    @Query("DELETE FROM finalized_drives")
+    suspend fun deleteAllFinalizedDrives()
 }

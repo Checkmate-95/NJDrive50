@@ -34,12 +34,17 @@ export interface ResumeDriveResult {
   status: 'ACTIVE'
 }
 
+export interface DeleteAllLocalDataResult {
+  success: boolean
+}
+
 export interface NativeDrivePlugin {
   startDrive(options: { driveId: string }): Promise<StartDriveResult>
   pauseDrive(options: { driveId: string }): Promise<PauseDriveResult>
   resumeDrive(options: { driveId: string }): Promise<ResumeDriveResult>
   stopDrive(options: { driveId: string }): Promise<FinalizedDrive>
   getDriveById(options: { driveId: string }): Promise<FinalizedDrive>
+  deleteAllLocalData(): Promise<DeleteAllLocalDataResult>
 }
 
 const Drive = registerPlugin<NativeDrivePlugin>('Drive')

@@ -1,10 +1,12 @@
 // src/screens/DeleteData.tsx
 import { useMemo, useState } from "react";
 import { httpsCallable } from "firebase/functions";
+import { Capacitor } from "@capacitor/core";
 import { auth, functions } from "../firebase";
 import { useNav } from "../state/navStore";
 import { clearDriveHistory } from "../state/driveStore";
 import { resetActiveDriveStore } from "../state/activeDriveStore";
+import Drive from "../native/drive";
 
 type DeleteDataPayload = {
   deleteDriveLogs: boolean;
@@ -97,6 +99,27 @@ export default function DeleteData() {
   setStep("working");
 
   try {
+    // Native Room DB wipe must happen BEFORE the Firebase call — if the
+    // native side rejects (e.g. a drive is currently ACTIVE), we want to
+    // stop here rather than tell the server data was deleted when the
+    // on-device drive_points/drive_sessions/finalized_drives tables
+    // were never touched.
+    if (
+      (deleteDriveLogs || deletePracticeSessions) &&
+      Capacitor.isNativePlatform()
+    ) {
+      try {
+        await Drive.deleteAllLocalData();
+      } catch (nativeError) {
+        console.error("[Drive] deleteAllLocalData failed:", nativeError);
+        setStep("idle");
+        setErrorMessage(
+          "Please stop your active drive before deleting this data."
+        );
+        return;
+      }
+    }
+
     const result = await requestDeleteData({
       deleteDriveLogs,
       deletePracticeSessions,

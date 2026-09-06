@@ -46,6 +46,8 @@ class DriveTrackingService : Service() {
 
         const val ACTION_START = "START_DRIVE"
         const val ACTION_STOP = "STOP_DRIVE"
+        const val ACTION_PAUSE = "PAUSE_DRIVE"
+        const val ACTION_RESUME = "RESUME_DRIVE"
         const val EXTRA_DRIVE_ID = "driveId"
 
         private const val WAKE_LOCK_TAG = "NJDrive50::DriveTrackingWakeLock"
@@ -66,6 +68,7 @@ class DriveTrackingService : Service() {
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var activeDriveId: String? = null
+    private var isPaused: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
@@ -87,7 +90,7 @@ class DriveTrackingService : Service() {
             ServiceCompat.startForeground(
                 this,
                 NOTIFICATION_ID,
-                buildForegroundNotification(activeDriveId ?: "recovering"),
+                buildForegroundNotification(activeDriveId ?: "recovering", paused = false),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             )
             scope.launch { recoverOrFinalizeStaleSession() }
@@ -106,6 +109,20 @@ class DriveTrackingService : Service() {
                     stopDriveInternal(driveId)
                 } else {
                     stopSelf()
+                }
+            }
+
+            ACTION_PAUSE -> {
+                val driveId = intent.getStringExtra(EXTRA_DRIVE_ID) ?: activeDriveId
+                if (driveId != null) {
+                    pauseDriveInternal(driveId)
+                }
+            }
+
+            ACTION_RESUME -> {
+                val driveId = intent.getStringExtra(EXTRA_DRIVE_ID) ?: activeDriveId
+                if (driveId != null) {
+                    resumeDriveInternal(driveId)
                 }
             }
         }
@@ -132,17 +149,18 @@ class DriveTrackingService : Service() {
     }
 
     // -----------------------------------------------------------------
-    // Start / Stop
+    // Start / Stop / Pause / Resume
     // -----------------------------------------------------------------
 
     private fun startDriveInternal(driveId: String) {
         val permissionGranted = hasLocationPermission()
         activeDriveId = driveId
+        isPaused = false
 
         ServiceCompat.startForeground(
             this,
             NOTIFICATION_ID,
-            buildForegroundNotification(driveId),
+            buildForegroundNotification(driveId, paused = false),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         )
 
@@ -200,10 +218,51 @@ class DriveTrackingService : Service() {
             }
 
             activeDriveId = null
+            isPaused = false
             releaseWakeLock()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
         }
+    }
+
+    /**
+     * Pauses GPS recording without ending the drive session or stopping the
+     * foreground service. The gap this creates in DrivePointEntity rows is
+     * exactly what DriveFinalizer's >60s segment-splitting logic relies on
+     * to exclude paused time from duration/day-night/distance calculations.
+     */
+    private fun pauseDriveInternal(driveId: String) {
+        if (activeDriveId != driveId) {
+            android.util.Log.w("DriveTrackingService", "pauseDriveInternal: driveId mismatch")
+            return
+        }
+
+        isPaused = true
+        stopLocationUpdates()
+        releaseWakeLock()
+        updateNotification(driveId, paused = true)
+    }
+
+    /**
+     * Resumes GPS recording for an already-active (paused) drive. Does not
+     * touch the session row — DriveFinalizer only cares about the gap in
+     * points, not an explicit paused/resumed status field.
+     */
+    private fun resumeDriveInternal(driveId: String) {
+        if (activeDriveId != driveId) {
+            android.util.Log.w("DriveTrackingService", "resumeDriveInternal: driveId mismatch")
+            return
+        }
+
+        if (!hasLocationPermission()) {
+            android.util.Log.w("DriveTrackingService", "resumeDriveInternal: permission missing")
+            return
+        }
+
+        isPaused = false
+        acquireWakeLock()
+        startLocationUpdates()
+        updateNotification(driveId, paused = false)
     }
 
     /**
@@ -234,6 +293,7 @@ class DriveTrackingService : Service() {
             }
 
             activeDriveId = null
+            isPaused = false
             releaseWakeLock()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
@@ -270,11 +330,12 @@ class DriveTrackingService : Service() {
             stopSelf()
         } else {
             activeDriveId = session.driveId
+            isPaused = false
             // Update the notification now that we know the real drive ID.
             ServiceCompat.startForeground(
                 this,
                 NOTIFICATION_ID,
-                buildForegroundNotification(session.driveId),
+                buildForegroundNotification(session.driveId, paused = false),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
             )
             acquireWakeLock()
@@ -426,7 +487,7 @@ class DriveTrackingService : Service() {
         }
     }
 
-    private fun buildForegroundNotification(driveId: String): Notification {
+    private fun buildForegroundNotification(driveId: String, paused: Boolean): Notification {
         val stopIntent = Intent(this, DriveTrackingService::class.java).apply {
             action = ACTION_STOP
             putExtra(EXTRA_DRIVE_ID, driveId)
@@ -441,7 +502,7 @@ class DriveTrackingService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("NJDrive50 is recording your drive")
-            .setContentText("Drive tracking is active.")
+            .setContentText(if (paused) "Drive tracking is paused." else "Drive tracking is active.")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -451,6 +512,16 @@ class DriveTrackingService : Service() {
                 stopPendingIntent
             )
             .build()
+    }
+
+    /**
+     * Updates the existing foreground notification in place (no re-promotion
+     * needed — the service is already in the foreground from startDriveInternal).
+     */
+    private fun updateNotification(driveId: String, paused: Boolean) {
+        val notification = buildForegroundNotification(driveId, paused)
+        getSystemService(NotificationManager::class.java)
+            ?.notify(NOTIFICATION_ID, notification)
     }
 
     // -----------------------------------------------------------------

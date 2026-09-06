@@ -15,6 +15,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
+
 function createAuth() {
   if (Capacitor.isNativePlatform()) {
     return initializeAuth(app, {

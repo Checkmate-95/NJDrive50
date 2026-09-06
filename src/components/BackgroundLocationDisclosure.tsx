@@ -6,7 +6,7 @@ export default function BackgroundLocationDisclosure({
   onCancel: () => void
 }) {
   return (
-    <div className="mx-auto max-w-md rounded-lg bg-white p-6 text-[#08194A] shadow-lg">
+    <div className="mx-auto max-h-[85vh] max-w-md overflow-y-auto rounded-lg bg-white p-6 text-[#08194A] shadow-lg">
       <h2 className="mb-3 text-xl font-semibold">
         Allow Location for Active Drive Tracking
       </h2>

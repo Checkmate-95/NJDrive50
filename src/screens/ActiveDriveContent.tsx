@@ -14,6 +14,7 @@ import BackgroundLocationDisclosure from "../components/BackgroundLocationDisclo
 import { fetchWeather } from "../services/weather"
 import Drive from "../native/drive"
 import type { FinalizedDrive } from "../native/drive"
+import { createPortal } from "react-dom"
 
 import {
   useActiveDriveStore,
@@ -911,7 +912,7 @@ function ActiveDriveContent({
     }
   }, [clearRuntimeLoops])
 
-  useEffect(() => {
+   useEffect(() => {
     if (showStopConfirm) {
       stopConfirmRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -919,6 +920,18 @@ function ActiveDriveContent({
       })
     }
   }, [showStopConfirm])
+
+  // ADD THIS:
+  useEffect(() => {
+    if (showDisclosure) {
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      document.body.style.overflow = ""
+    }
+  }, [showDisclosure])
 
   const [isMaximized, setIsMaximized] = useState(false)
 
@@ -1668,46 +1681,50 @@ function ActiveDriveContent({
           </div>
         </section>
 
-        {showDisclosure && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <BackgroundLocationDisclosure
-              onContinue={async () => {
-                if (isStartingDrive) return
+        {showDisclosure &&
+          createPortal(
+            <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 px-4 py-8">
+              <div className="flex min-h-full items-start justify-center">
+                <BackgroundLocationDisclosure
+                  onContinue={async () => {
+                    if (isStartingDrive) return
 
-                setShowDisclosure(false)
+                    setShowDisclosure(false)
 
-                const requested = await Geolocation.requestPermissions()
+                    const requested = await Geolocation.requestPermissions()
 
-                const granted =
-                  requested.location === "granted" ||
-                  requested.coarseLocation === "granted"
+                    const granted =
+                      requested.location === "granted" ||
+                      requested.coarseLocation === "granted"
 
-                if (!granted) {
-                  setLocationError(
-                    "Location access is needed to start and verify a drive."
-                  )
-                  return
-                }
+                    if (!granted) {
+                      setLocationError(
+                        "Location access is needed to start and verify a drive."
+                      )
+                      return
+                    }
 
-                const notificationsAllowed = await ensureForegroundServicePermission()
-                if (!notificationsAllowed) {
-                  setLocationError(
-                    "Notification permission is needed to show active drive tracking on Android."
-                  )
-                  return
-                }
+                    const notificationsAllowed = await ensureForegroundServicePermission()
+                    if (!notificationsAllowed) {
+                      setLocationError(
+                        "Notification permission is needed to show active drive tracking on Android."
+                      )
+                      return
+                    }
 
-                await beginDriveSession()
-              }}
-              onCancel={() => {
-  setShowDisclosure(false)
-  setLocationError(
-    "Location access is needed to start and verify a drive."
-  )
-}}
-            />
-          </div>
-        )}
+                    await beginDriveSession()
+                  }}
+                  onCancel={() => {
+                    setShowDisclosure(false)
+                    setLocationError(
+                      "Location access is needed to start and verify a drive."
+                    )
+                  }}
+                />
+              </div>
+            </div>,
+            document.body
+          )}
       </div>
     </div>
   )

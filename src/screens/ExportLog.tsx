@@ -11,7 +11,7 @@ import type { Screen } from "../App"
 import { useDriveHistory, isDriveVerified } from "../state/driveStore"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
-import { navigate } from "../navigation/navMap"
+import { useNav } from "../state/navStore"
 
 import { Filesystem, Directory } from "@capacitor/filesystem"
 import { Share } from "@capacitor/share"
@@ -137,7 +137,8 @@ function StatusBanner({
   )
 }
 
-export default function ExportLog({ setScreen }: ExportLogProps) {
+export default function ExportLog({ setScreen: _setScreen }: ExportLogProps) {
+  const { goBack } = useNav()
   const driveHistory = useDriveHistory()
   const drives = useMemo(() => driveHistory ?? [], [driveHistory])
   const [status, setStatus] = useState<StatusState>(null)
@@ -305,12 +306,11 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       const pdfBase64 = toBase64FromArrayBuffer(pdfArrayBuffer)
 
       const result = await Filesystem.writeFile({
-  path: fileName,
-  data: pdfBase64,
-  directory: Directory.Cache,
-  recursive: true,
-})
-
+        path: fileName,
+        data: pdfBase64,
+        directory: Directory.Cache,
+        recursive: true,
+      })
 
       const fileUri = result.uri?.replace(/\/$/, "")
 
@@ -396,12 +396,11 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
       const csvBase64 = toBase64Utf8(csvContent)
 
       const result = await Filesystem.writeFile({
-  path: fileName,
-  data: csvBase64,
-  directory: Directory.Cache,
-  recursive: true,
-})
-
+        path: fileName,
+        data: csvBase64,
+        directory: Directory.Cache,
+        recursive: true,
+      })
 
       const fileUri = result.uri?.replace(/\/$/, "")
 
@@ -614,7 +613,7 @@ export default function ExportLog({ setScreen }: ExportLogProps) {
 
         <button
           type="button"
-          onClick={() => navigate("export", "history", setScreen)}
+          onClick={() => goBack()}
           className="min-h-[52px] w-full rounded-xl border border-[#08194A]/20 bg-white py-3.5 font-semibold text-[#08194A] transition hover:bg-[#F7F9FC]"
         >
           Back to History

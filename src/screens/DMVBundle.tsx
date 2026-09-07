@@ -86,16 +86,18 @@ async function savePDF(doc: jsPDF, filename: string): Promise<void> {
     try {
       const base64 = doc.output("datauristring").split(",")[1]
 
-      await Filesystem.writeFile({
+      const result = await Filesystem.writeFile({
         path: filename,
         data: base64,
         directory: Directory.Cache,
+        recursive: true,
       })
 
-      const { uri } = await Filesystem.getUri({
-        path: filename,
-        directory: Directory.Cache,
-      })
+      const uri = result.uri?.replace(/\/$/, "")
+
+      if (!uri) {
+        throw new Error("No file URI was returned after writing the PDF.")
+      }
 
       await Share.share({
         title: filename,

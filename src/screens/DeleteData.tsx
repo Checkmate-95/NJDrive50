@@ -126,22 +126,16 @@ export default function DeleteData() {
       deleteUploadedDocuments,
     });
 
-    // 🔥 LOCAL CLEARING — selective, based on checkboxes
+    // 🔥 LOCAL CLEARING — selective, based on checkboxes.
+    // "Uploaded documents and exports" has no on-device cache to clear —
+    // uploaded paperwork and exports are stored server-side only, so this
+    // category is handled entirely by the requestDeleteData() call above.
     if (deleteDriveLogs) {
       clearDriveHistory({ removePersistedData: true });
-      // If you store drive logs in Preferences:
-      // await Preferences.remove({ key: "driveLogsCache" });
     }
 
     if (deletePracticeSessions) {
       resetActiveDriveStore();
-      // await Preferences.remove({ key: "practiceSessionCache" });
-      // await Preferences.remove({ key: "milestoneCache" });
-    }
-
-    if (deleteUploadedDocuments) {
-      // await Preferences.remove({ key: "uploadedDocsCache" });
-      // await Preferences.remove({ key: "exportMetadata" });
     }
 
     setSuccessMessage(
@@ -245,7 +239,9 @@ export default function DeleteData() {
                     Practice-session and milestone data
                   </span>
                   <span className="block text-xs leading-5 text-[#08194A]/70">
-                    Deletes in-progress drive data, practice-session records, and related milestone tracking data.
+                    Deletes your in-progress drive session. Milestone progress is
+                    calculated from your drive logs, so also check "Drive logs"
+                    above to reset it.
                   </span>
                 </span>
               </label>
@@ -262,7 +258,8 @@ export default function DeleteData() {
                     Uploaded documents and exports
                   </span>
                   <span className="block text-xs leading-5 text-[#08194A]/70">
-                    Deletes uploaded paperwork, exported files, and related stored metadata associated with your account.
+                    Deletes uploaded paperwork, exported files, and related
+                    metadata stored on our servers for your account.
                   </span>
                 </span>
               </label>

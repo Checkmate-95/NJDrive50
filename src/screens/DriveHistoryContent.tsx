@@ -361,7 +361,7 @@ export default function DriveHistoryContent() {
             onClick={() => goBack()}
             className="min-h-[44px] w-full rounded-xl bg-[#E9EDF5] px-4 py-3 text-sm font-semibold text-[#08194A] transition hover:bg-[#DCE4F2]"
           >
-            Back to Home
+            Back
           </button>
         </div>
       </section>

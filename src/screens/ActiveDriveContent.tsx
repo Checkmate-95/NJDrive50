@@ -336,6 +336,35 @@ function mapFinalizedDriveToEntry(
       break
   }
 
+  // Native FinalizedDrive doesn't carry day/night clock-time ranges — only
+  // the summed durations. Recompute the ranges here the same way
+  // buildDriveSnapshot() does, anchored to the drive's start coordinate,
+  // so TodaysDrive/DriveHistory can render the "(7:32 AM – 8:15 AM)"
+  // annotation regardless of whether the drive was finalized natively
+  // or via the JS fallback snapshot.
+  let dayRangeStartMs: number | null = null
+  let dayRangeEndMs: number | null = null
+  let nightRangeStartMs: number | null = null
+  let nightRangeEndMs: number | null = null
+
+  if (fallback.startCoord) {
+    const segments = splitDriveBySolar(
+      new Date(finalized.startedAtMs),
+      new Date(finalized.endedAtMs),
+      (d: Date) =>
+        getSolarWindowForDate(
+          fallback.startCoord!.lat,
+          fallback.startCoord!.lng,
+          d
+        )
+    )
+
+    dayRangeStartMs = segments.dayStartMs
+    dayRangeEndMs = segments.dayEndMs
+    nightRangeStartMs = segments.nightStartMs
+    nightRangeEndMs = segments.nightEndMs
+  }
+
   return {
     id: finalized.driveId,
     startTime: new Date(finalized.startedAtMs).toISOString(),
@@ -349,6 +378,11 @@ function mapFinalizedDriveToEntry(
     nightCalcMode,
     isVerifiedDay,
     needsReview,
+
+    dayRangeStartMs,
+    dayRangeEndMs,
+    nightRangeStartMs,
+    nightRangeEndMs,
 
     locationEstimated: !fallback.startCoord,
 
@@ -1312,9 +1346,9 @@ function ActiveDriveContent({
       onMinimize={onMinimize}
       isRunning={isRunning}
       hasActiveDrive={hasActiveDrive}
-      onStart={handlePrimaryAction}
-      onPause={handlePrimaryAction}
-      onResume={handlePrimaryAction}
+      onStart={() => void startNewDrive()}
+      onPause={() => void pauseCurrentDrive()}
+      onResume={() => void resumeCurrentDrive()}
       onEnd={handleStopRequest}
     />
   ) : (
@@ -1684,36 +1718,39 @@ function ActiveDriveContent({
         {showDisclosure &&
           createPortal(
             <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 px-4 py-8">
-              <div className="flex min-h-full items-start justify-center py-8">
+              <div className="flex min-h-full items-start justify-center">
                 <BackgroundLocationDisclosure
+
                   onContinue={async () => {
-                    if (isStartingDrive) return
+  if (isStartingDrive) return
 
-                    setShowDisclosure(false)
+  setShowDisclosure(false)
 
-                    const requested = await Geolocation.requestPermissions()
+  const requested = await Geolocation.requestPermissions()
 
-                    const granted =
-                      requested.location === "granted" ||
-                      requested.coarseLocation === "granted"
+  const granted =
+    requested.location === "granted" ||
+    requested.coarseLocation === "granted"
 
-                    if (!granted) {
-                      setLocationError(
-                        "Location access is needed to start and verify a drive."
-                      )
-                      return
-                    }
+  if (!granted) {
+    setLocationError(
+      "Location access is needed to start and verify a drive."
+    )
+    return
+  }
 
-                    const notificationsAllowed = await ensureForegroundServicePermission()
-                    if (!notificationsAllowed) {
-                      setLocationError(
-                        "Notification permission is needed to show active drive tracking on Android."
-                      )
-                      return
-                    }
+  const notificationsAllowed = await ensureForegroundServicePermission()
+  if (!notificationsAllowed) {
+    setLocationError(
+      "Notification permission is needed to show active drive tracking on Android."
+    )
+    return
+  }
 
-                    await beginDriveSession()
-                  }}
+  // Permissions granted — do NOT auto-start. The user must tap
+  // Start Timer again now that permissions are in place.
+}}
+
                   onCancel={() => {
                     setShowDisclosure(false)
                     setLocationError(

@@ -1,0 +1,24 @@
+{
+	"appId": "com.njdrive50.app",
+	"appName": "NJDRIVE50",
+	"webDir": "dist",
+	"android": {
+		"allowMixedContent": false,
+		"webContentsDebuggingEnabled": false,
+		"captureInput": true
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 1500,
+			"launchAutoHide": true,
+			"backgroundColor": "#0f172a",
+			"androidSplashResourceName": "splash",
+			"showSpinner": false
+		},
+		"Keyboard": {
+			"resize": "body",
+			"style": "dark",
+			"resizeOnFullScreen": true
+		}
+	}
+}

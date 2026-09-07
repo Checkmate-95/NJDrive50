@@ -22,16 +22,17 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name="com.getcapacitor.BridgeActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|density|uiMode|locale|layoutDirection|fontScale"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+    android:name="com.njdrive50.app.MainActivity"
+    android:exported="true"
+    android:launchMode="singleTask"
+    android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|screenLayout|density|uiMode|locale|layoutDirection|fontScale"
+    android:windowSoftInputMode="adjustResize">
+    <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+    </intent-filter>
+</activity>
+
 
         <!-- ✅ Added: your custom tracking service — previously undeclared, which
              would have crashed on the first startForegroundService() call from

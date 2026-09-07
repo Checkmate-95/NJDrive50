@@ -4,7 +4,9 @@ import { EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth"
 import { httpsCallable } from "firebase/functions"
 import { auth, functions } from "../firebase"
 import { useNav } from "../state/navStore"
-import { devResetAll } from "../utils/devReset"
+import { Capacitor } from "@capacitor/core"
+import Drive from "../native/drive"
+import { clearLocalSessionState } from "../utils/devReset"
 
 type DeleteAccountRequest = {
   confirmDelete: boolean
@@ -46,7 +48,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function DeleteAccount() {
-  const { goBack } = useNav()
+  const { goBack, setScreen } = useNav()
 
   const [acknowledged, setAcknowledged] = useState(false)
   const [confirmText, setConfirmText] = useState("")
@@ -103,9 +105,27 @@ export default function DeleteAccount() {
         await reauthenticateWithCredential(user, credential)
       }
 
+      // Native Room DB wipe must happen BEFORE the Firebase call — if the
+      // native side rejects (e.g. a drive is currently ACTIVE), we want to
+      // stop here rather than tell the user the account was deleted when
+      // on-device drive_points/drive_sessions/finalized_drives tables
+      // were never touched.
+      if (Capacitor.isNativePlatform()) {
+        try {
+          await Drive.deleteAllLocalData()
+        } catch (nativeError) {
+          console.error("[Drive] deleteAllLocalData failed:", nativeError)
+          setStep("idle")
+          setErrorMessage(
+            "Please stop your active drive before deleting your account."
+          )
+          return
+        }
+      }
+
       const result = await deleteMyAccount({ confirmDelete: true })
 
-      await devResetAll()
+      await clearLocalSessionState()
 
       setPassword("")
       setSuccessMessage(
@@ -115,6 +135,7 @@ export default function DeleteAccount() {
       setStep("success")
 
       await auth.signOut()
+      setScreen("dataClearedFull")
     } catch (error) {
       const code = getErrorCode(error)
 

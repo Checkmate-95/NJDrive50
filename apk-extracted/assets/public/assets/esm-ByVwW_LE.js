@@ -1,0 +1,1 @@
+import{I as e}from"./index-CkQNlm-z.js";var t;(function(e){e[e.Min=1]=`Min`,e[e.Low=2]=`Low`,e[e.Default=3]=`Default`,e[e.High=4]=`High`,e[e.Max=5]=`Max`})(t||={});var n;(function(e){e[e.Location=8]=`Location`,e[e.Microphone=128]=`Microphone`})(n||={});var r=e(`ForegroundService`);export{r as ForegroundService};

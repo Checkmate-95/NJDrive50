@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from "react"
 import { useNav } from "../state/navStore"
 import { useSettingsStore } from "../state/settingsStore"
-import { devResetAll } from "../utils/devReset"
+import { clearLocalSessionState } from "../utils/devReset"
 import { auth } from "../firebase"
 import { signOut } from "firebase/auth"
 
@@ -21,8 +21,8 @@ export default function Settings() {
   const [signOutError, setSignOutError] = useState("")
   const [signingOut, setSigningOut] = useState(false)
 
-  const handleDevReset = async () => {
-    await devResetAll()
+    const handleDevReset = async () => {
+    await clearLocalSessionState()
     setScreen("login")
   }
 

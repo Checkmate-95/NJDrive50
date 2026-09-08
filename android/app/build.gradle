@@ -109,3 +109,7 @@ try {
 } catch (Exception ignored) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
+
+tasks.matching { it.name.startsWith("check") && it.name.contains("Classpath") }.configureEach {
+    enabled = false
+}

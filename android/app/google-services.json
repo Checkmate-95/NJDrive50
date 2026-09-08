@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "378235645280",
+    "project_id": "njdrive50-app",
+    "storage_bucket": "njdrive50-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:378235645280:android:2c6e1c02d04ff72bb90205",
+        "android_client_info": {
+          "package_name": "com.njdrive50.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeEKsplUiSSfgfTOOF6HDtpX597wuud5E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

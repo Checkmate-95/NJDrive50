@@ -8,6 +8,6 @@ setGlobalOptions({
 
 import { deleteMyData } from "./deleteMyData";
 import { deleteMyAccount } from "./deleteMyAccount";
+import { api } from "./computeRoutesApi";
 
-export { deleteMyData, deleteMyAccount };
-
+export { deleteMyData, deleteMyAccount, api };

@@ -1,48 +1,18 @@
+// functions/src/computeRoutesApi.ts
+import { onRequest } from "firebase-functions/v2/https"
+import { defineSecret } from "firebase-functions/params"
 import express from "express"
-import dotenv from "dotenv"
-import path from "node:path"
-import { fileURLToPath } from "node:url"
 import cors from "cors"
 import helmet from "helmet"
 import rateLimit from "express-rate-limit"
 import OpenAI from "openai"
-import https from "https"
-import fs from "fs"
 
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
-
-// Load environment variables
-const envPath = path.join(__dirname, ".env")
-const dotenvResult = dotenv.config({ path: envPath })
-if (dotenvResult.error) {
-  console.error("dotenv load error:", dotenvResult.error)
-}
-
-const PORT = Number(process.env.PORT ?? 3001)
-const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
-const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini"
-
-const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean)
-
-if (!GOOGLE_MAPS_API_KEY) {
-  throw new Error("Missing GOOGLE_MAPS_API_KEY in server/.env")
-}
-if (!OPENAI_API_KEY) {
-  console.warn("⚠️ Missing OPENAI_API_KEY — AI helper will not work until added.")
-}
+const GOOGLE_MAPS_API_KEY = defineSecret("GOOGLE_MAPS_API_KEY")
+const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY")
 
 const app = express()
-const openai = new OpenAI({ apiKey: OPENAI_API_KEY })
 
-app.set("trust proxy", 1)
 app.use(helmet())
-
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
@@ -51,25 +21,9 @@ app.use(
     legacyHeaders: false,
   })
 )
-
-app.use(
-  cors({
-    origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true)
-        return
-      }
-      callback(new Error("Not allowed by CORS"))
-    },
-    methods: ["POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    maxAge: 86400,
-  })
-)
-
+app.use(cors({ origin: true }))
 app.use(express.json({ limit: "100kb" }))
 
-// ---------------- Google Routes Proxy ----------------
 type LatLng = { latitude: number; longitude: number }
 type Waypoint = { location: { latLng: LatLng } }
 type ComputeRoutesRequest = {
@@ -124,7 +78,7 @@ function normalizeComputeRoutesBody(body: unknown): ComputeRoutesRequest | null 
   return normalized
 }
 
-app.post("/api/computeRoutes", async (req, res) => {
+app.post("/computeRoutes", async (req, res) => {
   try {
     const normalizedBody = normalizeComputeRoutesBody(req.body)
     if (!normalizedBody) return res.status(400).json({ error: "Invalid computeRoutes payload" })
@@ -137,7 +91,7 @@ app.post("/api/computeRoutes", async (req, res) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
+          "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY.value(),
           "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
         },
         body: JSON.stringify(normalizedBody),
@@ -162,40 +116,30 @@ app.post("/api/computeRoutes", async (req, res) => {
   }
 })
 
-// ---------------- AI Helper Endpoint ----------------
-app.post("/api/njdrive50-ai", async (req, res) => {
+app.post("/njdrive50-ai", async (req, res) => {
   try {
     const { prompt } = req.body
     if (!prompt || typeof prompt !== "string") {
       return res.status(400).json({ error: "Missing or invalid prompt" })
     }
 
-    if (!OPENAI_API_KEY) {
-      return res.status(500).json({ error: "Missing OpenAI API key" })
-    }
+    const openai = new OpenAI({ apiKey: OPENAI_API_KEY.value() })
 
     const completion = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: "gpt-4o-mini",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
     })
 
     const reply = completion.choices[0]?.message?.content ?? "No response"
-    res.status(200).json({ message: reply })
+    return res.status(200).json({ message: reply })   // ← add "return" here
   } catch (err) {
     console.error("AI helper error:", err)
-    res.status(500).json({ error: "AI helper failed" })
+    return res.status(500).json({ error: "AI helper failed" })   // ← and here
   }
 })
 
-const httpsOptions = {
-  key: fs.readFileSync(path.join(__dirname, "cert", "key.pem")),
-  cert: fs.readFileSync(path.join(__dirname, "cert", "cert.pem")),
-}
-
-https.createServer(httpsOptions, app).listen(PORT, "0.0.0.0", () => {
-  console.log(
-    `Routes API proxy running on https://192.168.0.157:${PORT} (${process.env.NODE_ENV ?? "development"})`
-  )
-})
-
+export const api = onRequest(
+  { secrets: [GOOGLE_MAPS_API_KEY, OPENAI_API_KEY] },
+  app
+)

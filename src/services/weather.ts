@@ -19,7 +19,8 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherRes
     return { tempF: null, updatedAt: Date.now() }
   }
 
-  const apiKey = process.env.OPENWEATHER_API_KEY
+  const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY
+
 if (!apiKey) {
   console.warn("Missing OPENWEATHER_API_KEY")
   return { tempF: null, updatedAt: Date.now() }

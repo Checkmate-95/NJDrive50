@@ -121,6 +121,8 @@ tasks.matching { it.name.startsWith("check") && it.name.contains("Classpath") }.
 }
 
 // ⭐ Disable AndroidTest build variants (fixes fingerprint crash)
-androidTestVariants.all { variant ->
-    variant.enable = false
+androidComponents {
+    beforeVariants(selector().all()) { variantBuilder ->
+        variantBuilder.enableAndroidTest = false
+    }
 }

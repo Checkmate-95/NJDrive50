@@ -143,6 +143,7 @@ async function getAccurateMileage(
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
+
         method: "POST",
         headers: {
           "Content-Type": "application/json",

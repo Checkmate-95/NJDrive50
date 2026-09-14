@@ -18,8 +18,8 @@ import Onboarding from "./screens/OnboardingContent"
 import HomeIntro from "./screens/HomeIntroContent"
 import Login from "./Login"
 import Register from "./Register"
+import VerifyEmail from "./screens/VerifyEmail"
 import ForgotPassword from "./ForgotPassword"
-import { Preferences } from "@capacitor/preferences"
 import PrivacyPolicy from "./legal/PrivacyPolicy"
 import TermsOfUse from "./legal/TermsOfUse"
 import DeleteAccount from "./screens/DeleteAccount"
@@ -95,6 +95,7 @@ export type Screen =
   | "deleteData"
   | "login"
   | "register"
+  | "verifyEmail"
   | "forgotPassword"
   | "forgotIdentifier"
 
@@ -136,16 +137,6 @@ export default function App() {
     await setActiveDriveUser(user.uid)
 
     if (myCallId !== authCallIdRef.current) return
-
-    const { value: testMode } = await Preferences.get({ key: "testMode" })
-
-    if (myCallId !== authCallIdRef.current) return
-
-    if (testMode === "true") {
-      setAuthReady(true)
-      setScreen("home")
-      return
-    }
 
     startupController(user)
     setAuthReady(true)
@@ -194,6 +185,8 @@ export default function App() {
         return <Login />
       case "register":
         return <Register />
+      case "verifyEmail":
+        return <VerifyEmail />
       case "forgotPassword":
         return <ForgotPassword />
       case "onboarding":

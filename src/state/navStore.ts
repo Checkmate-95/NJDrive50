@@ -41,7 +41,14 @@ export const useNav = create<NavState>()(
         })
       },
 
-      goBack: (fallback: Screen = "home") => {
+      // Default fallback is "login", not "home" — resetTo() (used by every
+      // auth/onboarding gate, e.g. startupController's "verifyEmail" and
+      // "login" redirects) always clears the stack to []. If goBack() is
+      // ever called with an empty stack while sitting on a gated screen,
+      // falling back to "home" would silently bypass that gate. "login" is
+      // the safe default; screens that legitimately want "home" (or
+      // anywhere else) after an empty stack should pass it explicitly.
+      goBack: (fallback: Screen = "login") => {
         const { stack } = get()
 
         if (stack.length === 0) {

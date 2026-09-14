@@ -16,15 +16,18 @@ export async function startupController(authUser: User | null) {
   const nav = useNav.getState()
 
   if (!authUser) {
-  nav.resetTo("login")
-  return
-}
+    nav.resetTo("login")
+    return
+  }
 
-
+  if (!authUser.emailVerified) {
+    nav.resetTo("verifyEmail")
+    return
+  }
 
   const isDevBuild = import.meta.env.DEV
   const shouldBypassEntitlement =
-  isDevBuild && getViteEnvVar("VITE_BYPASS_ENTITLEMENT") === "true"
+    isDevBuild && getViteEnvVar("VITE_BYPASS_ENTITLEMENT") === "true"
 
   if (shouldBypassEntitlement) {
     nav.resetTo("home")
@@ -54,6 +57,10 @@ export async function startupController(authUser: User | null) {
     nav.resetTo("home")
   } catch (error) {
     console.error("Startup error:", error)
-    nav.resetTo("intro")
+    // Falling back to "intro" here would send an already-onboarded user
+    // backward through onboarding on a transient read failure, breaking
+    // the "intro never reappears" guarantee. "home" is the safer default —
+    // worst case they see a possibly-stale dashboard, not a broken flow.
+    nav.resetTo("home")
   }
 }

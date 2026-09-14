@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react"
 import { useCompass } from "../hooks/useCompass"
 import { Speedometer } from "../components/speedometer/Speedometer"
+import { useSmoothedSpeed } from "../hooks/useSmoothedSpeed"
 
 interface DriveDashboardProps {
   formattedTimer: string
@@ -45,7 +46,8 @@ export default function DriveDashboard({
   )
 
   const { cardinal: directionLetter, rawHeading, needsCalibration } = useCompass()
-  const displaySpeed = currentSpeed ?? 0
+  const smoothedSpeed = useSmoothedSpeed(currentSpeed ?? 0)
+  const displaySpeed = smoothedSpeed ?? 0
 
   useEffect(() => {
     const updateOrientation = () => {

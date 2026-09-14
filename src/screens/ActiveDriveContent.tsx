@@ -50,7 +50,7 @@ const FS_CHANNEL_ID = "njdrive50_drive"
 // This poll exists purely so the on-screen timer/day-night/speed/mileage
 // numbers update while the drive is running, before the native finalize
 // result is available at stopDrive().
-const LIVE_POLL_INTERVAL_MS = 8_000
+const LIVE_POLL_INTERVAL_MS = 2_000
 
 let foregroundServiceStarted = false
 

@@ -96,6 +96,7 @@ export const NAV = {
 
   reminderSettings: {},
   reminderLog: {},
+  verifyEmail: {},
 
   manageProfile: {
     close: "settings",
@@ -190,14 +191,14 @@ export function canNavigate<S extends NavScreen>(
 
 export function getNextScreen<
   S extends NavScreen,
-  A extends NavAction<S>,
+  A extends NavAction<S>
 >(current: S, action: A): NextScreen<S, A> {
   return NAV[current][action];
 }
 
 export function navigate<
   S extends NavScreen,
-  A extends NavAction<S>,
+  A extends NavAction<S>
 >(
   current: S,
   action: A,

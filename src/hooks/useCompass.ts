@@ -30,8 +30,9 @@ function angularDistance(a: number, b: number): number {
 function smoothHeading(
   prev: number | null,
   next: number,
-  alpha = 0.22
+  alpha = 0.4
 ): number {
+
   if (prev == null) return next
   const diff = ((next - prev + 540) % 360) - 180
   return normalizeHeadingDegrees(prev + alpha * diff)
@@ -45,7 +46,7 @@ function applyDeclination(
 }
 
 function stableCardinal(prev: Cardinal, heading: number): Cardinal {
-  const pad = 15
+  const pad = 8
   const baseHalfWidth = 45
 
   if (angularDistance(CENTERS[prev], heading) <= baseHalfWidth + pad) {
@@ -128,11 +129,11 @@ export function useCompass({
             }
 
             const jump = angularDistance(
-              lastHeading.current,
-              declinationCorrected
+             lastHeading.current,
+             declinationCorrected
             )
 
-            if (jump > 120) return
+            if (jump > 170) return
 
             const smoothed = smoothHeading(
               lastHeading.current,

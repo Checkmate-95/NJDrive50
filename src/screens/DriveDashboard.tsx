@@ -9,6 +9,7 @@ interface DriveDashboardProps {
   isNightMode: boolean
   onMinimize: () => void
   currentSpeed?: number | null
+  gpsHeading?: number | null
   liveMiles?: number
   outsideTempF?: number | null
   isRunning?: boolean
@@ -32,6 +33,7 @@ export default function DriveDashboard({
   isNightMode,
   onMinimize,
   currentSpeed = null,
+  gpsHeading = null,
   liveMiles = 0,
   outsideTempF = null,
   isRunning = false,
@@ -41,11 +43,15 @@ export default function DriveDashboard({
   onResume,
   onEnd,
 }: DriveDashboardProps) {
+
   const [isLandscape, setIsLandscape] = useState(
     typeof window !== "undefined" && window.innerWidth > window.innerHeight
   )
 
-  const { cardinal: directionLetter, rawHeading, needsCalibration } = useCompass()
+    const { cardinal: directionLetter, rawHeading, needsCalibration } = useCompass({
+    gpsHeading,
+    speedMph: currentSpeed,
+  })
   const smoothedSpeed = useSmoothedSpeed(currentSpeed ?? 0)
   const displaySpeed = smoothedSpeed ?? 0
 

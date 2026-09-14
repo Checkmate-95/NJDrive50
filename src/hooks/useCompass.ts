@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Capacitor } from "@capacitor/core"
 import {
   CapgoCompass,
@@ -9,6 +9,10 @@ import {
 
 // New Jersey is west of true north by about 13°
 const DEFAULT_DECLINATION = -13
+
+// Below this speed, GPS-derived heading is unreliable (position noise
+// dominates), so we fall back to the magnetometer.
+const DEFAULT_GPS_HEADING_THRESHOLD_MPH = 5
 
 type Cardinal = "N" | "E" | "S" | "W"
 
@@ -32,7 +36,6 @@ function smoothHeading(
   next: number,
   alpha = 0.4
 ): number {
-
   if (prev == null) return next
   const diff = ((next - prev + 540) % 360) - 180
   return normalizeHeadingDegrees(prev + alpha * diff)
@@ -71,12 +74,19 @@ export type UseCompassResult = {
   cardinal: Cardinal
   needsCalibration: boolean
   rawHeading: number | null
+  headingSource: "gps" | "magnetometer"
 }
 
 export function useCompass({
   declination = DEFAULT_DECLINATION,
+  gpsHeading = null,
+  speedMph = null,
+  gpsHeadingThresholdMph = DEFAULT_GPS_HEADING_THRESHOLD_MPH,
 }: {
   declination?: number
+  gpsHeading?: number | null
+  speedMph?: number | null
+  gpsHeadingThresholdMph?: number
 } = {}): UseCompassResult {
   const [cardinal, setCardinal] = useState<Cardinal>("N")
   const [needsCalibration, setNeedsCalibration] = useState(false)
@@ -86,6 +96,37 @@ export function useCompass({
   const headingHandle = useRef<{ remove: () => Promise<void> } | null>(null)
   const accuracyHandle = useRef<{ remove: () => Promise<void> } | null>(null)
   const cancelled = useRef(false)
+
+  // GPS course-over-ground doesn't depend on device sensors or screen
+  // rotation, so it sidesteps the magnetometer's broken landscape behavior.
+  // Only trust it above a speed threshold, where position-delta noise is
+  // small relative to actual movement.
+  const isUsingGps =
+    speedMph != null && speedMph >= gpsHeadingThresholdMph && gpsHeading != null
+
+  const isUsingGpsRef = useRef(false)
+  useEffect(() => {
+    isUsingGpsRef.current = isUsingGps
+  }, [isUsingGps])
+
+  const applyHeadingUpdate = useCallback((headingTrueNorth: number) => {
+    if (lastHeading.current == null) {
+      lastHeading.current = headingTrueNorth
+      setRawHeadingState(headingTrueNorth)
+      setCardinal((prev) => stableCardinal(prev, headingTrueNorth))
+      return
+    }
+
+    const jump = angularDistance(lastHeading.current, headingTrueNorth)
+
+    if (jump > 170) return
+
+    const smoothed = smoothHeading(lastHeading.current, headingTrueNorth)
+
+    lastHeading.current = smoothed
+    setRawHeadingState(smoothed)
+    setCardinal((prev) => stableCardinal(prev, smoothed))
+  }, [])
 
   useEffect(() => {
     if (Capacitor.getPlatform() === "web") {
@@ -109,6 +150,12 @@ export function useCompass({
         const h = await CapgoCompass.addListener(
           "headingChange",
           (event: HeadingChangeEvent) => {
+            // While GPS heading is authoritative (moving above threshold),
+            // ignore magnetometer updates entirely rather than blending —
+            // blending a broken landscape reading back in would just
+            // reintroduce the wrong-direction problem.
+            if (isUsingGpsRef.current) return
+
             const raw = event?.value
 
             if (raw == null || !Number.isFinite(raw)) return
@@ -119,30 +166,7 @@ export function useCompass({
               declination
             )
 
-            if (lastHeading.current == null) {
-              lastHeading.current = declinationCorrected
-              setRawHeadingState(declinationCorrected)
-              setCardinal((prev) =>
-                stableCardinal(prev, declinationCorrected)
-              )
-              return
-            }
-
-            const jump = angularDistance(
-             lastHeading.current,
-             declinationCorrected
-            )
-
-            if (jump > 170) return
-
-            const smoothed = smoothHeading(
-              lastHeading.current,
-              declinationCorrected
-            )
-
-            lastHeading.current = smoothed
-            setRawHeadingState(smoothed)
-            setCardinal((prev) => stableCardinal(prev, smoothed))
+            applyHeadingUpdate(declinationCorrected)
           }
         )
 
@@ -211,11 +235,19 @@ export function useCompass({
         }
       })()
     }
-  }, [declination])
+  }, [declination, applyHeadingUpdate])
+
+  // Feed GPS heading updates through the same smoothing/cardinal pipeline
+  // whenever it's the active source.
+  useEffect(() => {
+    if (!isUsingGps || gpsHeading == null) return
+    applyHeadingUpdate(normalizeHeadingDegrees(gpsHeading))
+  }, [isUsingGps, gpsHeading, applyHeadingUpdate])
 
   return {
     cardinal,
     needsCalibration,
     rawHeading: rawHeadingState,
+    headingSource: isUsingGps ? "gps" : "magnetometer",
   }
 }

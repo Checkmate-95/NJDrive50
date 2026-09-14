@@ -1337,9 +1337,10 @@ function ActiveDriveContent({
       ? "Lighting calculated from local sunrise and sunset"
       : "Solar verification pending"
 
-  return isMaximized ? (
+    return isMaximized ? (
     <DriveDashboard
       currentSpeed={currentSpeed}
+      gpsHeading={session.lastCoord?.heading ?? null}
       liveMiles={session.liveMiles}
       outsideTempF={session.outsideTempF}
       formattedTimer={formattedElapsed}

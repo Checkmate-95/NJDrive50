@@ -142,7 +142,7 @@ async function getAccurateMileage(
     const { signal: requestSignal, cleanup } = composeAbortSignal(signal)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/computeRoutes`, {
+      const response = await fetch(`${API_BASE_URL}/computeRoutes`, {
 
         method: "POST",
         headers: {

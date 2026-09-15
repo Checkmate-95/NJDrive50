@@ -60,6 +60,12 @@ export type ActiveDriveSession = {
 
   liveMiles: number
   currentSpeed: number
+  // Timestamp of the last tick where a speed value was actually derived
+  // (from native GPS speed or the manual haversine/time-delta fallback) —
+  // not merely the last time a coordinate arrived. Used to detect when
+  // coordinates keep arriving but none of them yield a usable speed, so
+  // currentSpeed can be reset instead of staying stuck at a stale value.
+  lastValidSpeedAt: number | null
   startCoord: RouteCoord | null
   lastCoord: RouteCoord | null
   routeTrail: RouteCoord[]
@@ -139,7 +145,15 @@ const MAX_GPS_ACCURACY_METERS = 65
 const MIN_SPEED_SAMPLE_MS = 1_000
 const MAX_SPEED_SAMPLE_MS = 15_000
 const MAX_REASONABLE_SPEED_MPH = 120
+// No coordinate at all arrived for this long (poll failed/was skipped
+// entirely) — zero out speed. See tick()'s "else" branch.
 const SPEED_STALE_AFTER_MS = 15_000
+// Coordinates ARE arriving, but neither native GPS speed nor the manual
+// distance/time fallback could produce a value from them (e.g. the device
+// omitted position.coords.speed for that fix). Shorter than
+// SPEED_STALE_AFTER_MS because this represents an ongoing data-quality
+// problem across active fixes, not just a single missed poll.
+const SPEED_UNAVAILABLE_STALE_MS = 5_000
 const PARKED_SPEED_THRESHOLD_MPH = 4
 const TINY_MOVEMENT_MILES = 0.001
 
@@ -199,6 +213,7 @@ function createInitialSession(): ActiveDriveSession {
 
     liveMiles: 0,
     currentSpeed: 0,
+    lastValidSpeedAt: null,
     startCoord: null,
     lastCoord: null,
     routeTrail: [],
@@ -357,6 +372,7 @@ function normalizeSession(value: unknown): ActiveDriveSession {
 
     liveMiles: normalizeNonNegativeNumber(raw.liveMiles),
     currentSpeed: normalizeNonNegativeNumber(raw.currentSpeed),
+    lastValidSpeedAt: normalizeNumber(raw.lastValidSpeedAt),
 
 
     startCoord: normalizeRouteCoord(raw.startCoord),
@@ -883,6 +899,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
 
           let liveMiles = next.liveMiles
           let currentSpeed = next.currentSpeed
+          let lastValidSpeedAt = next.lastValidSpeedAt
           let lastCoord = next.lastCoord
           let routeTrail = next.routeTrail
           let startCoord = next.startCoord
@@ -915,10 +932,44 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
 
 
     if (nextSpeedMph !== null) {
-      currentSpeed =
-        isPoorAccuracy || isTinyMovement || isLowSpeed
-          ? 0
-          : nextSpeedMph
+      // isTinyMovement is only a valid reason to zero out the MANUAL
+      // (haversine-derived) fallback speed, where a near-zero position
+      // delta directly implies near-zero average speed over the interval.
+      // It is NOT a valid reason to zero out native GPS speed: that's a
+      // direct (typically Doppler-based) velocity measurement from the
+      // device's GPS chip, independent of the position fix math. A real
+      // example where these two diverge: driving through a tight turn or
+      // roundabout, where actual distance traveled is real but the
+      // straight-line haversine delta between two fixes can be small —
+      // the car is genuinely moving, GPS speed correctly reflects that,
+      // but this position-delta heuristic would wrongly zero it out.
+      // isPoorAccuracy and isLowSpeed still apply regardless of source —
+      // those check accuracy and the resulting speed value itself, not
+      // position delta, so they're valid universal guards.
+      const shouldForceParkedSpeedToZero =
+        isPoorAccuracy ||
+        isLowSpeed ||
+        (gpsSpeedMph === null && isTinyMovement)
+
+      currentSpeed = shouldForceParkedSpeedToZero ? 0 : nextSpeedMph
+      lastValidSpeedAt = now
+    } else if (
+      lastValidSpeedAt === null ||
+      now - lastValidSpeedAt > SPEED_UNAVAILABLE_STALE_MS
+    ) {
+      // A coord arrived, but neither native GPS speed nor the manual
+      // distance/time derivation could produce a value from it (e.g. the
+      // device omitted position.coords.speed for this fix, or the gap
+      // between fixes fell outside calculateManualSpeedMph's 1-15s
+      // window). Previously currentSpeed was left completely untouched
+      // in this case — this branch didn't exist, and the "no coord at
+      // all" staleness check below never applies when a coord DID
+      // arrive — so a stale nonzero reading could persist indefinitely
+      // as long as some coord kept arriving each poll, even if none of
+      // them yielded a usable speed. Only zero out after a short window
+      // so one isolated missing-speed sample doesn't cause visible
+      // flicker; the smoothing in useSmoothedSpeed animates the drop.
+      currentSpeed = 0
     }
   } else {
     const gpsSpeedMph = calculateGpsSpeedMph(incomingCoord)
@@ -934,6 +985,18 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
         isPoorAccuracy || gpsSpeedMph < PARKED_SPEED_THRESHOLD_MPH
           ? 0
           : gpsSpeedMph
+      lastValidSpeedAt = now
+    } else if (
+      lastValidSpeedAt === null ||
+      now - lastValidSpeedAt > SPEED_UNAVAILABLE_STALE_MS
+    ) {
+      // Same staleness guard as above, applied here for symmetry: this
+      // branch runs when there's no lastCoord to derive a manual fallback
+      // from (typically the very first coord of a fresh drive, where
+      // currentSpeed already starts at 0 from createInitialSession() —
+      // but keeping this check here too guards against any future path
+      // that could clear lastCoord while leaving currentSpeed nonzero).
+      currentSpeed = 0
     }
   }
 
@@ -978,6 +1041,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
               ...next,
               liveMiles,
               currentSpeed,
+              lastValidSpeedAt,
               startCoord,
               lastCoord,
               routeTrail,
@@ -1030,6 +1094,7 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
             routeTrail: [],
             liveMiles: 0,
             currentSpeed: 0,
+            lastValidSpeedAt: null,
             startCoord: null,
             lastCoord: null,
             currentMode: "unverified",
@@ -1194,7 +1259,16 @@ export const useActiveDriveStore = create<ActiveDriveStore>()(
       storage: createJSONStorage(() =>
         isBrowser() ? localStorage : noopStorage
       ),
-      version: 14,
+      // Bumped 14 -> 15: added session.lastValidSpeedAt. Zustand's persist
+      // only runs migrate() (which normalizes/defaults missing fields to
+      // null via normalizeSession()) when the stored version differs from
+      // this one. Without this bump, existing localStorage data from
+      // before this field existed would be merged in as-is, leaving
+      // lastValidSpeedAt as `undefined` rather than `null` — and
+      // `now - undefined` is NaN, which silently defeats the new
+      // staleness check's comparison (NaN > threshold is always false)
+      // for any drive resumed from old persisted state.
+      version: 15,
       partialize: (state) => ({
         session: {
           ...state.session,

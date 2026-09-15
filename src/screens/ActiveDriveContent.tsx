@@ -812,9 +812,9 @@ function ActiveDriveContent({
     }
   }, [clearNotificationInterval, session.isRunning])
 
-  // Live-UI-only GPS poll. Replaces the old continuous Geolocation.watchPosition().
+    // Live-UI-only GPS poll. Replaces the old continuous Geolocation.watchPosition.
   // The native Drive plugin (DriveTrackingService.kt) is the actual source of
-  // truth for the saved drive — this poll exists solely so the on-screen
+  // truth for the saved drive. This poll exists solely so the on-screen
   // timer/day-night/speed/mileage numbers update while the drive is running.
   useEffect(() => {
     clearLivePoll()
@@ -822,8 +822,23 @@ function ActiveDriveContent({
     if (!session.isRunning) return
 
     let cancelled = false
+    let isPolling = false
+    let lastAcceptedPositionTimestamp = 0
 
     const poll = async () => {
+  // A location request can wait up to 8 seconds while the interval runs
+  // every 2 seconds. Do not allow concurrent requests to return in an
+  // unexpected order and become separate samples in tick().
+  if (isPolling) {
+
+        if (import.meta.env.DEV) {
+          console.debug("[LivePoll] Skipped — previous request still in flight")
+        }
+        return
+      }
+
+      isPolling = true
+
       try {
         if (Capacitor.isNativePlatform()) {
           const permission = await Geolocation.checkPermissions()
@@ -833,19 +848,23 @@ function ActiveDriveContent({
             permission.coarseLocation === "granted"
 
           if (!granted) {
-            if (!cancelled && mountedRef.current) {
-              setLocationError(
-                "Location access is needed to verify sunlight and darkness hours."
-              )
-            }
-            return
-          }
+  if (!cancelled && mountedRef.current) {
+    setLocationError(
+      "Location access is needed to verify sunlight and darkness hours."
+    )
+  }
+
+  return
+}
         }
 
         const position = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
           timeout: 8_000,
-          maximumAge: 5_000,
+
+          // This live poll runs every 2 seconds. Do not accept a cached
+          // location that could be several seconds old.
+          maximumAge: 0,
         })
 
         if (cancelled || !mountedRef.current) return
@@ -864,17 +883,44 @@ function ActiveDriveContent({
           return
         }
 
+        const positionTimestamp =
+          typeof position.timestamp === "number" &&
+          Number.isFinite(position.timestamp)
+            ? position.timestamp
+            : Date.now()
+
+        // Do not submit a duplicate or out-of-order location callback as a
+        // new movement sample for this live UI polling effect.
+        if (positionTimestamp <= lastAcceptedPositionTimestamp) {
+          if (import.meta.env.DEV) {
+            console.debug("[LivePoll] Ignored non-newer position", {
+              positionTimestamp,
+              lastAcceptedPositionTimestamp,
+            })
+          }
+          return
+        }
+
+        if (import.meta.env.DEV) {
+          console.debug("[LivePoll]", {
+            receivedAt: Date.now(),
+            positionTimestamp,
+            lat,
+            lng,
+            accuracy,
+            rawSpeedMps: speed,
+            heading,
+          })
+        }
+
+        lastAcceptedPositionTimestamp = positionTimestamp
         setLocationError(null)
 
         tick(
           {
             lat,
             lng,
-            at:
-              typeof position.timestamp === "number" &&
-              Number.isFinite(position.timestamp)
-                ? position.timestamp
-                : Date.now(),
+            at: positionTimestamp,
             accuracy:
               typeof accuracy === "number" && Number.isFinite(accuracy)
                 ? accuracy
@@ -896,10 +942,16 @@ function ActiveDriveContent({
             "Location updates are unavailable. Time will remain unverified until location returns."
           )
         }
+      } finally {
+        // This must remain in finally so all exits—including denied
+        // permission, invalid coordinates, success, and failures—release
+        // the polling lock.
+        isPolling = false
       }
     }
 
     void poll()
+
     livePollIntervalRef.current = globalThis.setInterval(
       () => void poll(),
       LIVE_POLL_INTERVAL_MS

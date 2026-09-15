@@ -93,18 +93,14 @@ export function useCompass({
   const [rawHeadingState, setRawHeadingState] = useState<number | null>(null)
 
   const lastHeading = useRef<number | null>(null)
-  const headingHandle = useRef<{ remove: () => Promise<void> } | null>(null)
-  const accuracyHandle = useRef<{ remove: () => Promise<void> } | null>(null)
-  const cancelled = useRef(false)
+  const isUsingGpsRef = useRef(false)
+  const isAccuracyPoorRef = useRef(false)
 
-  // GPS course-over-ground doesn't depend on device sensors or screen
-  // rotation, so it sidesteps the magnetometer's broken landscape behavior.
-  // Only trust it above a speed threshold, where position-delta noise is
-  // small relative to actual movement.
+  // GPS course-over-ground does not depend on device sensors or screen
+  // rotation, so prefer it while the device is moving fast enough.
   const isUsingGps =
     speedMph != null && speedMph >= gpsHeadingThresholdMph && gpsHeading != null
 
-  const isUsingGpsRef = useRef(false)
   useEffect(() => {
     isUsingGpsRef.current = isUsingGps
   }, [isUsingGps])
@@ -119,7 +115,14 @@ export function useCompass({
 
     const jump = angularDistance(lastHeading.current, headingTrueNorth)
 
-    if (jump > 170) return
+    // Treat a large difference as a valid re-acquisition after a period of
+    // unavailable/poor sensor data rather than keeping a stale heading forever.
+    if (jump > 170) {
+      lastHeading.current = headingTrueNorth
+      setRawHeadingState(headingTrueNorth)
+      setCardinal((prev) => stableCardinal(prev, headingTrueNorth))
+      return
+    }
 
     const smoothed = smoothHeading(lastHeading.current, headingTrueNorth)
 
@@ -134,30 +137,29 @@ export function useCompass({
       return
     }
 
-    cancelled.current = false
+    let cancelled = false
+    let headingHandle: { remove: () => Promise<void> } | null = null
+    let accuracyHandle: { remove: () => Promise<void> } | null = null
+
     lastHeading.current = null
+    isAccuracyPoorRef.current = false
+    setNeedsCalibration(false)
 
     const setup = async () => {
       try {
-        try {
-          await CapgoCompass.stopListening()
-        } catch {
-          // Ignore cleanup errors from prior listeners.
-        }
-
         await CapgoCompass.startListening()
 
         const h = await CapgoCompass.addListener(
           "headingChange",
           (event: HeadingChangeEvent) => {
-            // While GPS heading is authoritative (moving above threshold),
-            // ignore magnetometer updates entirely rather than blending —
-            // blending a broken landscape reading back in would just
-            // reintroduce the wrong-direction problem.
+            // GPS course is authoritative while driving above the threshold.
             if (isUsingGpsRef.current) return
 
-            const raw = event?.value
+            // Hold the last valid heading rather than applying sensor input
+            // Android reports as LOW or UNRELIABLE.
+            if (isAccuracyPoorRef.current) return
 
+            const raw = event?.value
             if (raw == null || !Number.isFinite(raw)) return
 
             const magneticHeading = normalizeHeadingDegrees(raw)
@@ -170,75 +172,70 @@ export function useCompass({
           }
         )
 
-        if (!cancelled.current) {
-          headingHandle.current = h
-        } else {
+        if (cancelled) {
           await h.remove()
+          return
         }
+
+        headingHandle = h
 
         try {
           await CapgoCompass.watchAccuracy()
 
           const a = await CapgoCompass.addListener(
             "accuracyChange",
-            (ev: AccuracyChangeEvent) => {
-              setNeedsCalibration(
-                ev.accuracy === CompassAccuracy.LOW ||
-                  ev.accuracy === CompassAccuracy.UNRELIABLE
-              )
+            (event: AccuracyChangeEvent) => {
+              const poor =
+                event.accuracy === CompassAccuracy.LOW ||
+                event.accuracy === CompassAccuracy.UNRELIABLE
+
+              isAccuracyPoorRef.current = poor
+              setNeedsCalibration(poor)
             }
           )
 
-          if (!cancelled.current) {
-            accuracyHandle.current = a
-          } else {
+          if (cancelled) {
             await a.remove()
+            return
           }
+
+          accuracyHandle = a
         } catch {
-          // Accuracy watching is optional; continue without it.
+          // Accuracy monitoring is optional; keep normal heading behavior if
+          // this feature is unavailable on the current platform/plugin build.
         }
-      } catch (err) {
-        console.error("Compass setup failed:", err)
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Compass setup failed:", error)
+        }
       }
     }
 
     void setup()
 
     return () => {
-      cancelled.current = true
+      cancelled = true
 
       void (async () => {
         try {
-          if (headingHandle.current) await headingHandle.current.remove()
+          if (headingHandle) await headingHandle.remove()
         } catch {
-          // Ignore listener removal failures during cleanup.
+          // Ignore listener cleanup failures.
         }
-        headingHandle.current = null
+        headingHandle = null
 
         try {
-          if (accuracyHandle.current) await accuracyHandle.current.remove()
+          if (accuracyHandle) await accuracyHandle.remove()
         } catch {
-          // Ignore listener removal failures during cleanup.
+          // Ignore listener cleanup failures.
         }
-        accuracyHandle.current = null
-
-        try {
-          await CapgoCompass.stopListening()
-        } catch {
-          // Ignore stop failures during cleanup.
-        }
-
-        try {
-          await CapgoCompass.unwatchAccuracy()
-        } catch {
-          // Ignore accuracy unwatch failures during cleanup.
-        }
+        accuracyHandle = null
       })()
     }
   }, [declination, applyHeadingUpdate])
 
-  // Feed GPS heading updates through the same smoothing/cardinal pipeline
-  // whenever it's the active source.
+  // Feed GPS heading through the same smoothing/cardinal pipeline whenever it
+  // is the active source.
   useEffect(() => {
     if (!isUsingGps || gpsHeading == null) return
     applyHeadingUpdate(normalizeHeadingDegrees(gpsHeading))

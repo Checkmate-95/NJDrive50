@@ -1,5 +1,4 @@
 // Force redeploy
-
 import OpenAI from "openai";
 
 export const runtime = "nodejs";
@@ -117,22 +116,17 @@ export async function POST(req: Request) {
             "If a New Jersey legal or MVC requirement may have changed, advise the user to verify it with the New Jersey MVC.",
           ].join("\n");
 
-    const completion = await client.chat.completions.create({
+    // NEW OPENAI SDK CALL — FIXES THE 500 ERROR
+    const completion = await client.responses.create({
       model: OPENAI_MODEL,
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        {
-          role: "user",
-          content: cleanPrompt,
-        },
+      input: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: cleanPrompt },
       ],
       temperature: mode === "faq" ? 0.3 : 0.5,
     });
 
-    const answer = completion.choices?.[0]?.message?.content ?? "";
+    const answer = completion.output_text ?? "";
 
     return Response.json(
       {

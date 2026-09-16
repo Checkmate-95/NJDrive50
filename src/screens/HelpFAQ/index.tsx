@@ -201,10 +201,10 @@ export default function HelpFaq() {
               "Only if you enable it — used for distance and route summaries.",
           },
           {
-            question: "Does it track speed?",
-            answer:
-              "No — NJDrive50 avoids collecting sensitive driving data.",
-          },
+  question: "Does NJDrive50 use speed data?",
+  answer:
+    "NJDrive50 can use your device's current GPS speed to display the live speedometer during an active drive. Speed is not used to score or grade driving behavior.",
+},
           {
             question: "How does it detect night hours?",
             answer:
@@ -214,6 +214,11 @@ export default function HelpFaq() {
             question: "Can I split a drive?",
             answer: "Yes — edit the drive and adjust start/end times.",
           },
+          {
+  question: "Why am I seeing a compass warning?",
+  answer:
+    "The compass warning means your phone's magnetic compass has low accuracy. This can happen near a magnetic mount, metal, a charger, speakers, or when the compass needs calibration. Move your phone in a figure-8 motion away from possible interference, then wait a few seconds for the heading to stabilize. The warning affects the compass heading display. Your drive time and distance tracking continue normally. While driving at normal road speed, NJDrive50 can use GPS course direction instead of the phone's magnetic compass.",
+},
         ],
       },
     ],

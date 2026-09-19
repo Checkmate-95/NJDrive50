@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useCompass } from "../hooks/useCompass"
 import { Speedometer } from "../components/speedometer/Speedometer"
-import { useSmoothedSpeed } from "../hooks/useSmoothedSpeed"
+
 
 interface DriveDashboardProps {
   formattedTimer: string
@@ -58,8 +58,10 @@ export default function DriveDashboard({
     speedMph: currentSpeed,
   })
 
-  const smoothedSpeed = useSmoothedSpeed(currentSpeed ?? 0)
-  const displaySpeed = smoothedSpeed ?? 0
+  const displaySpeed =
+  typeof currentSpeed === "number" && Number.isFinite(currentSpeed)
+    ? Math.max(0, currentSpeed)
+    : 0
 
   useEffect(() => {
     const updateOrientation = () => {

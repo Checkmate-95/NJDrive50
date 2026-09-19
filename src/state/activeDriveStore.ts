@@ -154,7 +154,10 @@ const SPEED_STALE_AFTER_MS = 15_000
 // SPEED_STALE_AFTER_MS because this represents an ongoing data-quality
 // problem across active fixes, not just a single missed poll.
 const SPEED_UNAVAILABLE_STALE_MS = 5_000
-const PARKED_SPEED_THRESHOLD_MPH = 4
+// Suppress only near-zero GPS drift while parked.
+// A 4 mph cutoff visibly delays movement at launch and hides real low-speed
+// deceleration. Keep genuine 1–3 mph movement visible.
+const PARKED_SPEED_THRESHOLD_MPH = 1.2
 const TINY_MOVEMENT_MILES = 0.001
 
 

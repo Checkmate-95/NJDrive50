@@ -350,15 +350,19 @@ class DriveTrackingService : Service() {
     // -----------------------------------------------------------------
 
     private fun setupLocationRequest() {
-        locationRequest = LocationRequest.Builder(
-            Priority.PRIORITY_HIGH_ACCURACY,
-            2_000L
-        )
-            .setMinUpdateIntervalMillis(1_000L)
-            .setMinUpdateDistanceMeters(0f)
-            .setMaxUpdateDelayMillis(5_000L)
-            .build()
-    }
+    locationRequest = LocationRequest.Builder(
+        Priority.PRIORITY_HIGH_ACCURACY,
+        1_000L
+    )
+        .setMinUpdateIntervalMillis(500L)
+        .setMinUpdateDistanceMeters(0f)
+
+        // Do not batch active-drive fixes. Each update should be delivered
+        // as promptly as the fused provider produces it.
+        .setMaxUpdateDelayMillis(0L)
+
+        .build()
+}
 
     private fun setupLocationCallback() {
         locationCallback = object : LocationCallback() {

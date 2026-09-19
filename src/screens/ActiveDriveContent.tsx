@@ -44,14 +44,6 @@ const ROUTE_TIMEOUT_MS = 8_000
 const FS_NOTIFICATION_ID = 1001
 const FS_CHANNEL_ID = "njdrive50_drive"
 
-// Live-UI-only GPS poll interval. This does NOT feed the saved drive record —
-// that comes from the native Drive plugin (DriveTrackingService.kt), which
-// records continuously and survives backgrounding/the 5-minute JS-GPS kill.
-// This poll exists purely so the on-screen timer/day-night/speed/mileage
-// numbers update while the drive is running, before the native finalize
-// result is available at stopDrive().
-const LIVE_POLL_INTERVAL_MS = 2_000
-
 let foregroundServiceStarted = false
 
 function safeNumber(value: unknown): number {
@@ -411,7 +403,7 @@ function ActiveDriveContent({
   const [isStartingDrive, setIsStartingDrive] = useState(false)
 
   const mountedRef = useRef(true)
-  const livePollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const liveWatchIdRef = useRef<string | null>(null)
   const frozenSnapshotRef = useRef<Promise<DriveEntry | null> | null>(null)
   const snapshotAbortRef = useRef<AbortController | null>(null)
   const wasRunningBeforeStopRef = useRef(false)
@@ -439,12 +431,16 @@ function ActiveDriveContent({
   // pause/resume/stop would silently lose their target driveId.
   const driveId = session.driveId
 
-  const clearLivePoll = useCallback(() => {
-    if (livePollIntervalRef.current !== null) {
-      globalThis.clearInterval(livePollIntervalRef.current)
-      livePollIntervalRef.current = null
-    }
-  }, [])
+  const clearLiveWatch = useCallback(() => {
+  if (liveWatchIdRef.current === null) return
+
+  const id = liveWatchIdRef.current
+  liveWatchIdRef.current = null
+
+  void Geolocation.clearWatch({ id }).catch((error) => {
+    console.warn("[LiveWatch] Failed to clear:", error)
+  })
+}, [])
 
   const clearNotificationInterval = useCallback(() => {
     if (notificationIntervalRef.current !== null) {
@@ -454,10 +450,10 @@ function ActiveDriveContent({
   }, [])
 
   const clearRuntimeLoops = useCallback(() => {
-    driveActionTokenRef.current += 1
-    clearLivePoll()
-    clearNotificationInterval()
-  }, [clearLivePoll, clearNotificationInterval])
+  driveActionTokenRef.current += 1
+  clearLiveWatch()
+  clearNotificationInterval()
+}, [clearLiveWatch, clearNotificationInterval])
 
   const getCurrentLocation = useCallback(async (): Promise<RouteCoord | null> => {
     if (locationRequestRef.current) {
@@ -757,14 +753,15 @@ function ActiveDriveContent({
   const [displayedMs, setDisplayedMs] = useState(() => getTotalActiveMs())
 
   useEffect(() => {
-    mountedRef.current = true
+  mountedRef.current = true
 
-    return () => {
-      mountedRef.current = false
-      snapshotAbortRef.current?.abort()
-      driveActionTokenRef.current += 1
-    }
-  }, [])
+  return () => {
+    mountedRef.current = false
+    snapshotAbortRef.current?.abort()
+    driveActionTokenRef.current += 1
+    clearLiveWatch()
+  }
+}, [clearLiveWatch])
 
   useEffect(() => {
     const intervalId = globalThis.setInterval(() => {
@@ -812,33 +809,18 @@ function ActiveDriveContent({
     }
   }, [clearNotificationInterval, session.isRunning])
 
-    // Live-UI-only GPS poll. Replaces the old continuous Geolocation.watchPosition.
-  // The native Drive plugin (DriveTrackingService.kt) is the actual source of
-  // truth for the saved drive. This poll exists solely so the on-screen
-  // timer/day-night/speed/mileage numbers update while the drive is running.
+      // Continuous live GPS stream for the on-screen dashboard.
+  //
+  // The native Drive plugin remains the source of truth for the saved drive.
+  // This watch only keeps speed, heading, live mileage, and solar status
+  // responsive while Active Drive is visible and running.
   useEffect(() => {
-    clearLivePoll()
-
     if (!session.isRunning) return
 
     let cancelled = false
-    let isPolling = false
     let lastAcceptedPositionTimestamp = 0
 
-    const poll = async () => {
-  // A location request can wait up to 8 seconds while the interval runs
-  // every 2 seconds. Do not allow concurrent requests to return in an
-  // unexpected order and become separate samples in tick().
-  if (isPolling) {
-
-        if (import.meta.env.DEV) {
-          console.debug("[LivePoll] Skipped — previous request still in flight")
-        }
-        return
-      }
-
-      isPolling = true
-
+    const startLiveWatch = async () => {
       try {
         if (Capacitor.isNativePlatform()) {
           const permission = await Geolocation.checkPermissions()
@@ -848,120 +830,143 @@ function ActiveDriveContent({
             permission.coarseLocation === "granted"
 
           if (!granted) {
-  if (!cancelled && mountedRef.current) {
-    setLocationError(
-      "Location access is needed to verify sunlight and darkness hours."
-    )
-  }
-
-  return
-}
-        }
-
-        const position = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 8_000,
-
-          // This live poll runs every 2 seconds. Do not accept a cached
-          // location that could be several seconds old.
-          maximumAge: 0,
-        })
-
-        if (cancelled || !mountedRef.current) return
-
-        const { latitude: lat, longitude: lng, accuracy, heading, speed } =
-          position.coords
-
-        if (
-          !Number.isFinite(lat) ||
-          !Number.isFinite(lng) ||
-          lat < -90 ||
-          lat > 90 ||
-          lng < -180 ||
-          lng > 180
-        ) {
-          return
-        }
-
-        const positionTimestamp =
-          typeof position.timestamp === "number" &&
-          Number.isFinite(position.timestamp)
-            ? position.timestamp
-            : Date.now()
-
-        // Do not submit a duplicate or out-of-order location callback as a
-        // new movement sample for this live UI polling effect.
-        if (positionTimestamp <= lastAcceptedPositionTimestamp) {
-          if (import.meta.env.DEV) {
-            console.debug("[LivePoll] Ignored non-newer position", {
-              positionTimestamp,
-              lastAcceptedPositionTimestamp,
-            })
+            if (!cancelled && mountedRef.current) {
+              setLocationError(
+                "Location access is needed to verify sunlight and darkness hours."
+              )
+            }
+            return
           }
+        }
+
+        const id = await Geolocation.watchPosition(
+          {
+            enableHighAccuracy: true,
+
+            // Android / Capacitor Geolocation v8:
+            // request a live location update every second.
+            interval: 1_000,
+
+            // Android only: permit callbacks up to twice per second.
+            minimumUpdateInterval: 500,
+
+            // Allow temporary weak GPS signal without immediately failing.
+            timeout: 10_000,
+
+            // Do not begin with a stale cached location.
+            maximumAge: 0,
+          },
+          (position, error) => {
+            if (cancelled || !mountedRef.current) return
+
+            if (error || !position) {
+              setLocationError(
+                "Location updates are unavailable. Time will remain unverified until location returns."
+              )
+              return
+            }
+
+            const { latitude: lat, longitude: lng, accuracy, heading, speed } =
+              position.coords
+
+            if (
+              !Number.isFinite(lat) ||
+              !Number.isFinite(lng) ||
+              lat < -90 ||
+              lat > 90 ||
+              lng < -180 ||
+              lng > 180
+            ) {
+              return
+            }
+
+            const positionTimestamp =
+              typeof position.timestamp === "number" &&
+              Number.isFinite(position.timestamp)
+                ? position.timestamp
+                : Date.now()
+
+            // Never turn a repeated/older callback into a new movement sample.
+            if (positionTimestamp <= lastAcceptedPositionTimestamp) {
+              if (import.meta.env.DEV) {
+                console.debug("[LiveWatch] Ignored non-newer position", {
+                  positionTimestamp,
+                  lastAcceptedPositionTimestamp,
+                })
+              }
+              return
+            }
+
+            lastAcceptedPositionTimestamp = positionTimestamp
+
+            if (import.meta.env.DEV) {
+              console.debug("[LiveWatch]", {
+                receivedAt: Date.now(),
+                positionTimestamp,
+                sampleAgeMs: Date.now() - positionTimestamp,
+                lat,
+                lng,
+                accuracy,
+                rawSpeedMps: speed,
+                rawSpeedMph:
+                  typeof speed === "number" && Number.isFinite(speed)
+                    ? speed * 2.236936
+                    : null,
+                heading,
+              })
+            }
+
+            setLocationError(null)
+
+            tick(
+              {
+                lat,
+                lng,
+                at: positionTimestamp,
+                accuracy:
+                  typeof accuracy === "number" && Number.isFinite(accuracy)
+                    ? accuracy
+                    : null,
+                heading:
+                  typeof heading === "number" && Number.isFinite(heading)
+                    ? heading
+                    : null,
+                gpsSpeedMps:
+                  typeof speed === "number" && Number.isFinite(speed)
+                    ? speed
+                    : null,
+              },
+              Date.now()
+            )
+          }
+        )
+
+        // The screen may have stopped/unmounted while the native watch was
+        // being created. Do not leave a watch running in that case.
+        if (cancelled) {
+          void Geolocation.clearWatch({ id }).catch(() => {})
           return
         }
 
-        if (import.meta.env.DEV) {
-          console.debug("[LivePoll]", {
-            receivedAt: Date.now(),
-            positionTimestamp,
-            lat,
-            lng,
-            accuracy,
-            rawSpeedMps: speed,
-            heading,
-          })
-        }
+        liveWatchIdRef.current = id
+      } catch (error) {
+        console.warn("[LiveWatch] Failed to start:", error)
 
-        lastAcceptedPositionTimestamp = positionTimestamp
-        setLocationError(null)
-
-        tick(
-          {
-            lat,
-            lng,
-            at: positionTimestamp,
-            accuracy:
-              typeof accuracy === "number" && Number.isFinite(accuracy)
-                ? accuracy
-                : null,
-            heading:
-              typeof heading === "number" && Number.isFinite(heading)
-                ? heading
-                : null,
-            gpsSpeedMps:
-              typeof speed === "number" && Number.isFinite(speed)
-                ? speed
-                : null,
-          },
-          Date.now()
-        )
-      } catch {
         if (!cancelled && mountedRef.current) {
           setLocationError(
             "Location updates are unavailable. Time will remain unverified until location returns."
           )
         }
-      } finally {
-        // This must remain in finally so all exits—including denied
-        // permission, invalid coordinates, success, and failures—release
-        // the polling lock.
-        isPolling = false
       }
     }
 
-    void poll()
-
-    livePollIntervalRef.current = globalThis.setInterval(
-      () => void poll(),
-      LIVE_POLL_INTERVAL_MS
-    )
+    void startLiveWatch()
 
     return () => {
       cancelled = true
-      clearLivePoll()
+      clearLiveWatch()
     }
-  }, [clearLivePoll, session.isRunning, tick])
+  }, [clearLiveWatch, session.isRunning, tick])
 
   useEffect(() => {
     if (!session.isRunning) return

@@ -132,7 +132,7 @@ app.post("/njdrive50-ai", async (req, res) => {
     })
 
     const reply = completion.choices[0]?.message?.content ?? "No response"
-    return res.status(200).json({ message: reply })   // ← add "return" here
+return res.status(200).json({ output: reply })   // ← add "return" here
   } catch (err) {
     console.error("AI helper error:", err)
     return res.status(500).json({ error: "AI helper failed" })   // ← and here

@@ -143,3 +143,4 @@ export const api = onRequest(
   { secrets: [GOOGLE_MAPS_API_KEY, OPENAI_API_KEY] },
   app
 )
+

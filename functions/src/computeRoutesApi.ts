@@ -11,7 +11,7 @@ const GOOGLE_MAPS_API_KEY = defineSecret("GOOGLE_MAPS_API_KEY")
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY")
 
 const app = express()
-
+app.set("trust proxy", 1)
 app.use(helmet())
 app.use(
   rateLimit({

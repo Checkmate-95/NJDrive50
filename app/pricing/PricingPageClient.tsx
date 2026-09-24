@@ -249,10 +249,11 @@ function PlanCard({
 }
 
 export default function PricingPageClient({
-  pricingFaqs,
+  pricingFaqs = [],
 }: {
-  pricingFaqs: Faq[];
+  pricingFaqs?: Faq[];
 }) {
+  
   const includedRows: FeatureRow[] = [
     { label: "New Jersey 50-hour driving log tracking", available: true },
     { label: "Automatic night-hours tracking", available: true },

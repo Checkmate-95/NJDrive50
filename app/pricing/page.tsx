@@ -56,6 +56,11 @@ const includedRows: FeatureRow[] = [
 
 const pricingFaqs: Faq[] = [
   {
+    question: "Can I pay for NJDrive50 on this website?",
+    answer:
+      "No. This website does not process payments. Subscriptions are purchased, billed, and managed through Google Play inside the NJDrive50 Android app.",
+  },
+  {
     question: "Is there a free trial?",
     answer:
       "The yearly plan includes a 7-day free trial. After the trial ends, $29.99 is billed for one year unless you cancel through Google Play before the trial ends.",

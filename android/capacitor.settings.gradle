@@ -25,3 +25,6 @@ project(':capawesome-team-capacitor-android-foreground-service').projectDir = ne
 
 include ':capgo-capacitor-compass'
 project(':capgo-capacitor-compass').projectDir = new File('../node_modules/@capgo/capacitor-compass/android')
+
+include ':revenuecat-purchases-capacitor'
+project(':revenuecat-purchases-capacitor').projectDir = new File('../node_modules/@revenuecat/purchases-capacitor/android')

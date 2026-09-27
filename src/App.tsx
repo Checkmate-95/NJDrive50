@@ -34,6 +34,8 @@ import {
   setActiveProfileUser,
   resetProfileStore,
 } from "./state/profileStore"
+import { usePremium, usePremiumStore } from "./billing/premiumStore"
+import { isBillingSupported } from "./billing/revenuecat"
 
 const DriveSummary = lazy(() => import("./screens/DriveSummaryContent"))
 const DriveHistoryContent = lazy(() => import("./screens/DriveHistoryContent"))
@@ -53,6 +55,7 @@ const RestartOnboarding = lazy(() => import("./screens/RestartOnboarding"))
 const DataCleared = lazy(() => import("./screens/DataCleared"))
 const DataClearedFull = lazy(() => import("./screens/DataClearedFull"))
 const DataClearedPartial = lazy(() => import("./screens/DataClearedPartial"))
+const Paywall = lazy(() => import("./screens/Paywall"))
 
 const authCallIdRef = { current: 0 }
 
@@ -98,7 +101,60 @@ export type Screen =
   | "verifyEmail"
   | "forgotPassword"
   | "forgotIdentifier"
+  | "paywall"
 
+// Model A: every screen NOT listed here requires an active "premium"
+// entitlement (the 7-day yearly trial counts). Account, onboarding, legal,
+// deletion (required by Google Play), settings, and help always stay free.
+const FREE_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
+  "loading",
+  "intro",
+  "onboarding",
+  "teenInfo",
+  "parentInfo",
+  "manageProfile",
+  "restartOnboarding",
+  "login",
+  "register",
+  "verifyEmail",
+  "forgotPassword",
+  "forgotIdentifier",
+  "privacy",
+  "terms",
+  "about",
+  "settings",
+  "helpFaq",
+  "deleteAccount",
+  "deleteData",
+  "dataCleared",
+  "dataClearedFull",
+  "dataClearedPartial",
+  "paywall",
+])
+
+// A drive already in progress is never interrupted by the paywall.
+const ACTIVE_DRIVE_SCREENS: ReadonlySet<Screen> = new Set<Screen>([
+  "active",
+  "activeDrive",
+  "summary",
+])
+
+// Where "Not now" on the paywall sends a signed-in, non-premium user.
+const PAYWALL_EXIT_SCREEN: Screen = "settings"
+
+// Dev-only: a desktop browser (npm run dev) cannot run Google Play Billing.
+// Release builds are never bypassed.
+const DEV_BILLING_BYPASS = import.meta.env.DEV && !isBillingSupported()
+
+function LoadingScreen() {
+  return (
+    <div className="flex min-h-dvh w-full items-center justify-center bg-[#08194A]">
+      <div className="rounded-2xl bg-white/10 px-6 py-4 text-sm font-semibold text-white backdrop-blur-sm">
+        Loading…
+      </div>
+    </div>
+  )
+}
 
 export default function App() {
   const viteMode = import.meta.env?.MODE
@@ -106,44 +162,50 @@ export default function App() {
     console.log("🔥 NJDrive50 app loaded")
   }
 
-  const { screen, setScreen, stack } = useNav()
+  const { screen, setScreen, stack, goBack, resetTo } = useNav()
   const [authUser, setAuthUser] = useState<User | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [currentDrive, setCurrentDrive] = useState<DriveEntry | null>(null)
   const prevStackLengthRef = useRef(stack.length)
-  
 
+  const isPremium = usePremium()
+  const billingStatus = usePremiumStore((state) => state.status)
+  const driveInProgress = useActiveDriveStore((state) => Boolean(state.session?.isActive))
 
   useEffect(() => {
-  const unsubscribe = onAuthStateChanged(auth, async (user) => {
-    const myCallId = ++authCallIdRef.current
-    setAuthUser(user)
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      const myCallId = ++authCallIdRef.current
+      setAuthUser(user)
 
-    if (myCallId !== authCallIdRef.current) return
+      if (myCallId !== authCallIdRef.current) return
 
-    if (!user) {
-      resetProfileStore()
-      resetDriveStore()
-      resetActiveDriveStore()
-      useNav.getState().resetTo("login")
+      if (!user) {
+        void usePremiumStore.getState().signOut()
+        resetProfileStore()
+        resetDriveStore()
+        resetActiveDriveStore()
+        useNav.getState().resetTo("login")
+        setAuthReady(true)
+        return
+      }
+
+      setActiveProfileUser(user.uid)
+
+      // Link RevenueCat to this Firebase account (non-blocking).
+      void usePremiumStore.getState().signIn(user.uid)
+
+      if (myCallId !== authCallIdRef.current) return
+
+      await setActiveDriveUser(user.uid)
+
+      if (myCallId !== authCallIdRef.current) return
+
+      startupController(user)
       setAuthReady(true)
-      return
-    }
+    })
 
-    setActiveProfileUser(user.uid)
-
-    if (myCallId !== authCallIdRef.current) return
-
-    await setActiveDriveUser(user.uid)
-
-    if (myCallId !== authCallIdRef.current) return
-
-    startupController(user)
-    setAuthReady(true)
-  })
-
-  return () => unsubscribe()
-}, [setScreen])
+    return () => unsubscribe()
+  }, [setScreen])
 
   const safeScreen: Screen = screen ?? (authUser ? "home" : "login")
 
@@ -168,16 +230,40 @@ export default function App() {
   }, [safeScreen, stack.length])
 
   if (!authReady || safeScreen === "loading") {
-    return (
-      <div className="flex min-h-dvh w-full items-center justify-center bg-[#08194A]">
-        <div className="rounded-2xl bg-white/10 px-6 py-4 text-sm font-semibold text-white backdrop-blur-sm">
-          Loading…
-        </div>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
+  // Closing a paywall that replaced a locked screen: if the user just
+  // subscribed, stay put (the locked screen now renders); otherwise leave
+  // to a free screen instead of bouncing back into another locked one.
+  const closeGatedPaywall = () => {
+    if (usePremiumStore.getState().isPremium) return
+    resetTo(PAYWALL_EXIT_SCREEN)
+  }
+
+  // Closing the standalone "paywall" screen (opened from an Upgrade button).
+  const closePaywallScreen = () => {
+    if (usePremiumStore.getState().isPremium) {
+      resetTo("home")
+      return
+    }
+    goBack(PAYWALL_EXIT_SCREEN)
+  }
+
+  const requiresPremium =
+    Boolean(authUser) &&
+    !DEV_BILLING_BYPASS &&
+    !FREE_SCREENS.has(safeScreen) &&
+    !(driveInProgress && ACTIVE_DRIVE_SCREENS.has(safeScreen))
+
   const renderScreen = () => {
+    if (requiresPremium && !isPremium) {
+      if (billingStatus === "idle" || billingStatus === "loading") {
+        return <LoadingScreen />
+      }
+      return <Paywall onClose={closeGatedPaywall} />
+    }
+
     switch (safeScreen) {
       case "intro":
         return <HomeIntro setScreen={setScreenCompat} />
@@ -199,6 +285,8 @@ export default function App() {
         return <DataClearedFull />
       case "dataClearedPartial":
         return <DataClearedPartial />
+      case "paywall":
+        return <Paywall onClose={closePaywallScreen} />
       case "home":
         return <HomeDashboardContent setScreen={setScreenCompat} />
 
@@ -215,7 +303,6 @@ export default function App() {
           <TodaysDrive drive={currentDrive} />
         ) : (
           <HomeDashboardContent setScreen={setScreenCompat} />
-
         )
       case "summary": {
         const activeSession = useActiveDriveStore.getState().session
@@ -275,7 +362,6 @@ export default function App() {
       default:
         return authUser ? (
           <HomeDashboardContent setScreen={setScreenCompat} />
-
         ) : (
           <Login />
         )
@@ -283,19 +369,18 @@ export default function App() {
   }
 
   return (
-  <AppShell
-    user={authUser}
-    setScreen={setScreenCompat}
-    active={safeScreen}
-  >
-    <MapProvider>
-      <ErrorBoundary key={safeScreen}>
-        <Suspense fallback={<div>Loading…</div>}>
-          {renderScreen()}
-        </Suspense>
-      </ErrorBoundary>
-    </MapProvider>
-  </AppShell>
-)
-
+    <AppShell
+      user={authUser}
+      setScreen={setScreenCompat}
+      active={safeScreen}
+    >
+      <MapProvider>
+        <ErrorBoundary key={safeScreen}>
+          <Suspense fallback={<div>Loading…</div>}>
+            {renderScreen()}
+          </Suspense>
+        </ErrorBoundary>
+      </MapProvider>
+    </AppShell>
+  )
 }

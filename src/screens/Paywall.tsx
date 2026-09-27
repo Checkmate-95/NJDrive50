@@ -14,6 +14,8 @@ type PaywallProps = {
   onUnlocked?: () => void
 }
 
+type PlanKey = "annual" | "monthly"
+
 const TERMS_URL = "https://www.njdrive50.com/terms"
 const PRIVACY_URL = "https://www.njdrive50.com/privacy"
 const MANAGE_URL = "https://play.google.com/store/account/subscriptions"
@@ -27,12 +29,17 @@ const PREMIUM_FEATURES = [
   "BA-CSD preparation support",
 ]
 
+const PERIOD_WORD: Record<PlanKey, string> = {
+  annual: "year",
+  monthly: "month",
+}
+
 type FreePhaseShape = {
   defaultOption?: { freePhase?: { billingPeriod?: { iso8601?: string } } | null } | null
 }
 
-// Returns the free-trial length in days, or null if this package has no trial
-// available for this user (Google only offers it to eligible new subscribers).
+// Free-trial length in days, or null if Google is not offering a trial to
+// this user for this package (e.g. they already used their one trial).
 function getTrialDays(aPackage: PurchasesPackage | null): number | null {
   if (!aPackage) return null
   const period = (aPackage.product as unknown as FreePhaseShape).defaultOption?.freePhase
@@ -43,6 +50,12 @@ function getTrialDays(aPackage: PurchasesPackage | null): number | null {
   const weeks = /^P(\d+)W$/.exec(period)
   if (weeks) return Number(weeks[1]) * 7
   return null
+}
+
+function planLine(aPackage: PurchasesPackage, plan: PlanKey): string {
+  const trialDays = getTrialDays(aPackage)
+  const price = `${aPackage.product.priceString}/${PERIOD_WORD[plan]}`
+  return trialDays ? `${trialDays}-day free trial, then ${price}` : price
 }
 
 function openExternal(url: string) {
@@ -63,7 +76,7 @@ export default function Paywall({ onClose, onUnlocked }: PaywallProps) {
   const [offering, setOffering] = useState<PurchasesOffering | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<"purchase" | "restore" | null>(null)
-  const [selected, setSelected] = useState<"annual" | "monthly">("annual")
+  const [selected, setSelected] = useState<PlanKey>("annual")
   const [message, setMessage] = useState("")
 
   useEffect(() => {
@@ -89,7 +102,7 @@ export default function Paywall({ onClose, onUnlocked }: PaywallProps) {
   const annual = offering?.annual ?? null
   const monthly = offering?.monthly ?? null
   const selectedPackage = selected === "annual" ? annual : monthly
-  const annualTrialDays = getTrialDays(annual)
+  const selectedTrialDays = getTrialDays(selectedPackage)
 
   const handlePurchase = async () => {
     if (!selectedPackage || busy) return
@@ -140,6 +153,12 @@ export default function Paywall({ onClose, onUnlocked }: PaywallProps) {
       active ? "border-[#F9C80E] bg-[#FFF8DB]" : "border-[#08194A]/10 bg-white"
     }`
 
+  const disclosure = selectedPackage
+    ? selectedTrialDays
+      ? `After the ${selectedTrialDays}-day free trial, ${selectedPackage.product.priceString} is charged to your Google Play account and renews every ${PERIOD_WORD[selected]}. Cancel before the trial ends and you will not be charged. `
+      : `${selectedPackage.product.priceString} is charged to your Google Play account and renews every ${PERIOD_WORD[selected]}. `
+    : ""
+
   return (
     <main className="min-h-dvh bg-[#F7F9FC] px-4 py-6 text-[#08194A]">
       <div className="mx-auto w-full max-w-md space-y-5">
@@ -186,11 +205,7 @@ export default function Paywall({ onClose, onUnlocked }: PaywallProps) {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-base font-extrabold">Yearly</p>
-                    <p className="text-sm text-[#08194A]/70">
-                      {annualTrialDays
-                        ? `${annualTrialDays}-day free trial, then ${annual.product.priceString}/year`
-                        : `${annual.product.priceString}/year`}
-                    </p>
+                    <p className="text-sm text-[#08194A]/70">{planLine(annual, "annual")}</p>
                   </div>
                   <span className="rounded-full bg-[#08194A] px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.12em] text-white">
                     Best value
@@ -202,7 +217,7 @@ export default function Paywall({ onClose, onUnlocked }: PaywallProps) {
             {monthly ? (
               <button type="button" onClick={() => setSelected("monthly")} className={optionClasses(selected === "monthly")}>
                 <p className="text-base font-extrabold">Monthly</p>
-                <p className="text-sm text-[#08194A]/70">{monthly.product.priceString}/month</p>
+                <p className="text-sm text-[#08194A]/70">{planLine(monthly, "monthly")}</p>
               </button>
             ) : null}
           </div>
@@ -222,7 +237,7 @@ export default function Paywall({ onClose, onUnlocked }: PaywallProps) {
         >
           {busy === "purchase"
             ? "Opening Google Play..."
-            : selected === "annual" && annualTrialDays
+            : selectedTrialDays
               ? "Start free trial"
               : "Subscribe"}
         </button>
@@ -237,11 +252,9 @@ export default function Paywall({ onClose, onUnlocked }: PaywallProps) {
         </button>
 
         <p className="text-xs leading-5 text-[#08194A]/60">
-          {selected === "annual" && annualTrialDays
-            ? `After the ${annualTrialDays}-day free trial, ${annual?.product.priceString ?? ""} is charged to your Google Play account and renews every year. `
-            : `Payment is charged to your Google Play account and renews every ${selected === "annual" ? "year" : "month"}. `}
-          Subscriptions renew automatically unless canceled at least 24 hours before the end of
-          the current period (or before the trial ends). Manage or cancel anytime in Google Play.
+          {disclosure}
+          Subscriptions renew automatically unless canceled before the end of the current period.
+          One free trial per Google account. Manage or cancel anytime in Google Play.
         </p>
 
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs font-semibold text-[#08194A]/70">

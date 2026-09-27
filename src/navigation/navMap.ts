@@ -89,6 +89,7 @@ export const NAV = {
     manageProfile: "manageProfile",
     teenDriverRules: "teenDriverRules",
     reminderLog: "reminderLog",
+    upgrade: "paywall",
     close: "home",
     privacy: "privacy",
     terms: "terms",
@@ -175,6 +176,10 @@ export const NAV = {
   terms: {
     home: "home",
   },
+
+  // Closed via the Paywall component's own onClose (goBack / resetTo),
+  // so it needs no named actions.
+  paywall: {},
 } as const satisfies NavShape;
 
 export type NavMap = typeof NAV;
@@ -182,38 +187,21 @@ export type NavScreen = keyof NavMap;
 export type NavAction<S extends NavScreen> = Extract<keyof NavMap[S], string>;
 export type NextScreen<S extends NavScreen, A extends NavAction<S>> = NavMap[S][A];
 
-export function canNavigate<S extends NavScreen>(
-  current: S,
-  action: string
-): action is NavAction<S> {
+export function canNavigate<S extends NavScreen>(current: S, action: string): action is NavAction<S> {
   return action in NAV[current];
 }
 
-export function getNextScreen<
-  S extends NavScreen,
-  A extends NavAction<S>
->(current: S, action: A): NextScreen<S, A> {
+export function getNextScreen<S extends NavScreen, A extends NavAction<S>>(current: S, action: A): NextScreen<S, A> {
   return NAV[current][action];
 }
 
-export function navigate<
-  S extends NavScreen,
-  A extends NavAction<S>
->(
-  current: S,
-  action: A,
-  setScreen: (screen: Screen) => void
-): NextScreen<S, A> {
+export function navigate<S extends NavScreen, A extends NavAction<S>>(current: S, action: A, setScreen: (screen: Screen) => void): NextScreen<S, A> {
   const next = getNextScreen(current, action);
   setScreen(next as Screen);
   return next;
 }
 
-export function tryNavigate(
-  current: Screen,
-  action: string,
-  setScreen: (screen: Screen) => void
-): Screen | undefined {
+export function tryNavigate(current: Screen, action: string, setScreen: (screen: Screen) => void): Screen | undefined {
   if (!canNavigate(current, action)) {
     console.warn(`No route for action "${action}" from screen "${current}"`);
     return undefined;

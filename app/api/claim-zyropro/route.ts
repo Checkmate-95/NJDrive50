@@ -33,13 +33,11 @@ type Claim = {
 
 type PromotionStatus =
   | { open: true }
-  | {
-      open: false
-      reason: "disabled" | "not_started" | "ended" | "full"
-      message: string
-    }
+  | { open: false; reason: "disabled" | "not_started" | "ended" | "full"; message: string }
 
 type ValidationResult = { ok: true; claim: Claim } | { ok: false; error: string }
+
+type EmailResult = { adminEmailSent: boolean; confirmationEmailSent: boolean }
 
 // ─── Validation ──────────────────────────────────────────────────────────────
 const US_STATE_CODES = new Set([
@@ -57,15 +55,11 @@ const EMAIL_RE = /^[^\s@,;<>"]+@[^\s@,;<>".]+(\.[^\s@,;<>".]+)*\.[A-Za-z]{2,}$/
 const ZIP_RE = /^\d{5}(-\d{4})?$/
 const NAME_RE = /^[\p{L}\p{M}][\p{L}\p{M} .'-]{1,99}$/u
 const ADDRESS_RE = /^[\p{L}\p{M}\d][\p{L}\p{M}\d #.,'/-]{0,199}$/u
-const URL_LIKE_RE =
-  /(https?:|www\.|\.(com|net|org|io|co|ru|xyz|info|biz|link|app|site|online)\b)/i
+const URL_LIKE_RE = /(https?:|www\.|\.(com|net|org|io|co|ru|xyz|info|biz|link|app|site|online)\b)/i
 
 function cleanString(value: unknown, maxLength: number): string | null {
   if (typeof value !== "string") return null
-  const cleaned = value
-    .replace(/[\u0000-\u001F\u007F]+/g, " ")
-    .replace(/\s{2,}/g, " ")
-    .trim()
+  const cleaned = value.replace(/[\u0000-\u001F\u007F]+/g, " ").replace(/\s{2,}/g, " ").trim()
   if (!cleaned || cleaned.length > maxLength) return null
   return cleaned
 }
@@ -85,8 +79,7 @@ function validatePayload(data: unknown): ValidationResult {
   if (raw.attestsEligibility !== true) {
     return {
       ok: false,
-      error:
-        "You must confirm that you are a U.S. legal resident, 18 or older, and the holder of the yearly subscription.",
+      error: "You must confirm that you are a U.S. legal resident, 18 or older, and the holder of the yearly subscription.",
     }
   }
 
@@ -96,11 +89,7 @@ function validatePayload(data: unknown): ValidationResult {
 
   const fullName = cleanString(raw.fullName, 100)
   if (!fullName || !NAME_RE.test(fullName) || URL_LIKE_RE.test(fullName)) {
-    return {
-      ok: false,
-      error:
-        "Enter your full name using letters, spaces, periods, apostrophes, or hyphens.",
-    }
+    return { ok: false, error: "Enter your full name using letters, spaces, periods, apostrophes, or hyphens." }
   }
 
   const email = cleanString(raw.email, 254)?.toLowerCase() ?? null
@@ -108,23 +97,16 @@ function validatePayload(data: unknown): ValidationResult {
     return { ok: false, error: "A valid email address is required." }
   }
 
-  const orderId =
-    cleanString(raw.orderId, 40)?.replace(/\s+/g, "").toUpperCase() ?? null
+  const orderId = cleanString(raw.orderId, 40)?.replace(/\s+/g, "").toUpperCase() ?? null
   if (!orderId || !ORDER_ID_RE.test(orderId)) {
     return {
       ok: false,
-      error:
-        "Order ID format looks incorrect. It should look like GPA.1234-5678-9012-34567. Check your Google Play purchase confirmation email.",
+      error: "Order ID format looks incorrect. It should look like GPA.1234-5678-9012-34567. Check your Google Play purchase confirmation email.",
     }
   }
 
   const addressLine1 = cleanString(raw.addressLine1, 200)
-  if (
-    !addressLine1 ||
-    addressLine1.length < 4 ||
-    !ADDRESS_RE.test(addressLine1) ||
-    URL_LIKE_RE.test(addressLine1)
-  ) {
+  if (!addressLine1 || addressLine1.length < 4 || !ADDRESS_RE.test(addressLine1) || URL_LIKE_RE.test(addressLine1)) {
     return { ok: false, error: "A valid street address is required." }
   }
 
@@ -156,68 +138,35 @@ function validatePayload(data: unknown): ValidationResult {
   }
 
   if (raw.country !== "United States") {
-    return {
-      ok: false,
-      error: "This promotion is available only for U.S. shipping addresses.",
-    }
+    return { ok: false, error: "This promotion is available only for U.S. shipping addresses." }
   }
 
   return {
     ok: true,
-    claim: {
-      fullName,
-      email,
-      orderId,
-      addressLine1,
-      addressLine2,
-      city,
-      state,
-      postalCode,
-      country: "United States",
-    },
+    claim: { fullName, email, orderId, addressLine1, addressLine2, city, state, postalCode, country: "United States" },
   }
 }
 
 // ─── Promotion status ────────────────────────────────────────────────────────
 async function getPromotionStatus(db: Firestore): Promise<PromotionStatus> {
   if (process.env.ZYROPRO_PROMO_OPEN !== "true") {
-    return {
-      open: false,
-      reason: "disabled",
-      message: "This promotion is not currently accepting claims.",
-    }
+    return { open: false, reason: "disabled", message: "This promotion is not currently accepting claims." }
   }
 
   const now = Date.now()
 
   if (now < PROMOTION_START_AT.getTime()) {
-    return {
-      open: false,
-      reason: "not_started",
-      message: "This promotion begins September 30, 2026 at 12:00 AM Eastern Time.",
-    }
+    return { open: false, reason: "not_started", message: "This promotion begins September 30, 2026 at 12:00 AM Eastern Time." }
   }
 
   if (now >= PROMOTION_END_AT.getTime()) {
-    return {
-      open: false,
-      reason: "ended",
-      message: "This promotion ended March 31, 2027 at 11:59 PM Eastern Time.",
-    }
+    return { open: false, reason: "ended", message: "This promotion ended March 31, 2027 at 11:59 PM Eastern Time." }
   }
 
-  const qualifying = await db
-    .collection(CLAIMS_COLLECTION)
-    .where("status", "in", QUALIFYING_STATUSES)
-    .count()
-    .get()
+  const qualifying = await db.collection(CLAIMS_COLLECTION).where("status", "in", QUALIFYING_STATUSES).count().get()
 
   if (qualifying.data().count >= MAX_CLAIMS) {
-    return {
-      open: false,
-      reason: "full",
-      message: `All ${MAX_CLAIMS} promotional mounts have been claimed. This promotion has ended.`,
-    }
+    return { open: false, reason: "full", message: `All ${MAX_CLAIMS} promotional mounts have been claimed. This promotion has ended.` }
   }
 
   return { open: true }
@@ -231,21 +180,14 @@ function lockId(kind: "order" | "email" | "address", value: string) {
 }
 
 function addressKey(claim: Claim) {
-  return [
-    claim.addressLine1,
-    claim.addressLine2,
-    claim.city,
-    claim.state,
-    claim.postalCode.slice(0, 5),
-  ]
+  return [claim.addressLine1, claim.addressLine2, claim.city, claim.state, claim.postalCode.slice(0, 5)]
     .join("|")
     .toLowerCase()
     .replace(/[^a-z0-9|]/g, "")
 }
 
 // ─── Rate limit (best-effort, per instance) ──────────────────────────────────
-// Treat as a speed bump only. For real protection use your host's
-// firewall/rate-limiting product.
+// A speed bump only. For real protection use your host's firewall / rate limiting.
 const submissionTimestamps = new Map<string, number[]>()
 const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX_REQUESTS = 3
@@ -262,9 +204,7 @@ function isRateLimited(ip: string): boolean {
     }
   }
 
-  const timestamps = (submissionTimestamps.get(ip) ?? []).filter(
-    (t) => now - t < RATE_LIMIT_WINDOW_MS
-  )
+  const timestamps = (submissionTimestamps.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT_WINDOW_MS)
 
   if (timestamps.length >= RATE_LIMIT_MAX_REQUESTS) {
     submissionTimestamps.set(ip, timestamps)
@@ -277,13 +217,15 @@ function isRateLimited(ip: string): boolean {
 }
 
 // ─── Email notifications (never throw; Firestore is the record) ──────────────
-async function sendClaimEmails(claim: Claim, claimId: string, receivedAtIso: string) {
+async function sendClaimEmails(claim: Claim, claimId: string, receivedAtIso: string): Promise<EmailResult> {
+  const result: EmailResult = { adminEmailSent: false, confirmationEmailSent: false }
+
   const mailUser = process.env.ZYROPRO_MAIL_USER
   const mailPass = process.env.ZYROPRO_MAIL_PASS
 
   if (!mailUser || !mailPass) {
     console.error("ZyroPro mail configuration is missing; claim was stored but no email was sent.")
-    return
+    return result
   }
 
   const transporter = nodemailer.createTransport({
@@ -304,7 +246,8 @@ Review steps:
 4. Confirm the order was not refunded, reversed, or charged back.
 5. Review pending claims in receivedAt order.
 6. In Firestore (${CLAIMS_COLLECTION}/${claimId}), set status to "verified" or "rejected".
-7. After shipping, set status to "shipped".
+7. If rejected and the claimant may resubmit, delete the documents listed in lockIds from ${LOCKS_COLLECTION}.
+8. After shipping, set status to "shipped".
 
 Claimant attested: U.S. legal resident, 18+, subscription holder = YES
 Claimant agreed to Promotion Terms (version ${TERMS_VERSION}) = YES
@@ -327,6 +270,7 @@ ${claim.country}
       subject: `ZyroPro Claim for Review - ${claim.orderId}`,
       text: reviewText,
     })
+    result.adminEmailSent = true
   } catch (error) {
     console.error("ZyroPro admin notification email failed:", error)
   }
@@ -350,9 +294,12 @@ If you have questions, reply to this email or contact ${SUPPORT_EMAIL}.
 
 - NJDrive50 Team`,
     })
+    result.confirmationEmailSent = true
   } catch (error) {
     console.error("ZyroPro claimant confirmation email failed:", error)
   }
+
+  return result
 }
 
 // ─── GET: promotion status for the claim page ────────────────────────────────
@@ -363,11 +310,7 @@ export async function GET() {
   } catch (error) {
     console.error("ZyroPro status check failed:", error)
     return NextResponse.json(
-      {
-        open: false,
-        reason: "unavailable",
-        message: "Claims are temporarily unavailable. Please try again later.",
-      },
+      { open: false, reason: "unavailable", message: "Claims are temporarily unavailable. Please try again later." },
       { status: 503, headers: { "Cache-Control": "no-store" } }
     )
   }
@@ -379,10 +322,7 @@ export async function POST(req: Request) {
   const clientIp = forwardedFor?.split(",")[0]?.trim() || "unknown"
 
   if (isRateLimited(clientIp)) {
-    return NextResponse.json(
-      { error: "Too many requests. Please try again later." },
-      { status: 429 }
-    )
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 })
   }
 
   let data: unknown
@@ -407,27 +347,18 @@ export async function POST(req: Request) {
     status = await getPromotionStatus(db)
   } catch (error) {
     console.error("ZyroPro claim setup failed:", error)
-    return NextResponse.json(
-      { error: "Claim submission is temporarily unavailable. Please try again later." },
-      { status: 503 }
-    )
+    return NextResponse.json({ error: "Claim submission is temporarily unavailable. Please try again later." }, { status: 503 })
   }
 
   if (!status.open) {
-    return NextResponse.json(
-      { error: status.message, reason: status.reason },
-      { status: 403 }
-    )
+    return NextResponse.json({ error: status.message, reason: status.reason }, { status: 403 })
   }
 
   // Renewals share the base order ID (GPA.x-x-x-x..0), so strip the suffix.
   const orderIdBase = claim.orderId.replace(/\.\.\d+$/, "")
   const claimRef = db.collection(CLAIMS_COLLECTION).doc()
-  const lockRefs = [
-    lockId("order", orderIdBase),
-    lockId("email", claim.email),
-    lockId("address", addressKey(claim)),
-  ].map((id) => db.collection(LOCKS_COLLECTION).doc(id))
+  const lockIds = [lockId("order", orderIdBase), lockId("email", claim.email), lockId("address", addressKey(claim))]
+  const lockRefs = lockIds.map((id) => db.collection(LOCKS_COLLECTION).doc(id))
 
   try {
     await db.runTransaction(async (tx) => {
@@ -446,13 +377,13 @@ export async function POST(req: Request) {
         attestsEligibility: true,
         agreesToRules: true,
         termsVersion: TERMS_VERSION,
+        lockIds,
+        adminEmailSent: null,
+        confirmationEmailSent: null,
       })
 
       for (const ref of lockRefs) {
-        tx.create(ref, {
-          claimId: claimRef.id,
-          createdAt: FieldValue.serverTimestamp(),
-        })
+        tx.create(ref, { claimId: claimRef.id, createdAt: FieldValue.serverTimestamp() })
       }
     })
   } catch (error) {
@@ -466,10 +397,7 @@ export async function POST(req: Request) {
     }
 
     console.error("ZyroPro claim storage failed:", error)
-    return NextResponse.json(
-      { error: "Failed to submit claim. Please try again later." },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: "Failed to submit claim. Please try again later." }, { status: 500 })
   }
 
   let receivedAtIso = new Date().toISOString()
@@ -483,7 +411,18 @@ export async function POST(req: Request) {
     console.error("ZyroPro receivedAt read failed:", error)
   }
 
-  await sendClaimEmails(claim, claimRef.id, receivedAtIso)
+  const emailResult = await sendClaimEmails(claim, claimRef.id, receivedAtIso)
+
+  // Record email outcome for manual follow-up. Never affects the saved claim.
+  try {
+    await claimRef.update({
+      adminEmailSent: emailResult.adminEmailSent,
+      confirmationEmailSent: emailResult.confirmationEmailSent,
+      emailAttemptedAt: FieldValue.serverTimestamp(),
+    })
+  } catch (error) {
+    console.error("ZyroPro email status update failed:", error)
+  }
 
   return NextResponse.json({ ok: true, claimId: claimRef.id })
 }

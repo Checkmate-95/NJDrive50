@@ -102,12 +102,17 @@ const faqs = [
   {
     question: "Will NJDrive50 work on Android?",
     answer:
-      "NJDrive50 is being prepared for Android and is designed for New Jersey families who want to organize supervised driving hours, permit milestones, and road-test planning in one place.",
+      "Yes. NJDrive50 has a Google Play listing. An updated subscription version has been approved and is being prepared for release. Check Google Play for the version and price currently offered.",
   },
   {
-    question: "Will NJDrive50 offer subscriptions?",
+    question: "What are the NJDrive50 subscription options?",
     answer:
-      "NJDrive50 is planned to offer subscription options through Google Play. Final pricing, trial availability, billing terms, and cancellation options will be shown before purchase when the app becomes publicly available.",
+      "The approved update offers $4.99 monthly and $29.99 yearly subscriptions through Google Play inside the Android app. Eligible new subscribers may receive a 7-day free trial on either plan. Google Play displays the offer, final price, billing period, and cancellation terms before you subscribe. The updated subscription version is pending release.",
+  },
+  {
+    question: "How does the ZyroPro launch promotion work?",
+    answer:
+      "The promotion is not open yet. After an applicable trial ends and the first $29.99 yearly payment succeeds, eligible yearly subscribers may submit a claim. NJDrive50 manually reviews claims; the first 50 valid eligible claims qualify. Monthly plans do not qualify. Submission does not guarantee a mount. Read the ZyroPro Promotion Terms for dates and full eligibility rules.",
   },
 ]
 

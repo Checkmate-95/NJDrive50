@@ -41,7 +41,10 @@ type Field =
 type PromoState =
   | { state: "loading" }
   | { state: "open" }
-  | { state: "closed"; message: string }
+  | { state: "closed"; title: string; message: string }
+
+const CLOSED_TITLE = "ZyroPro promotion is closed"
+const UNAVAILABLE_TITLE = "Claims temporarily unavailable"
 
 const ALL_FIELDS_TOUCHED: Record<Field, boolean> = {
   fullName: true,
@@ -110,20 +113,28 @@ export default function ClaimZyroProPage() {
 
     fetch("/api/claim-zyropro", { cache: "no-store" })
       .then((response) => response.json())
-      .then((data: { open?: boolean; message?: string }) => {
+      .then((data: { open?: boolean; reason?: string; message?: string }) => {
         if (cancelled) return
         if (data?.open === true) {
           setPromo({ state: "open" })
         } else {
           setPromo({
             state: "closed",
+            title: data?.reason === "unavailable" ? UNAVAILABLE_TITLE : CLOSED_TITLE,
             message: data?.message ?? "This promotion is not currently accepting claims.",
           })
         }
       })
       .catch(() => {
-        // Status check failed; show the form. The server still enforces the rules.
-        if (!cancelled) setPromo({ state: "open" })
+        // The status check could not reach the server, so a submission would
+        // almost certainly fail too. Tell the user instead of showing the form.
+        if (!cancelled) {
+          setPromo({
+            state: "closed",
+            title: UNAVAILABLE_TITLE,
+            message: "Claim status is temporarily unavailable. Please refresh the page and try again.",
+          })
+        }
       })
 
     return () => {
@@ -237,6 +248,7 @@ export default function ClaimZyroProPage() {
       if (response.status === 403 && result?.reason) {
         setPromo({
           state: "closed",
+          title: CLOSED_TITLE,
           message: result.error ?? "This promotion is not currently accepting claims.",
         })
         return
@@ -277,7 +289,7 @@ export default function ClaimZyroProPage() {
       <PageShell>
         <div className="mt-5 rounded-3xl border border-[#08194A]/10 bg-white px-5 py-6 shadow-[0_12px_32px_rgba(8,25,74,0.08)] sm:px-7 sm:py-8">
           <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-            ZyroPro promotion is closed
+            {promo.title}
           </h1>
           <p className="mt-3 text-sm leading-6 text-[#08194A]/70">{promo.message}</p>
           <p className="mt-3 text-sm leading-6 text-[#08194A]/70">

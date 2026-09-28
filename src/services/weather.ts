@@ -1,4 +1,5 @@
 // src/services/weather.ts
+// Weather goes through the NJDrive50 server so the OpenWeather API key never ships in the app.
 
 export type WeatherResponse = {
   tempF: number | null
@@ -6,6 +7,15 @@ export type WeatherResponse = {
 }
 
 const FETCH_TIMEOUT_MS = 8000
+
+// Optional override for local testing (e.g. http://localhost:3000/api/weather).
+const WEATHER_ENDPOINT =
+  (import.meta.env.VITE_WEATHER_ENDPOINT as string | undefined) || "https://www.njdrive50.com/api/weather"
+
+// About 1 km precision: enough for current temperature, and no precise GPS leaves the device.
+function roundCoordinate(value: number): number {
+  return Math.round(value * 100) / 100
+}
 
 function withTimeout(ms: number): { signal: AbortSignal; cancel: () => void } {
   const controller = new AbortController()
@@ -19,14 +29,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherRes
     return { tempF: null, updatedAt: Date.now() }
   }
 
-  const apiKey = import.meta.env.VITE_WEATHER_API_KEY
-
-  if (!apiKey) {
-    console.warn("Missing VITE_WEATHER_API_KEY")
-    return { tempF: null, updatedAt: Date.now() }
-  }
-
-  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=${apiKey}`
+  const url = `${WEATHER_ENDPOINT}?lat=${roundCoordinate(lat)}&lon=${roundCoordinate(lon)}`
   const { signal, cancel } = withTimeout(FETCH_TIMEOUT_MS)
 
   try {
@@ -37,10 +40,14 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherRes
       return { tempF: null, updatedAt: Date.now() }
     }
 
-    const data = await res.json()
+    const data: unknown = await res.json()
+    const tempF =
+      data && typeof data === "object" && typeof (data as { tempF?: unknown }).tempF === "number"
+        ? (data as { tempF: number }).tempF
+        : null
 
     return {
-      tempF: typeof data.main?.temp === "number" ? data.main.temp : null,
+      tempF: tempF !== null && Number.isFinite(tempF) ? tempF : null,
       updatedAt: Date.now(),
     }
   } catch (err) {

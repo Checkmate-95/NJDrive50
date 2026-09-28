@@ -8,7 +8,8 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 // ─── Promotion configuration (must match the published terms) ────────────────
-const PROMOTION_START_AT = new Date("2026-09-30T00:00:00-04:00")
+const PROMOTION_START_AT = new Date("2026-09-30T00:00:00-04:00");
+
 // Exclusive end: claims are accepted through 11:59:59 PM ET on March 31, 2027.
 const PROMOTION_END_AT = new Date("2027-04-01T00:00:00-04:00")
 const MAX_CLAIMS = 50
@@ -149,7 +150,7 @@ function validatePayload(data: unknown): ValidationResult {
 
 // ─── Promotion status ────────────────────────────────────────────────────────
 async function getPromotionStatus(db: Firestore): Promise<PromotionStatus> {
-  if (process.env.ZYROPRO_PROMO_OPEN !== "true") {
+  if (process.env.ZYROPRO_PROMO_OPEN !== "false") {
     return { open: false, reason: "disabled", message: "This promotion is not currently accepting claims." }
   }
 

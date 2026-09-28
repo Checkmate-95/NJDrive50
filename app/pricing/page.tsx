@@ -4,7 +4,7 @@ import Link from "next/link"
 const PAGE_URL = "https://www.njdrive50.com/pricing"
 const PAGE_TITLE = "Pricing | NJDrive50"
 const PAGE_DESCRIPTION =
-  "NJDrive50 subscription options: $4.99 per month, or a 7-day free trial then $29.99 per year, purchased through Google Play."
+  "NJDrive50 subscription options: $4.99 per month or $29.99 per year through Google Play. Eligible new subscribers may receive a 7-day free trial."
 
 export const metadata: Metadata = {
   title: PAGE_TITLE,
@@ -63,7 +63,7 @@ const pricingFaqs: Faq[] = [
   {
     question: "Is there a free trial?",
     answer:
-      "The yearly plan includes a 7-day free trial. After the trial ends, $29.99 is billed for one year unless you cancel through Google Play before the trial ends.",
+      "Eligible new subscribers may receive a 7-day free trial on either plan. If you receive a trial, cancel through Google Play before it ends to avoid the first charge. Otherwise, the monthly plan is $4.99 per month and the yearly plan is $29.99 per year. Google Play shows the offer and final price before you subscribe.",
   },
   {
     question: "Does uninstalling the app cancel my subscription?",
@@ -86,7 +86,7 @@ const legalLinks = [
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/terms", label: "Terms of Use" },
   { href: "/delete-account", label: "Delete Account" },
-  { href: "/delete-data/index.html", label: "Delete My Data" },
+  { href: "/delete-data", label: "Delete My Data" },
 ]
 
 const googlePlayLinkBase =
@@ -293,10 +293,11 @@ export default function PricingPage() {
               </p>
 
               <p className="mt-2 max-w-3xl text-xs leading-5 text-[#08194A]/55">
+                Eligible new subscribers may receive a 7-day free trial on either plan.
                 Monthly and yearly subscriptions renew automatically unless
-                canceled through Google Play before the next billing date. A
-                valid payment method may be required to begin a subscription or
-                free trial.
+                canceled through Google Play before an applicable trial ends or the next
+                billing date. Google Play shows your eligible offer and billing terms
+                before you subscribe.
               </p>
             </div>
 
@@ -316,7 +317,7 @@ export default function PricingPage() {
               description="Full NJDrive50 premium access with monthly billing through Google Play."
               price="$4.99 per month"
               helperText="A flexible option for families who need help tracking supervised driving progress month to month."
-              trustText="Auto-renews every month unless canceled through Google Play before your next billing date. Not eligible for the ZyroPro launch promotion."
+              trustText="Eligible new subscribers may receive a 7-day free trial. If you receive one, $4.99 is billed when it ends unless canceled first. The plan auto-renews monthly unless canceled through Google Play. Not eligible for the ZyroPro launch promotion."
               features={[
                 "Track supervised driving hours in New Jersey",
                 "Monitor required night driving hours",
@@ -329,9 +330,9 @@ export default function PricingPage() {
               title="Yearly"
               badge="Best value"
               description="Full NJDrive50 premium access with annual billing through Google Play."
-              price="7-day free trial, then $29.99 per year"
-              helperText="One year of premium support for less than $2.50 per month, billed annually after the free trial."
-              trustText="After the 7-day free trial, $29.99 is billed and the plan auto-renews every year unless canceled through Google Play before the trial ends or before your next billing date."
+              price="$29.99 per year"
+              helperText="About $2.50 per month, billed annually. Eligible new subscribers may receive a 7-day free trial."
+              trustText="If you receive a 7-day free trial, $29.99 is billed when it ends unless canceled first. The plan auto-renews yearly unless canceled through Google Play."
               features={[
                 "Everything in the monthly plan",
                 "One year of driving-log access",
@@ -426,7 +427,7 @@ export default function PricingPage() {
               </div>
 
               <p className="text-sm text-[#08194A]/55">
-                Available with an active NJDrive50 subscription.
+                Available with an active NJDrive50 subscription or free trial.
               </p>
             </div>
 
@@ -458,78 +459,72 @@ export default function PricingPage() {
           </section>
 
           <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-  <div className="rounded-[28px] border border-[#08194A]/10 bg-white px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:px-6 sm:py-6">
-    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
-      FAQs
-    </p>
+            <div className="rounded-[28px] border border-[#08194A]/10 bg-white px-4 py-5 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:px-6 sm:py-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
+                FAQs
+              </p>
 
-    <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
-      Common pricing questions
-    </h2>
+              <h2 className="mt-2 text-2xl font-extrabold tracking-tight">
+                Common pricing questions
+              </h2>
 
-    <div className="mt-5 space-y-4">
-      {(pricingFaqs ?? []).map(({ question, answer }) => (
-        <div key={question} className="rounded-2xl bg-[#F7F9FC] px-4 py-4">
-          <h3 className="text-sm font-bold text-[#08194A]">{question}</h3>
-          <p className="mt-2 text-sm leading-6 text-[#08194A]/68">{answer}</p>
-        </div>
-      ))}
-    </div>
-  </div>
+              <div className="mt-5 space-y-4">
+                {pricingFaqs.map(({ question, answer }) => (
+                  <div key={question} className="rounded-2xl bg-[#F7F9FC] px-4 py-4">
+                    <h3 className="text-sm font-bold text-[#08194A]">{question}</h3>
+                    <p className="mt-2 text-sm leading-6 text-[#08194A]/68">{answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-  <aside className="lg:sticky lg:top-4 lg:self-start">
-    <div className="rounded-[28px] border border-white/30 bg-[#08194A] px-5 py-6 text-white shadow-[0_16px_40px_rgba(8,25,74,0.22)]">
-      <div className="inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/72">
-        App access
-      </div>
+            <aside className="lg:sticky lg:top-4 lg:self-start">
+              <div className="rounded-[28px] border border-white/30 bg-[#08194A] px-5 py-6 text-white shadow-[0_16px_40px_rgba(8,25,74,0.22)]">
+                <div className="inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/72">
+                  App access
+                </div>
 
-      <h2 className="mt-3 text-2xl font-extrabold tracking-tight">
-        Get started in the Android app
-      </h2>
+                <h2 className="mt-3 text-2xl font-extrabold tracking-tight">
+                  Get started in the Android app
+                </h2>
 
-      <p className="mt-3 text-sm leading-6 text-white/72">
-        Install NJDrive50 from Google Play to choose a subscription
-        plan, manage premium access, and track supervised driving
-        progress.
-      </p>
+                <p className="mt-3 text-sm leading-6 text-white/72">
+                  Install NJDrive50 from Google Play to choose a subscription
+                  plan, manage premium access, and track supervised driving
+                  progress.
+                </p>
 
-      <div className="mt-5 rounded-2xl bg-white/8 p-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
-          Best value
-        </p>
-        <p className="mt-2 text-2xl font-extrabold tracking-tight">$29.99 / year</p>
-        <p className="mt-1 text-sm text-white/62">
-          Starts with a 7-day free trial. About $2.50 per month,
-          billed annually. Monthly access is also available for
-          $4.99/month.
-        </p>
-      </div>
+                <div className="mt-5 rounded-2xl bg-white/8 p-4">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
+                    Best value
+                  </p>
+                  <p className="mt-2 text-2xl font-extrabold tracking-tight">$29.99 / year</p>
+                  <p className="mt-1 text-sm text-white/62">
+                    Eligible new subscribers may receive a 7-day free trial. About $2.50 per month,
+                    billed annually. Monthly access is also available for
+                    $4.99/month, with a trial for eligible new subscribers.
+                  </p>
+                </div>
 
-      <GooglePlayLink dark className="mt-5" />
+                <GooglePlayLink dark className="mt-5" />
 
-      <p className="mt-3 text-xs leading-5 text-white/56">
-        Google Play handles subscription signup, billing, renewals,
-        cancellations, and subscription management. Refund eligibility
-        follows Google Play policies and applicable law.
-      </p>
+                <p className="mt-3 text-xs leading-5 text-white/56">
+                  Google Play handles subscription signup, billing, renewals,
+                  cancellations, and subscription management. Refund eligibility
+                  follows Google Play policies and applicable law.
+                </p>
 
-      <a
-        href={GOOGLE_PLAY_MANAGE_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={manageLinkClasses}
-      >
-        Manage subscription on Google Play
-      </a>
+                <a href={GOOGLE_PLAY_MANAGE_URL} target="_blank" rel="noopener noreferrer" className={manageLinkClasses}>
+                  Manage subscription on Google Play
+                </a>
 
-      <p className="mt-3 text-xs leading-5 text-white/56">
-        NJDrive50 is an organizational tool and is not affiliated with
-        NJMVC.
-      </p>
-    </div>
-  </aside>
-</section>
-
+                <p className="mt-3 text-xs leading-5 text-white/56">
+                  NJDrive50 is an organizational tool and is not affiliated with
+                  NJMVC.
+                </p>
+              </div>
+            </aside>
+          </section>
 
           <section className="rounded-[28px] border border-[#08194A]/10 bg-[#08194A] px-4 py-5 text-white shadow-[0_8px_24px_rgba(8,25,74,0.14)] sm:px-6 sm:py-6">
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#F9C80E]/80">

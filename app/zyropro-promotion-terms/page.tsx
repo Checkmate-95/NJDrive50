@@ -14,8 +14,8 @@ const YEARLY_PRICE = "$29.99"
 const VERIFICATION_RESPONSE_DAYS = 7
 const RETENTION_DAYS = 90
 
-// Set to false only if ZyroPro is a brand owned by Organic Brands LLC.
-const ZYROPRO_IS_THIRD_PARTY = true
+// ZyroPro is a brand owned by Organic Brands LLC.
+const ZYROPRO_IS_THIRD_PARTY = false
 
 const PAGE_URL = "https://www.njdrive50.com/zyropro-promotion-terms"
 const PAGE_TITLE = "ZyroPro Launch Promotion Terms | NJDrive50"
@@ -132,6 +132,10 @@ const sections: TermSection[] = [
         </Link>{" "}
         during the Promotion Period, including the required attestation of
         U.S. legal residency, age, and subscription ownership.
+      </>,
+      <>
+        Monthly NJDrive50 subscriptions are not eligible for this Promotion,
+        including monthly subscriptions in a free trial.
       </>,
       <>
         A claim is not eligible merely because a person starts a trial, starts
@@ -315,22 +319,21 @@ const sections: TermSection[] = [
     ],
   },
   {
-    title: "Non-affiliation and trademarks",
+        title: "Non-affiliation and brand ownership",
     paragraphs: [
       <>
         NJDrive50 is an independent organizational tool. NJDrive50 is not
         affiliated with, endorsed by, or sponsored by the New Jersey Motor
         Vehicle Commission or any government agency.
       </>,
-      ...(ZYROPRO_IS_THIRD_PARTY
-        ? [
-            <>
-              ZyroPro is a trademark of its respective owner. The owner of the
-              ZyroPro brand is not a sponsor or administrator of this
-              Promotion.
-            </>,
-          ]
-        : []),
+      ZYROPRO_IS_THIRD_PARTY ? (
+        <>
+          ZyroPro is a trademark of its respective owner. The owner of the
+          ZyroPro brand is not a sponsor or administrator of this Promotion.
+        </>
+      ) : (
+                <>ZyroPro is a brand of {SPONSOR_LEGAL_NAME}.</>
+      ),
       <>Google Play is a trademark of Google LLC.</>,
     ],
   },
@@ -378,7 +381,8 @@ export default function ZyroProPromotionTermsPage() {
               dashboard mount. You must be a U.S. legal resident age 18 or
               older, your 7-day free trial must end, and your {YEARLY_PRICE}{" "}
               yearly payment must successfully process before you submit a
-              claim. Google Play is not a sponsor of this Promotion.
+              claim. Yearly subscriptions only; monthly subscriptions are not
+              eligible. Google Play is not a sponsor of this Promotion.
             </div>
           </header>
 

@@ -112,7 +112,7 @@ const faqs = [
   {
     question: "How does the ZyroPro launch promotion work?",
     answer:
-      "The promotion is not open yet. After an applicable trial ends and the first $29.99 yearly payment succeeds, eligible yearly subscribers may submit a claim. NJDrive50 manually reviews claims; the first 50 valid eligible claims qualify. Monthly plans do not qualify. Submission does not guarantee a mount. Read the ZyroPro Promotion Terms for dates and full eligibility rules.",
+      "The promotion is not open yet, and the start and end dates will be posted on the ZyroPro Promotion Terms page before claims open. Once it opens, eligible yearly subscribers may submit a claim after any applicable free trial ends and the first $29.99 yearly payment succeeds. NJDrive50 manually reviews claims, and the first 50 valid eligible claims may receive one ZyroPro dashboard mount. Monthly plans do not qualify. Submission does not guarantee a mount.",
   },
 ]
 

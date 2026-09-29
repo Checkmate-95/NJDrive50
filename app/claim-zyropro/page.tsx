@@ -41,10 +41,22 @@ type Field =
 type PromoState =
   | { state: "loading" }
   | { state: "open" }
-  | { state: "closed"; title: string; message: string }
+  | { state: "closed"; reason: string; message: string }
 
+const NOT_OPEN_TITLE = "Claims are not open yet"
 const CLOSED_TITLE = "ZyroPro promotion is closed"
 const UNAVAILABLE_TITLE = "Claims temporarily unavailable"
+const DEFAULT_CLOSED_MESSAGE = "This promotion is not open yet. Claims are not being accepted."
+
+function closedContent(reason: string) {
+  if (reason === "unavailable") {
+    return { title: UNAVAILABLE_TITLE, comingSoon: false }
+  }
+  if (reason === "disabled" || reason === "not_started") {
+    return { title: NOT_OPEN_TITLE, comingSoon: true }
+  }
+  return { title: CLOSED_TITLE, comingSoon: false }
+}
 
 const ALL_FIELDS_TOUCHED: Record<Field, boolean> = {
   fullName: true,
@@ -120,8 +132,8 @@ export default function ClaimZyroProPage() {
         } else {
           setPromo({
             state: "closed",
-            title: data?.reason === "unavailable" ? UNAVAILABLE_TITLE : CLOSED_TITLE,
-            message: data?.message ?? "This promotion is not currently accepting claims.",
+            reason: data?.reason ?? "disabled",
+            message: data?.message ?? DEFAULT_CLOSED_MESSAGE,
           })
         }
       })
@@ -131,7 +143,7 @@ export default function ClaimZyroProPage() {
         if (!cancelled) {
           setPromo({
             state: "closed",
-            title: UNAVAILABLE_TITLE,
+            reason: "unavailable",
             message: "Claim status is temporarily unavailable. Please refresh the page and try again.",
           })
         }
@@ -248,8 +260,8 @@ export default function ClaimZyroProPage() {
       if (response.status === 403 && result?.reason) {
         setPromo({
           state: "closed",
-          title: CLOSED_TITLE,
-          message: result.error ?? "This promotion is not currently accepting claims.",
+          reason: result.reason,
+          message: result.error ?? DEFAULT_CLOSED_MESSAGE,
         })
         return
       }
@@ -285,17 +297,34 @@ export default function ClaimZyroProPage() {
   }
 
   if (promo.state === "closed") {
+    const content = closedContent(promo.reason)
+
     return (
       <PageShell>
         <div className="mt-5 rounded-3xl border border-[#08194A]/10 bg-white px-5 py-6 shadow-[0_12px_32px_rgba(8,25,74,0.08)] sm:px-7 sm:py-8">
+          {content.comingSoon ? (
+            <div className="mb-4 inline-flex rounded-full bg-[#F9C80E] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#08194A]">
+              Coming soon
+            </div>
+          ) : null}
+
           <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-            {promo.title}
+            {content.title}
           </h1>
           <p className="mt-3 text-sm leading-6 text-[#08194A]/70">{promo.message}</p>
-          <p className="mt-3 text-sm leading-6 text-[#08194A]/70">
-            If you already submitted a claim, we will email you with its status.
-            Questions? Contact <SupportEmailLink />.
-          </p>
+
+          {content.comingSoon ? (
+            <p className="mt-3 text-sm leading-6 text-[#08194A]/70">
+              The start and end dates will be posted on the Promotion Terms
+              page before claims open. Questions? Contact <SupportEmailLink />.
+            </p>
+          ) : (
+            <p className="mt-3 text-sm leading-6 text-[#08194A]/70">
+              If you already submitted a claim, we will email you with its
+              status. Questions? Contact <SupportEmailLink />.
+            </p>
+          )}
+
           <Link
             href={TERMS_HREF}
             target="_blank"
@@ -318,9 +347,10 @@ export default function ClaimZyroProPage() {
         >
           We received your claim for review
           {claimId ? ` (reference ${claimId})` : ""}. We will verify your
-          eligibility, including your yearly NJDrive50 subscription, completed
-          7-day trial, successful $29.99 yearly payment, and claim order, then
-          email you with your claim status.
+          eligibility, including your yearly NJDrive50 subscription,
+          completion of any applicable free trial, successful first $29.99
+          yearly payment, and claim order, then email you with your claim
+          status.
         </div>
 
         <p className="mt-4 text-sm leading-6 text-[#08194A]/60">
@@ -358,8 +388,9 @@ export default function ClaimZyroProPage() {
               email address, shipping address, and household.
             </li>
             <li>
-              Your 7-day free trial must have ended and the $29.99 yearly
-              subscription payment must have successfully processed.
+              Any free trial that applies to your subscription must have ended,
+              and your first $29.99 yearly subscription payment must have
+              successfully processed.
             </li>
             <li>
               You must be a U.S. legal resident, 18 or older, and the holder of

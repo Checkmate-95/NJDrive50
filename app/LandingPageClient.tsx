@@ -199,7 +199,7 @@ export default function LandingPageClient({
               </div>
               <div className="mt-7 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center">
                 <Link href="/pricing" className={ctaLinkClass}>
-                  See pricing and launch offer
+                  See pricing
                 </Link>
                 <a href="#how-it-works" className={secondaryLinkClass}>
                   See how it works
@@ -490,14 +490,17 @@ export default function LandingPageClient({
               </h2>
               <p className="mt-4 text-sm leading-7 text-white/75 sm:text-base">
                 The first 50 valid eligible claims from yearly NJDrive50
-                subscribers qualify. A claim can be submitted after an applicable
-                free trial ends and the first $29.99 yearly payment succeeds.
-                Monthly subscriptions do not qualify.
+                subscribers may receive one ZyroPro dashboard mount. A claim can
+                be submitted after any applicable free trial ends and the first
+                $29.99 yearly payment succeeds. Monthly subscriptions do not
+                qualify.
               </p>
               <p className="mt-3 text-xs leading-6 text-white/55">
-                U.S. residents 18+ only. One per eligible order and household.
-                Claims are reviewed manually; submission does not guarantee a
-                mount. The promotion and claim form are not open yet.
+                The promotion and claim form are not open yet. Start and end
+                dates will be posted on the promotion terms page before claims
+                open. U.S. residents 18+ only. One per eligible order and
+                household. Claims are reviewed manually; submission does not
+                guarantee a mount.
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <Link href="/pricing" className={ctaLinkClass}>
@@ -795,12 +798,12 @@ export default function LandingPageClient({
       </footer>
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#020617]/95 p-3 backdrop-blur md:hidden">
         <div className="flex items-center gap-2">
-          <a
+          <Link
             href="/pricing"
             className="inline-flex min-h-[52px] flex-1 items-center justify-center rounded-xl bg-[#38BDF8] px-5 py-3 text-sm font-extrabold text-[#020617] shadow-[0_18px_40px_rgba(56,189,248,0.35)] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#38BDF8] focus-visible:ring-offset-2 focus-visible:ring-offset-[#020617]"
           >
             Pricing
-          </a>
+          </Link>
           <Link
             href="/login"
             className="inline-flex min-h-[52px] items-center justify-center rounded-xl border border-white/20 px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"

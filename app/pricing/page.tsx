@@ -6,12 +6,14 @@ const MANAGE_URL = "https://play.google.com/store/account/subscriptions"
 const TERMS_URL = "/zyropro-promotion-terms"
 const CLAIM_URL = "/claim-zyropro"
 
-// Set this in Vercel Production only after the subscription update and the
-// app's install price have been checked in Play Console, then redeploy.
+// Set this in Vercel Production only after the subscription update is live
+// in Play Console (app pricing is already set to Free), then redeploy.
 const BILLING_LIVE = process.env.NJDRIVE50_BILLING_LIVE === "true"
 
-// The claim API must use the same ZYROPRO_PROMO_OPEN setting.
-// Redeploy after changing it.
+// The claim API must use the same ZYROPRO_PROMO_OPEN setting, and the promotion
+// dates must be published in the terms before this is set to "true".
+// This value is read at build time: redeploy after changing it, and set it back
+// to false and redeploy when the promotion ends.
 const PROMO_OPEN =
   BILLING_LIVE && process.env.ZYROPRO_PROMO_OPEN === "true"
 
@@ -50,7 +52,9 @@ const plans = [
       "Everything in the monthly plan",
       "One year of premium access",
       "Parent and teen progress tools",
-      "Eligible for the limited ZyroPro promotion",
+      PROMO_OPEN
+        ? "Eligible for the limited ZyroPro promotion"
+        : "Eligible for the ZyroPro launch promotion when it opens",
     ],
   },
 ]
@@ -73,8 +77,11 @@ const faqs = [
   },
   {
     question: "How does the ZyroPro promotion work?",
-    answer:
-      "After an applicable trial ends and the first $29.99 yearly payment succeeds, an eligible subscriber may submit a claim. NJDrive50 manually reviews claims. The first 50 valid eligible claims qualify; submitting a claim does not guarantee a mount. Monthly subscribers do not qualify. Read the full promotion terms for dates and limits.",
+    answer: `${
+      PROMO_OPEN
+        ? "The promotion is open."
+        : "The promotion is not open yet, and the start and end dates will be posted on the promotion terms page before claims open."
+    } After any applicable free trial ends and the first $29.99 yearly payment succeeds, an eligible yearly subscriber may submit a claim. NJDrive50 manually reviews claims, and the first 50 valid eligible claims may receive one ZyroPro dashboard mount. Submitting a claim does not guarantee a mount. Monthly subscribers do not qualify. Read the full promotion terms for limits and eligibility rules.`,
   },
 ]
 
@@ -193,15 +200,19 @@ export default function PricingPage() {
               Updated September 2026
             </p>
             <p className="mt-4 text-sm leading-7 text-white/75">
-              The first 50 valid eligible claims from yearly subscribers qualify
-              after an applicable free trial ends and the first $29.99 yearly
-              payment succeeds. Monthly subscriptions do not qualify.
+              The first 50 valid eligible claims from yearly subscribers may
+              receive one ZyroPro dashboard mount after any applicable free
+              trial ends and the first $29.99 yearly payment succeeds. Monthly
+              subscriptions do not qualify.
             </p>
             <p className="mt-3 text-xs leading-6 text-white/60">
               U.S. residents 18+ only. One per eligible order and household.
               Claims are reviewed manually. Submission does not guarantee a
               mount. NJDrive50 offers and fulfills the promotion, not Google
-              Play. See the terms for dates and complete eligibility rules.
+              Play.{" "}
+              {PROMO_OPEN
+                ? "See the terms for dates and complete eligibility rules."
+                : "Start and end dates will be posted in the promotion terms before claims open."}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link

@@ -8,17 +8,30 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 // ─── Promotion configuration (must match the published terms) ────────────────
-const PROMOTION_START_AT = new Date("2026-09-30T00:00:00-04:00");
+// Claims open ONLY when both are true:
+//   1. ZYROPRO_PROMO_OPEN is exactly "true" (server-side env var; default closed)
+//   2. getPromotionWindow() returns dates that match the published terms
+//
+// To open the promotion: set the real start and end dates together here,
+// publish the same dates in the terms page, deploy, then set the env var.
+function getPromotionWindow(): PromotionWindow | null {
+  // Example (endAt is exclusive; use -04:00 during daylight time, -05:00 otherwise):
+  // return {
+  //   startAt: new Date("YYYY-MM-DDT00:00:00-04:00"),
+  //   endAt: new Date("YYYY-MM-DDT00:00:00-05:00"),
+  //   termsVersion: "YYYY-MM-DD",
+  // }
+  return null
+}
 
-// Exclusive end: claims are accepted through 11:59:59 PM ET on March 31, 2027.
-const PROMOTION_END_AT = new Date("2027-04-01T00:00:00-04:00")
 const MAX_CLAIMS = 50
-const TERMS_VERSION = "2026-09-30"
 const SUPPORT_EMAIL = "support@njdrive50.com"
 
 const CLAIMS_COLLECTION = "zyroproClaims"
 const LOCKS_COLLECTION = "zyroproClaimLocks"
 const QUALIFYING_STATUSES = ["verified", "shipped"]
+
+type PromotionWindow = { startAt: Date; endAt: Date; termsVersion: string }
 
 type Claim = {
   fullName: string
@@ -32,9 +45,11 @@ type Claim = {
   country: "United States"
 }
 
+type ClosedReason = "disabled" | "not_started" | "ended" | "full" | "unavailable"
+
 type PromotionStatus =
-  | { open: true }
-  | { open: false; reason: "disabled" | "not_started" | "ended" | "full"; message: string }
+  | { open: true; termsVersion: string }
+  | { open: false; reason: ClosedReason; message: string }
 
 type ValidationResult = { ok: true; claim: Claim } | { ok: false; error: string }
 
@@ -149,20 +164,43 @@ function validatePayload(data: unknown): ValidationResult {
 }
 
 // ─── Promotion status ────────────────────────────────────────────────────────
+const NOT_OPEN_MESSAGE = "This promotion is not open yet. Claims are not being accepted."
+
+// Flag and schedule only. No database access, so it is safe to call first and
+// it fails closed if anything is missing or misconfigured.
+function getScheduleStatus(now = Date.now()): PromotionStatus {
+  const flag = (process.env.ZYROPRO_PROMO_OPEN ?? "").trim()
+
+  if (flag !== "true") {
+    return { open: false, reason: "disabled", message: NOT_OPEN_MESSAGE }
+  }
+
+  const window = getPromotionWindow()
+
+  if (
+    !window ||
+    !window.termsVersion ||
+    Number.isNaN(window.startAt.getTime()) ||
+    Number.isNaN(window.endAt.getTime()) ||
+    window.endAt.getTime() <= window.startAt.getTime()
+  ) {
+    return { open: false, reason: "disabled", message: NOT_OPEN_MESSAGE }
+  }
+
+  if (now < window.startAt.getTime()) {
+    return { open: false, reason: "not_started", message: "This promotion has not started yet." }
+  }
+
+  if (now >= window.endAt.getTime()) {
+    return { open: false, reason: "ended", message: "This promotion has ended." }
+  }
+
+  return { open: true, termsVersion: window.termsVersion }
+}
+
 async function getPromotionStatus(db: Firestore): Promise<PromotionStatus> {
-  if (process.env.ZYROPRO_PROMO_OPEN !== "false") {
-    return { open: false, reason: "disabled", message: "This promotion is not currently accepting claims." }
-  }
-
-  const now = Date.now()
-
-  if (now < PROMOTION_START_AT.getTime()) {
-    return { open: false, reason: "not_started", message: "This promotion begins September 30, 2026 at 12:00 AM Eastern Time." }
-  }
-
-  if (now >= PROMOTION_END_AT.getTime()) {
-    return { open: false, reason: "ended", message: "This promotion ended March 31, 2027 at 11:59 PM Eastern Time." }
-  }
+  const scheduled = getScheduleStatus()
+  if (!scheduled.open) return scheduled
 
   const qualifying = await db.collection(CLAIMS_COLLECTION).where("status", "in", QUALIFYING_STATUSES).count().get()
 
@@ -170,7 +208,7 @@ async function getPromotionStatus(db: Firestore): Promise<PromotionStatus> {
     return { open: false, reason: "full", message: `All ${MAX_CLAIMS} promotional mounts have been claimed. This promotion has ended.` }
   }
 
-  return { open: true }
+  return scheduled
 }
 
 // ─── Duplicate locks ─────────────────────────────────────────────────────────
@@ -218,7 +256,12 @@ function isRateLimited(ip: string): boolean {
 }
 
 // ─── Email notifications (never throw; Firestore is the record) ──────────────
-async function sendClaimEmails(claim: Claim, claimId: string, receivedAtIso: string): Promise<EmailResult> {
+async function sendClaimEmails(
+  claim: Claim,
+  claimId: string,
+  receivedAtIso: string,
+  termsVersion: string
+): Promise<EmailResult> {
   const result: EmailResult = { adminEmailSent: false, confirmationEmailSent: false }
 
   const mailUser = process.env.ZYROPRO_MAIL_USER
@@ -243,7 +286,7 @@ Status: pending
 Review steps:
 1. Look up this Order ID in Play Console > Order management.
 2. Confirm it is a yearly NJDrive50 subscription.
-3. Confirm the 7-day free trial ended and the $29.99 yearly payment processed.
+3. Confirm any applicable free trial ended and the first $29.99 yearly payment processed.
 4. Confirm the order was not refunded, reversed, or charged back.
 5. Review pending claims in receivedAt order.
 6. In Firestore (${CLAIMS_COLLECTION}/${claimId}), set status to "verified" or "rejected".
@@ -251,7 +294,7 @@ Review steps:
 8. After shipping, set status to "shipped".
 
 Claimant attested: U.S. legal resident, 18+, subscription holder = YES
-Claimant agreed to Promotion Terms (version ${TERMS_VERSION}) = YES
+Claimant agreed to Promotion Terms (version ${termsVersion}) = YES
 
 Full Name: ${claim.fullName}
 Email: ${claim.email}
@@ -287,7 +330,7 @@ We received your ZyroPro dashboard mount claim for review.
 
 Claim reference: ${claimId}
 
-Submission does not guarantee qualification or shipment. We will verify your eligibility, including your qualifying NJDrive50 yearly subscription, completed 7-day trial, successful $29.99 yearly payment, and claim order under the Promotion Terms. We will email you with your claim status.
+Submission does not guarantee qualification or shipment. We will verify your eligibility, including your qualifying NJDrive50 yearly subscription, completion of any applicable free trial, successful first $29.99 yearly payment, and claim order under the Promotion Terms. We will email you with your claim status.
 
 The promotion is limited to the first ${MAX_CLAIMS} valid eligible claims received. Google Play does not sponsor or fulfill this promotion.
 
@@ -305,20 +348,35 @@ If you have questions, reply to this email or contact ${SUPPORT_EMAIL}.
 
 // ─── GET: promotion status for the claim page ────────────────────────────────
 export async function GET() {
+  const noStore = { "Cache-Control": "no-store" }
+
+  // Closed states are answered without touching Firebase.
+  const scheduled = getScheduleStatus()
+  if (!scheduled.open) {
+    return NextResponse.json(scheduled, { headers: noStore })
+  }
+
   try {
     const status = await getPromotionStatus(getAdminDb())
-    return NextResponse.json(status, { headers: { "Cache-Control": "no-store" } })
+    return NextResponse.json(status.open ? { open: true } : status, { headers: noStore })
   } catch (error) {
     console.error("ZyroPro status check failed:", error)
     return NextResponse.json(
       { open: false, reason: "unavailable", message: "Claims are temporarily unavailable. Please try again later." },
-      { status: 503, headers: { "Cache-Control": "no-store" } }
+      { status: 503, headers: noStore }
     )
   }
 }
 
 // ─── POST: submit a claim ────────────────────────────────────────────────────
 export async function POST(req: Request) {
+  // Fail closed first: no body parsing, validation, email, or Firestore access
+  // while the promotion is not open.
+  const scheduled = getScheduleStatus()
+  if (!scheduled.open) {
+    return NextResponse.json({ error: scheduled.message, reason: scheduled.reason }, { status: 403 })
+  }
+
   const forwardedFor = req.headers.get("x-forwarded-for")
   const clientIp = forwardedFor?.split(",")[0]?.trim() || "unknown"
 
@@ -355,6 +413,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: status.message, reason: status.reason }, { status: 403 })
   }
 
+  const termsVersion = status.termsVersion
+
   // Renewals share the base order ID (GPA.x-x-x-x..0), so strip the suffix.
   const orderIdBase = claim.orderId.replace(/\.\.\d+$/, "")
   const claimRef = db.collection(CLAIMS_COLLECTION).doc()
@@ -377,7 +437,7 @@ export async function POST(req: Request) {
         eligibilityVerifiedAt: null,
         attestsEligibility: true,
         agreesToRules: true,
-        termsVersion: TERMS_VERSION,
+        termsVersion,
         lockIds,
         adminEmailSent: null,
         confirmationEmailSent: null,
@@ -412,7 +472,7 @@ export async function POST(req: Request) {
     console.error("ZyroPro receivedAt read failed:", error)
   }
 
-  const emailResult = await sendClaimEmails(claim, claimRef.id, receivedAtIso)
+  const emailResult = await sendClaimEmails(claim, claimRef.id, receivedAtIso, termsVersion)
 
   // Record email outcome for manual follow-up. Never affects the saved claim.
   try {

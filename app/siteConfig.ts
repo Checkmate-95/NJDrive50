@@ -1,7 +1,7 @@
 // app/siteConfig.ts
 
 export const siteConfig = {
-  company: "ORGANIC BRANDS LLC",
+  company: "Organic Brands LLC",
   appName: "NJDrive50",
   contactEmail: "support@njdrive50.com",
 
@@ -18,8 +18,9 @@ export const siteConfig = {
   },
 
   external: {
+    // NJDrive50 is Android-only. Delete this line if nothing references it.
     iosApp: "https://apps.apple.com/",
-    androidApp: "https://play.google.com/store/apps/",
+    androidApp: "https://play.google.com/store/apps/details?id=com.njdrive50.app",
   },
 
   meta: {

@@ -5,22 +5,19 @@ import type { ReactNode } from "react"
 const SPONSOR_LEGAL_NAME = "Organic Brands LLC"
 const SUPPORT_EMAIL = "support@njdrive50.com"
 
-const PROMOTION_START = "September 30, 2026 at 12:00 AM Eastern Time"
-const PROMOTION_END = "March 31, 2027 at 11:59 PM Eastern Time"
-const EFFECTIVE_DATE = "September 30, 2026"
+// This is the document update date, not the promotion start date.
+// Publish the promotion start and end dates together before opening claims.
+const LAST_UPDATED = "September 29, 2026"
 
 const MAX_CLAIMS = 50
 const YEARLY_PRICE = "$29.99"
 const VERIFICATION_RESPONSE_DAYS = 7
 const RETENTION_DAYS = 90
 
-// ZyroPro is a brand owned by Organic Brands LLC.
-const ZYROPRO_IS_THIRD_PARTY = false
-
 const PAGE_URL = "https://www.njdrive50.com/zyropro-promotion-terms"
 const PAGE_TITLE = "ZyroPro Launch Promotion Terms | NJDrive50"
 const PAGE_DESCRIPTION =
-  "Official terms for the NJDrive50 ZyroPro dashboard mount launch promotion for eligible yearly subscribers."
+  "Terms for the NJDrive50 ZyroPro dashboard mount launch promotion for eligible yearly subscribers. Coming soon; claims are not open yet."
 
 export const metadata: Metadata = {
   title: PAGE_TITLE,
@@ -82,17 +79,25 @@ const sections: TermSection[] = [
     ],
   },
   {
-    title: "Promotion Period",
+    title: "Promotion status and Promotion Period",
     paragraphs: [
       <>
-        The Promotion begins at {PROMOTION_START} and ends at {PROMOTION_END},
-        or when NJDrive50 has received {MAX_CLAIMS} valid eligible claims,
-        whichever occurs first (the “Promotion Period”).
+        The Promotion is coming soon and is not open yet. NJDrive50 is not
+        accepting claims, and no claim submitted before the Promotion opens
+        will be eligible.
+      </>,
+      <>
+        NJDrive50 will publish the start date and end date of the Promotion
+        together on this page before it accepts any claims. Once published,
+        the Promotion runs from the published start date and time until the
+        published end date and time, or until NJDrive50 has received{" "}
+        {MAX_CLAIMS} valid eligible claims, whichever occurs first (the
+        “Promotion Period”).
       </>,
       <>
         When the Promotion Period ends, NJDrive50 will display an “ended”
-        notice and stop accepting new claims. Claims submitted after the
-        Promotion Period ends are not eligible.
+        notice and stop accepting new claims. Claims submitted outside the
+        Promotion Period are not eligible.
       </>,
     ],
   },
@@ -111,10 +116,11 @@ const sections: TermSection[] = [
         are not eligible.
       </>,
       <>
-        No purchase is required to download or use the free features of the
-        NJDrive50 app. Eligibility for this Promotion, however, requires an
-        eligible NJDrive50 yearly subscription and compliance with these
-        Terms. The Promotion is void where prohibited by law.
+        No payment is required to download NJDrive50. Premium access is
+        offered through a Google Play subscription, and eligible new
+        subscribers may receive a free trial. Eligibility for this Promotion
+        requires an eligible paid NJDrive50 yearly subscription and compliance
+        with these Terms. The Promotion is void where prohibited by law.
       </>,
     ],
   },
@@ -122,11 +128,11 @@ const sections: TermSection[] = [
     title: "How to qualify and claim",
     paragraphs: [
       <>
-        To qualify, an eligible person must: (a) hold an active eligible NJDrive50
-        yearly subscription purchased through Google Play; (b) complete the
-        applicable 7-day free trial; (c) have the {YEARLY_PRICE} yearly
-        subscription payment successfully processed; and (d) submit a complete
-        and valid claim through the official{" "}
+        Once the Promotion is open, to qualify an eligible person must: (a)
+        hold an active eligible NJDrive50 yearly subscription purchased through
+        Google Play; (b) complete any applicable free trial; (c) have the{" "}
+        {YEARLY_PRICE} yearly subscription payment successfully processed; and
+        (d) submit a complete and valid claim through the official{" "}
         <Link href="/claim-zyropro" className={linkClasses}>
           NJDrive50 ZyroPro claim page
         </Link>{" "}
@@ -248,12 +254,12 @@ const sections: TermSection[] = [
     paragraphs: [
       <>
         NJDrive50 manually reviews claims and may verify the Google Play Order
-        ID, subscription status, completed trial period, successful payment,
-        refund or reversal status, identity, residency, shipping address,
-        duplicate submissions, and compliance with these Terms. NJDrive50 may
-        request reasonable verification information by email; failure to
-        respond within {VERIFICATION_RESPONSE_DAYS} days of the request may
-        result in disqualification.
+        ID, subscription status, any applicable trial period, successful
+        payment, refund or reversal status, identity, residency, shipping
+        address, duplicate submissions, and compliance with these Terms.
+        NJDrive50 may request reasonable verification information by email;
+        failure to respond within {VERIFICATION_RESPONSE_DAYS} days of the
+        request may result in disqualification.
       </>,
       <>
         NJDrive50 may disqualify anyone who tampers with the claim process,
@@ -300,7 +306,8 @@ const sections: TermSection[] = [
         proper operation of the Promotion. NJDrive50 will not apply a material
         change retroactively to a claim that has already qualified, except
         where necessary to comply with law, address fraud, or correct an error.
-        Changes will be posted on this page with an updated effective date.
+        Changes, including the Promotion Period dates once set, will be posted
+        on this page with an updated date.
       </>,
     ],
   },
@@ -309,31 +316,24 @@ const sections: TermSection[] = [
     paragraphs: [
       <>
         To the fullest extent permitted by law, {SPONSOR_LEGAL_NAME} and its
-        officers, directors, employees, contractors, affiliates, suppliers, and
-        agents are not liable for indirect, incidental, special, consequential,
-        or punitive damages arising from or related to the Promotion, the claim
-        process, shipping, or use of the promotional item. Nothing in these
-        Terms excludes or limits liability that cannot be excluded or limited
-        under applicable law.
+        officers, directors, employees, contractors, affiliates, suppliers,
+        and agents are not liable for indirect, incidental, special,
+        consequential, or punitive damages arising from or related to the
+        Promotion, the claim process, shipping, or use of the promotional item.
+        Nothing in these Terms excludes or limits liability that cannot be
+        excluded or limited under applicable law.
       </>,
     ],
   },
   {
-        title: "Non-affiliation and brand ownership",
+    title: "Non-affiliation and brand ownership",
     paragraphs: [
       <>
         NJDrive50 is an independent organizational tool. NJDrive50 is not
         affiliated with, endorsed by, or sponsored by the New Jersey Motor
         Vehicle Commission or any government agency.
       </>,
-      ZYROPRO_IS_THIRD_PARTY ? (
-        <>
-          ZyroPro is a trademark of its respective owner. The owner of the
-          ZyroPro brand is not a sponsor or administrator of this Promotion.
-        </>
-      ) : (
-                <>ZyroPro is a brand of {SPONSOR_LEGAL_NAME}.</>
-      ),
+      <>ZyroPro is a brand of {SPONSOR_LEGAL_NAME}.</>,
       <>Google Play is a trademark of Google LLC.</>,
     ],
   },
@@ -363,7 +363,7 @@ export default function ZyroProPromotionTermsPage() {
         <article className="mt-5 rounded-3xl border border-[#08194A]/10 bg-white px-5 py-7 shadow-[0_12px_32px_rgba(8,25,74,0.08)] sm:px-10 sm:py-10">
           <header className="border-b border-[#08194A]/10 pb-6">
             <div className="inline-flex rounded-full bg-[#F9C80E] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#08194A]">
-              Official promotion terms
+              Coming soon
             </div>
 
             <h1 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
@@ -371,18 +371,21 @@ export default function ZyroProPromotionTermsPage() {
             </h1>
 
             <p className="mt-3 text-sm leading-6 text-[#08194A]/60">
-              Effective date: {EFFECTIVE_DATE}
+              Last updated: {LAST_UPDATED}
             </p>
 
             <div className="mt-5 rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] px-4 py-4 text-sm leading-6 text-[#08194A]/80">
               <span className="font-bold text-[#08194A]">Quick summary:</span>{" "}
-              The first {MAX_CLAIMS} valid eligible claims received between{" "}
-              {PROMOTION_START} and {PROMOTION_END} may receive one ZyroPro
-              dashboard mount. You must be a U.S. legal resident age 18 or
-              older, your 7-day free trial must end, and your {YEARLY_PRICE}{" "}
-              yearly payment must successfully process before you submit a
-              claim. Yearly subscriptions only; monthly subscriptions are not
-              eligible. Google Play is not a sponsor of this Promotion.
+              This promotion is not open yet, and NJDrive50 is not accepting
+              claims. Start and end dates will be published on this page before
+              claims open. When it opens, the first {MAX_CLAIMS} valid eligible
+              claims received during the Promotion Period may receive one
+              ZyroPro dashboard mount. You must be a U.S. legal resident age 18
+              or older, any applicable free trial must end, and your first{" "}
+              {YEARLY_PRICE} yearly payment must successfully process before
+              you submit a claim. Yearly subscriptions only; monthly
+              subscriptions are not eligible. Google Play is not a sponsor of
+              this Promotion.
             </div>
           </header>
 
@@ -407,24 +410,23 @@ export default function ZyroProPromotionTermsPage() {
         </article>
 
         <section className="mt-6 rounded-2xl bg-[#08194A] px-5 py-5 text-white shadow-[0_12px_32px_rgba(8,25,74,0.16)] sm:px-6">
-          <h2 className="text-lg font-extrabold">Ready to submit a claim?</h2>
+          <h2 className="text-lg font-extrabold">Claims are not open yet</h2>
 
           <p className="mt-2 text-sm leading-7 text-white/70">
-            Submit only after your 7-day free trial has ended and your{" "}
-            {YEARLY_PRICE} yearly subscription payment has successfully
-            processed.
+            The start and end dates will be posted on this page before
+            NJDrive50 accepts any claims. Questions? Contact{" "}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="font-semibold text-[#F9C80E] underline underline-offset-2"
+            >
+              {SUPPORT_EMAIL}
+            </a>
+            .
           </p>
-
-          <Link
-            href="/claim-zyropro"
-            className="mt-4 inline-flex min-h-[48px] items-center justify-center rounded-xl bg-[#F9C80E] px-5 py-3 text-sm font-extrabold text-[#08194A] shadow-sm transition hover:bg-[#FFD84A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#08194A]"
-          >
-            Go to the claim page
-          </Link>
         </section>
 
         <p className="mt-8 text-center text-xs leading-6 text-[#08194A]/50">
-          Last updated: {EFFECTIVE_DATE}
+          Last updated: {LAST_UPDATED}
         </p>
       </div>
     </main>

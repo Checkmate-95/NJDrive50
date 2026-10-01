@@ -6,6 +6,23 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [
+      { "source": "/privacy", "destination": "https://www.njdrive50.com/privacy", "type": 302 },
+      { "source": "/privacy/", "destination": "https://www.njdrive50.com/privacy", "type": 302 },
+      { "source": "/privacy/index.html", "destination": "https://www.njdrive50.com/privacy", "type": 302 },
+
+      { "source": "/terms", "destination": "https://www.njdrive50.com/terms", "type": 302 },
+      { "source": "/terms/", "destination": "https://www.njdrive50.com/terms", "type": 302 },
+      { "source": "/terms/index.html", "destination": "https://www.njdrive50.com/terms", "type": 302 },
+
+      { "source": "/delete-data", "destination": "https://www.njdrive50.com/delete-data", "type": 302 },
+      { "source": "/delete-data/", "destination": "https://www.njdrive50.com/delete-data", "type": 302 },
+      { "source": "/delete-data/index.html", "destination": "https://www.njdrive50.com/delete-data", "type": 302 },
+
+      { "source": "/delete-account", "destination": "https://www.njdrive50.com/delete-account", "type": 302 },
+      { "source": "/delete-account/", "destination": "https://www.njdrive50.com/delete-account", "type": 302 },
+      { "source": "/delete-account/index.html", "destination": "https://www.njdrive50.com/delete-account", "type": 302 }
+    ],
     "rewrites": [
       {
         "source": "**",

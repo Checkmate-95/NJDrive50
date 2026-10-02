@@ -1,12 +1,18 @@
-// C:\Dev\NJDRIVE50\src\Register.tsx
-import { useState } from "react";
+// src/Register.tsx
+import { useState, type FormEvent } from "react";
+import { Browser } from "@capacitor/browser";
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
+  type User,
 } from "firebase/auth";
 
 import { auth } from "./firebase";
 import { useNav } from "./state/navStore";
+
+const TERMS_URL = "https://www.njdrive50.com/terms";
+const PRIVACY_URL = "https://www.njdrive50.com/privacy";
+const MIN_PASSWORD_LENGTH = 8;
 
 function getFirebaseErrorCode(err: unknown): string {
   if (
@@ -39,6 +45,11 @@ function getFriendlyError(code: string): string {
     default:
       return "Something went wrong. Please try again.";
   }
+}
+
+// Opens a website page in the in-app browser so the form keeps what was typed.
+function openLink(url: string) {
+  void Browser.open({ url });
 }
 
 // ─── Eye icons (shared) ──────────────────────────────────────────────────────
@@ -90,15 +101,19 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [acknowledged, setAcknowledged] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   // ── Register ──────────────────────────────────────────────────────────────
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
-    if (!email.trim() || !password) {
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail || !password) {
       setError("Please enter both email and password.");
       return;
     }
@@ -106,26 +121,47 @@ export default function Register() {
       setError("Passwords do not match.");
       return;
     }
-    if (password.length < 8) {
+    if (password.length < MIN_PASSWORD_LENGTH) {
       setError("Password must be at least 8 characters.");
+      return;
+    }
+    if (!acknowledged) {
+      setError(
+        "Please confirm the statement above the button before creating an account."
+      );
       return;
     }
 
     setLoading(true);
 
+    let user: User;
+
     try {
-      const { user } = await createUserWithEmailAndPassword(
+      const credential = await createUserWithEmailAndPassword(
         auth,
-        email,
+        cleanEmail,
         password
       );
-      await sendEmailVerification(user);
-      setScreen("verifyEmail");
+      user = credential.user;
     } catch (err: unknown) {
       setError(getFriendlyError(getFirebaseErrorCode(err)));
-    } finally {
       setLoading(false);
+      return;
     }
+
+    // The account exists and the user is signed in at this point. A failure to
+    // send the verification email must not look like a failed sign-up.
+    try {
+      await sendEmailVerification(user);
+    } catch (err: unknown) {
+      console.error(
+        "Verification email could not be sent:",
+        getFirebaseErrorCode(err)
+      );
+    }
+
+    setLoading(false);
+    setScreen("verifyEmail");
   };
 
   // ── Registration form ─────────────────────────────────────────────────────
@@ -142,6 +178,11 @@ export default function Register() {
           </h1>
           <p className="mt-2 text-sm text-[#08194A]/60">
             Enter your email and password to get started.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-[#08194A]/55">
+            NJDrive50 is for New Jersey permit holders aged 16 or older, and
+            for parents or guardians setting up an account for an eligible
+            driver.
           </p>
         </div>
 
@@ -235,6 +276,42 @@ export default function Register() {
                 </button>
               </div>
             </div>
+
+            {/* Eligibility and agreement (a self-declaration, not verified) */}
+            <label
+              htmlFor="ageTerms"
+              className="flex items-start gap-3 rounded-xl border border-[#08194A]/10 bg-[#F7F9FC] p-3 text-sm leading-relaxed text-[#08194A]/75"
+            >
+              <input
+                id="ageTerms"
+                type="checkbox"
+                checked={acknowledged}
+                onChange={(e) => setAcknowledged(e.target.checked)}
+                className="mt-1 h-4 w-4 shrink-0 accent-[#08194A]"
+              />
+              <span>
+                I am 16 or older, or I am a parent or guardian setting up an
+                account for a driver who is 16 or older. I have read and agree
+                to the{" "}
+                <button
+                  type="button"
+                  onClick={() => openLink(TERMS_URL)}
+                  className="font-semibold text-[#08194A] underline underline-offset-2"
+                >
+                  Terms of Use
+                </button>{" "}
+                and acknowledge the{" "}
+                <button
+                  type="button"
+                  onClick={() => openLink(PRIVACY_URL)}
+                  className="font-semibold text-[#08194A] underline underline-offset-2"
+                >
+                  Privacy Policy
+                </button>
+                . If I am under 18, my parent or guardian has reviewed these
+                documents with me and agrees to my use of NJDrive50.
+              </span>
+            </label>
 
             {/* Error */}
             {error && (

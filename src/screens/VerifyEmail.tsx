@@ -104,10 +104,10 @@ export default function VerifyEmail() {
             Verify your email
           </h1>
           <p className="mt-2 text-sm text-[#08194A]/60">
-            We sent a verification link to{" "}
-            <span className="font-semibold text-[#08194A]">{email}</span>.
-            Open it, then come back.
-          </p>
+  Check your inbox for a verification link for{" "}
+  <span className="font-semibold text-[#08194A]">{email}</span>.
+  {" "}If it hasn’t arrived, use Resend email below. Open the link, then come back.
+</p>
         </div>
 
         {/* Card */}

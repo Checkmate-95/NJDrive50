@@ -1,4 +1,13 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react"
+// src/components/EditDriveModal.tsx
+
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+
 import {
   type DriveEntry,
   updateDriveInHistory,
@@ -34,23 +43,35 @@ const FOCUSABLE_SELECTOR = [
 
 function toLocalInputValue(iso: string) {
   const date = new Date(iso)
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+
+  const local = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60000
+  )
+
   return local.toISOString().slice(0, 16)
 }
 
 function parseLocalDateTime(value: string) {
   if (!value) return null
+
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? null : parsed
 }
 
 function parseMilesInput(value: string) {
   if (value.trim() === "") return null
+
   const parsed = Number.parseFloat(value)
   return Number.isFinite(parsed) ? parsed : null
 }
 
-export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
+export function EditDriveModal({
+  open,
+  entry,
+  onClose,
+  onSaved,
+}: Props) {
+  const saveInFlightRef = useRef(false)
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const startInputRef = useRef<HTMLInputElement | null>(null)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
@@ -62,19 +83,31 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
   const endErrorId = useId()
   const milesErrorId = useId()
 
-  // ⭐ Lazy initializers derive from `entry` on mount. Parent must render
-  // this component with key={entry.id} so a different drive forces a
-  // fresh mount (and thus fresh initial values) instead of relying on
-  // an effect to resync state after the fact.
-  const [startInput, setStartInput] = useState(() => toLocalInputValue(entry.startTime))
-  const [endInput, setEndInput] = useState(() => toLocalInputValue(entry.endTime))
-  const [miles, setMiles] = useState(() => String(entry.miles ?? ""))
+  // Parent should use key={entry.id} when changing the selected drive.
+  const [startInput, setStartInput] = useState(() =>
+    toLocalInputValue(entry.startTime)
+  )
+
+  const [endInput, setEndInput] = useState(() =>
+    toLocalInputValue(entry.endTime)
+  )
+
+  const [miles, setMiles] = useState(() =>
+    String(entry.miles ?? "")
+  )
+
   const [errors, setErrors] = useState<ValidationErrors>({})
+  const [isSaving, setIsSaving] = useState(false)
+
+  function requestClose() {
+    if (!saveInFlightRef.current) onClose()
+  }
 
   useEffect(() => {
     if (!open) return
 
-    previouslyFocusedRef.current = document.activeElement as HTMLElement | null
+    previouslyFocusedRef.current =
+      document.activeElement as HTMLElement | null
 
     const originalOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -86,7 +119,8 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault()
-        onClose()
+
+        if (!saveInFlightRef.current) onClose()
         return
       }
 
@@ -96,7 +130,9 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
       if (!dialog) return
 
       const focusable = Array.from(
-        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        dialog.querySelectorAll<HTMLElement>(
+          FOCUSABLE_SELECTOR
+        )
       ).filter(
         (el) =>
           !el.hasAttribute("disabled") &&
@@ -112,13 +148,15 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
 
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
-      const active = document.activeElement as HTMLElement | null
+      const active =
+        document.activeElement as HTMLElement | null
 
       if (e.shiftKey) {
         if (active === first || active === dialog) {
           e.preventDefault()
           last.focus()
         }
+
         return
       }
 
@@ -144,12 +182,22 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
 
     if (!start || !end || end <= start) return null
 
-    return (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+    return (
+      (end.getTime() - start.getTime()) /
+      (1000 * 60 * 60)
+    )
   }, [startInput, endInput])
 
   if (!open) return null
 
-  function validateForm(): { ok: true; start: Date; end: Date; milesValue: number } | { ok: false } {
+  function validateForm():
+    | {
+        ok: true
+        start: Date
+        end: Date
+        milesValue: number
+      }
+    | { ok: false } {
     const nextErrors: ValidationErrors = {}
 
     const start = parseLocalDateTime(startInput)
@@ -175,12 +223,15 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
     }
 
     if (Object.keys(nextErrors).length > 0) {
-      nextErrors.form = "Please fix the highlighted fields before saving."
+      nextErrors.form =
+        "Please fix the highlighted fields before saving."
+
       setErrors(nextErrors)
       return { ok: false }
     }
 
     setErrors({})
+
     return {
       ok: true,
       start: start!,
@@ -189,12 +240,15 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
     }
   }
 
-  function handleSave() {
+  async function handleSave() {
+    if (saveInFlightRef.current) return
+
     const result = validateForm()
     if (!result.ok) return
 
     const totalDurationHours =
-      (result.end.getTime() - result.start.getTime()) / (1000 * 60 * 60)
+      (result.end.getTime() - result.start.getTime()) /
+      (1000 * 60 * 60)
 
     const updated: DriveEntry = {
       ...entry,
@@ -204,25 +258,51 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
       miles: result.milesValue,
     }
 
-    updateDriveInHistory(updated)
+    saveInFlightRef.current = true
+    setIsSaving(true)
+
+    try {
+      await updateDriveInHistory(updated)
+    } catch {
+      setErrors({
+        form:
+          "Your changes could not be saved. Please try again before closing this window.",
+      })
+      return
+    } finally {
+      saveInFlightRef.current = false
+      setIsSaving(false)
+    }
+
     onSaved(updated)
   }
 
-  const startDescribedBy = errors.start ? startErrorId : undefined
-  const endDescribedBy = errors.end ? endErrorId : undefined
-  const milesDescribedBy = errors.miles ? milesErrorId : undefined
+  const startDescribedBy = errors.start
+    ? startErrorId
+    : undefined
+
+  const endDescribedBy = errors.end
+    ? endErrorId
+    : undefined
+
+  const milesDescribedBy = errors.miles
+    ? milesErrorId
+    : undefined
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-[#08194A]/40 px-4 py-4 backdrop-blur-[2px]"
-      onClick={onClose}
+      onClick={requestClose}
     >
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-busy={isSaving}
         aria-labelledby={titleId}
-        aria-describedby={`${descriptionId}${errors.form ? ` ${formErrorId}` : ""}`}
+        aria-describedby={`${descriptionId}${
+          errors.form ? ` ${formErrorId}` : ""
+        }`}
         tabIndex={-1}
         className="w-full max-w-lg rounded-3xl border border-[#08194A]/10 bg-white p-5 text-[#08194A] shadow-[0_12px_30px_rgba(0,0,0,0.06)] outline-none sm:p-6 max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -244,16 +324,17 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
               id={descriptionId}
               className="mt-2 max-w-md text-sm leading-6 text-[#08194A]/65"
             >
-              Adjust the saved time range and mileage for this drive entry, then
-              save your changes.
+              Adjust the saved time range and mileage for this
+              drive entry, then save your changes.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="Close edit drive modal"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] text-lg font-semibold text-[#08194A]/70 transition hover:bg-[#EEF3FA] hover:text-[#08194A]"
+            disabled={isSaving}
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#08194A]/10 bg-[#F7F9FC] text-lg font-semibold text-[#08194A]/70 transition hover:bg-[#EEF3FA] hover:text-[#08194A] disabled:cursor-not-allowed disabled:opacity-50"
           >
             ×
           </button>
@@ -278,11 +359,15 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
             >
               Start Time
             </label>
+
             <input
               ref={startInputRef}
               id="edit-drive-start"
               type="datetime-local"
-              aria-invalid={errors.start ? "true" : undefined}
+              disabled={isSaving}
+              aria-invalid={
+                errors.start ? "true" : undefined
+              }
               aria-describedby={startDescribedBy}
               className={`min-h-[48px] w-full rounded-2xl bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:bg-white focus:ring-2 ${
                 errors.start
@@ -290,10 +375,16 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
                   : "border border-[#08194A]/10 focus:border-[#08194A]/20 focus:ring-[#08194A]/8"
               }`}
               value={startInput}
-              onChange={(e) => setStartInput(e.target.value)}
+              onChange={(e) =>
+                setStartInput(e.target.value)
+              }
             />
+
             {errors.start && (
-              <p id={startErrorId} className="mt-2 text-sm text-red-700">
+              <p
+                id={startErrorId}
+                className="mt-2 text-sm text-red-700"
+              >
                 {errors.start}
               </p>
             )}
@@ -306,10 +397,14 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
             >
               End Time
             </label>
+
             <input
               id="edit-drive-end"
               type="datetime-local"
-              aria-invalid={errors.end ? "true" : undefined}
+              disabled={isSaving}
+              aria-invalid={
+                errors.end ? "true" : undefined
+              }
               aria-describedby={endDescribedBy}
               className={`min-h-[48px] w-full rounded-2xl bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:bg-white focus:ring-2 ${
                 errors.end
@@ -317,10 +412,16 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
                   : "border border-[#08194A]/10 focus:border-[#08194A]/20 focus:ring-[#08194A]/8"
               }`}
               value={endInput}
-              onChange={(e) => setEndInput(e.target.value)}
+              onChange={(e) =>
+                setEndInput(e.target.value)
+              }
             />
+
             {errors.end && (
-              <p id={endErrorId} className="mt-2 text-sm text-red-700">
+              <p
+                id={endErrorId}
+                className="mt-2 text-sm text-red-700"
+              >
                 {errors.end}
               </p>
             )}
@@ -333,13 +434,17 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
             >
               Miles
             </label>
+
             <input
               id="edit-drive-miles"
               type="number"
+              disabled={isSaving}
               inputMode="decimal"
               step="0.01"
               min="0"
-              aria-invalid={errors.miles ? "true" : undefined}
+              aria-invalid={
+                errors.miles ? "true" : undefined
+              }
               aria-describedby={milesDescribedBy}
               className={`min-h-[48px] w-full rounded-2xl bg-[#F8FAFD] px-4 py-3 text-sm text-[#08194A] outline-none transition placeholder:text-[#08194A]/35 focus:bg-white focus:ring-2 ${
                 errors.miles
@@ -349,8 +454,12 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
               value={miles}
               onChange={(e) => setMiles(e.target.value)}
             />
+
             {errors.miles && (
-              <p id={milesErrorId} className="mt-2 text-sm text-red-700">
+              <p
+                id={milesErrorId}
+                className="mt-2 text-sm text-red-700"
+              >
                 {errors.miles}
               </p>
             )}
@@ -361,6 +470,7 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
           <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#08194A]/45">
             Calculated Duration
           </p>
+
           <p className="mt-1 text-sm font-semibold text-[#08194A]">
             {computedDuration !== null
               ? `${computedDuration.toFixed(2)} hrs`
@@ -369,15 +479,20 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
         </div>
 
         <div className="mt-4 rounded-xl bg-[#FFF7DB] border border-[#f9c80e]/40 p-3 text-sm text-[#8A6500]">
-          <strong>Note:</strong> Editing the start or end time updates the drive details only.
+          <strong>Note:</strong> Editing updates the saved
+          timestamps, total duration, and mileage.
 
           <details className="mt-2">
             <summary className="cursor-pointer text-[#8A6500]/80 underline">
               More info
             </summary>
+
             <p className="mt-2 text-[#8A6500]">
-              The original day/night classification and solar data are preserved and are not recalculated.
-              This ensures the solar engine snapshot remains accurate to the original drive conditions.
+              The solar calculation is not rerun. If the
+              edited total is shorter than the existing
+              day/night and unverified hours combined,
+              those hour amounts may be reduced to fit
+              the edited total.
             </p>
           </details>
         </div>
@@ -385,18 +500,20 @@ export function EditDriveModal({ open, entry, onClose, onSaved }: Props) {
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
-            onClick={onClose}
-            className="min-h-[48px] rounded-xl border border-[#08194A]/10 bg-white px-5 py-3 text-sm font-semibold text-[#08194A]/75 transition hover:bg-[#F7F9FC] hover:text-[#08194A]"
+            onClick={requestClose}
+            disabled={isSaving}
+            className="min-h-[48px] rounded-xl border border-[#08194A]/10 bg-white px-5 py-3 text-sm font-semibold text-[#08194A]/75 transition hover:bg-[#F7F9FC] hover:text-[#08194A] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
 
           <button
             type="button"
-            onClick={handleSave}
-            className="min-h-[48px] rounded-xl bg-[#08194A] px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E]"
+            onClick={() => void handleSave()}
+            disabled={isSaving}
+            className="min-h-[48px] rounded-xl bg-[#08194A] px-5 py-3 text-sm font-extrabold text-white shadow-[0_16px_30px_rgba(8,25,74,0.18)] transition hover:-translate-y-[1px] hover:bg-[#0A1E5E] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Save Changes
+            {isSaving ? "Saving…" : "Save Changes"}
           </button>
         </div>
       </div>

@@ -254,7 +254,7 @@ export default function Paywall({ onClose, onUnlocked }: PaywallProps) {
         <p className="text-xs leading-5 text-[#08194A]/60">
           {disclosure}
           Subscriptions renew automatically unless canceled before the end of the current period.
-          One free trial per Google account. Manage or cancel anytime in Google Play.
+          Free trial availability depends on your Google Play account eligibility. Manage or cancel anytime in Google Play.
         </p>
 
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs font-semibold text-[#08194A]/70">
